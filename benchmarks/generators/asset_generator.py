@@ -145,23 +145,26 @@ class AssetGenerator:
     def ensure_profile_assets(self, profile_config: dict[str, Any]) -> dict[str, Path]:
         """Ensures all assets required for a profile exist on disk."""
         assets: dict[str, Path] = {}
-        large_cfg = profile_config.get("large_image", {})
-        if large_cfg:
-            dim = tuple(large_cfg.get("dimension", [16384, 16384]))
-            p = self.generate_large_image(
-                target_size_mb=large_cfg.get("target_size_mb", 120),
-                dimension=dim,
-                pattern=large_cfg.get("pattern", "gradient"),
-                format_ext=large_cfg.get("format", "bmp")
-            )
-            assets["large_image"] = p
 
-        folder_cfg = profile_config.get("folder_dataset", {})
-        if folder_cfg:
-            p_folder = self.generate_test_folder(
-                folder_name=folder_cfg.get("name", "dataset_standard"),
-                file_count=folder_cfg.get("file_count", 100)
-            )
-            assets["folder_dataset"] = p_folder
+        # 1. Large Image
+        dim_val = profile_config.get("large_image_dim", 8192)
+        mb_val = profile_config.get("large_image_mb", 50)
+        p = self.generate_large_image(
+            target_size_mb=mb_val,
+            dimension=(dim_val, dim_val),
+            pattern="gradient",
+            format_ext="bmp"
+        )
+        assets["large_image"] = p
+
+        # 2. Folder Dataset
+        file_count = profile_config.get("folder_file_count", 50)
+        folder_name = f"dataset_{file_count}_files"
+        p_folder = self.generate_test_folder(
+            folder_name=folder_name,
+            file_count=file_count
+        )
+        assets["folder_dataset"] = p_folder
 
         return assets
+

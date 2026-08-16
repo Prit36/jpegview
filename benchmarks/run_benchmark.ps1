@@ -23,14 +23,29 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Locate Python
-$PythonExe = "C:\Users\My_Home\AppData\Local\Programs\Python\Python312\python.exe"
-if (-not (Test-Path $PythonExe)) {
+# Locate Python (Prioritize Python 3.14+)
+$CandidatePaths = @(
+    "C:\Users\My_Home\AppData\Local\Programs\Python\Python314\python.exe",
+    "C:\Program Files\Python314\python.exe",
+    "C:\Users\My_Home\AppData\Local\Programs\Python\Python313\python.exe",
+    "C:\Program Files\Python313\python.exe",
+    "C:\Users\My_Home\AppData\Local\Programs\Python\Python312\python.exe"
+)
+
+$PythonExe = $null
+foreach ($path in $CandidatePaths) {
+    if (Test-Path $path) {
+        $PythonExe = $path
+        break
+    }
+}
+
+if (-not $PythonExe) {
     $PythonCmd = Get-Command python -ErrorAction SilentlyContinue
     if ($PythonCmd) {
         $PythonExe = $PythonCmd.Source
     } else {
-        Write-Error "Python 3.12+ was not found on this machine."
+        Write-Error "Python 3.14+ was not found on this machine."
         exit 1
     }
 }
