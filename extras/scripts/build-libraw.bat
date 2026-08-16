@@ -35,11 +35,10 @@ REM cleanup
 del "%XMAKEFILE%"
 
 
-echo === HEADER FILES NOT MAINTAINED BY SCRIPT ===
-echo NOTE: as for the header files, copy/replace files AS NEEDED
-echo;
-echo TO:   src\JPEGView\libraw\include
-echo FROM: extras\third_party\LibRaw\libraw
+xcopy "%XLIB_DIR%\libraw\*.h" "%XSRC_DIR%\include\libraw\" /Y /C /D
+IF ERRORLEVEL 1 exit /b 1
+
+echo === HEADER FILES SYNCHRONIZED ===
 
 exit /b 0
 

@@ -82,7 +82,23 @@ IF /I "%PLATFORM_ARCHITECTURE%" EQU "64" (
 echo + XCopy %PLATFORM_ARCHITECTURE%-bit DLLs for "%DEP_NAME%" if needed ...
 xcopy "%SRC_DIR%\*.dll" "%OUT_DIR_FULL_PATH%" /Y /D
 echo ~ ErrorLevel: %ErrorLevel%
+IF ERRORLEVEL 1 exit /b 1
 
-exit /b %ErrorLevel%
+IF /I "%DEP_NAME%" EQU "libjxl" (
+	IF NOT EXIST "%OUT_DIR_FULL_PATH%jxl_dec.dll" exit /b 1
+	IF NOT EXIST "%OUT_DIR_FULL_PATH%jxl_threads.dll" exit /b 1
+	IF NOT EXIST "%OUT_DIR_FULL_PATH%brotlicommon.dll" exit /b 1
+	IF NOT EXIST "%OUT_DIR_FULL_PATH%brotlidec.dll" exit /b 1
+)
+IF /I "%DEP_NAME%" EQU "libheif" (
+	IF NOT EXIST "%OUT_DIR_FULL_PATH%heif.dll" exit /b 1
+	IF NOT EXIST "%OUT_DIR_FULL_PATH%libde265.dll" exit /b 1
+)
+IF /I "%DEP_NAME%" EQU "libavif" (
+	IF NOT EXIST "%OUT_DIR_FULL_PATH%avif.dll" exit /b 1
+	IF NOT EXIST "%OUT_DIR_FULL_PATH%dav1d.dll" exit /b 1
+)
+
+exit /b 0
 
 REM ================================================================================

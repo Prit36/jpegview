@@ -39,6 +39,15 @@ namespace ATL {
 
 	CAtlBaseModule _AtlBaseModule;
 
+#if defined(_M_IX86)
+	void* __stdcall __AllocStdCallThunk(void) {
+		return ::VirtualAlloc(NULL, 64, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	}
+
+	void __stdcall __FreeStdCallThunk(void* p) {
+		if (p) ::VirtualFree(p, 0, MEM_RELEASE);
+	}
+#else
 	void* __cdecl __AllocStdCallThunk(void) {
 		return ::VirtualAlloc(NULL, 64, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	}
@@ -46,6 +55,7 @@ namespace ATL {
 	void __cdecl __FreeStdCallThunk(void* p) {
 		if (p) ::VirtualFree(p, 0, MEM_RELEASE);
 	}
+#endif
 }
 
 #if (_ATL_VER < 0x0700)

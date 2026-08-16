@@ -14,6 +14,7 @@
 [submodule "extras/zlib"]
 	path = extras/third_party/libpng-apng.src-patch/zlib
 	url = https://github.com/madler/zlib
+	ignore = dirty
 [submodule "extras/libjxl"]
 	path = extras/third_party/libjxl
 	url = https://github.com/libjxl/libjxl/

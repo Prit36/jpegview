@@ -12,8 +12,7 @@ SET XLIB_DIR=%~dp0..\third_party\libjxl
 SET XOUT_DIR=%~dp0libjxl
 
 IF EXIST "%XOUT_DIR%" (
-	echo libjxl output exists, please delete folder before trying to build
-	exit /b 1
+	rd /s /q "%XOUT_DIR%"
 )
 
 call :BUILD_COPY_JXL x86 Win32 ""
@@ -21,14 +20,12 @@ IF ERRORLEVEL 1 exit /b 1
 call :BUILD_COPY_JXL x64 x64 "64"
 IF ERRORLEVEL 1 exit /b 1
 
+xcopy "%XLIB_DIR%\lib\include\jxl\*.h" "%XSRC_DIR%\JPEGView\libjxl\include\jxl\" /Y /C /D
+IF ERRORLEVEL 1 exit /b 1
 
+rd /s /q "%XOUT_DIR%" 2>nul
 
-
-echo === HEADER FILES NOT MAINTAINED BY SCRIPT ===
-echo NOTE: as for the header files, copy/replace files AS NEEDED
-echo TO: src\JPEGView\libjxl\include\jxl
-echo FROM: extras\third_party\libjxl\lib\include\jxl
-echo FROM: %XOUT_DIR%\[arch]\lib\include\jxl
+echo === HEADER FILES SYNCHRONIZED ===
 
 exit /b 0
 
@@ -53,21 +50,32 @@ call "%~dp0vs-init.bat" %XBUILD_ARCH%
 
 pushd "%XBUILD_DIR%"
 
-cmake.exe -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -A %XPLATFORM% "%XLIB_DIR%"
+cmake.exe -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DJPEGXL_ENABLE_TOOLS=OFF -DJPEGXL_ENABLE_DOXYGEN=OFF -DJPEGXL_ENABLE_MANPAGES=OFF -DJPEGXL_ENABLE_BENCHMARK=OFF -DJPEGXL_ENABLE_EXAMPLES=OFF -DJPEGXL_ENABLE_JNI=OFF -DJPEGXL_ENABLE_SJPEG=OFF -DJPEGXL_ENABLE_OPENEXR=OFF -DJPEGXL_ENABLE_PLUGINS=OFF -A %XPLATFORM% "%XLIB_DIR%"
 IF ERRORLEVEL 1 exit /b 1
-msbuild.exe /p:Platform=%XPLATFORM% /p:configuration="Release" LIBJXL.sln /t:jxl_dec /t:jxl_threads
+msbuild.exe /p:Platform=%XPLATFORM% /p:configuration="Release" LIBJXL.sln /t:jxl_dec;jxl_threads
 IF ERRORLEVEL 1 exit /b 1
 
 popd
 
-REM copy the libs over
-copy /y "%XBUILD_DIR%\Release\jxl*.dll" "%XSRC_DIR%\JPEGView\libjxl\bin%XJPV_ARCH_PATH%\"
+REM copy the binaries over
+IF EXIST "%XBUILD_DIR%\lib\Release\jxl_dec.dll" (
+	copy /y "%XBUILD_DIR%\lib\Release\jxl*.dll" "%XSRC_DIR%\JPEGView\libjxl\bin%XJPV_ARCH_PATH%\"
+) ELSE (
+	copy /y "%XBUILD_DIR%\Release\jxl*.dll" "%XSRC_DIR%\JPEGView\libjxl\bin%XJPV_ARCH_PATH%\"
+)
 IF ERRORLEVEL 1 exit /b 1
-copy /y "%XBUILD_DIR%\third_party\brotli\Release\brotli*.dll" "%XSRC_DIR%\JPEGView\libjxl\bin%XJPV_ARCH_PATH%\"
-IF ERRORLEVEL 1 exit /b 1
+
+IF EXIST "%XBUILD_DIR%\third_party\brotli\Release\brotlicommon.dll" (
+	copy /y "%XBUILD_DIR%\third_party\brotli\Release\brotli*.dll" "%XSRC_DIR%\JPEGView\libjxl\bin%XJPV_ARCH_PATH%\"
+	IF ERRORLEVEL 1 exit /b 1
+)
+
 copy /y "%XBUILD_DIR%\lib\Release\jxl*.lib" "%XSRC_DIR%\JPEGView\libjxl\lib%XJPV_ARCH_PATH%\"
 IF ERRORLEVEL 1 exit /b 1
 
-
+xcopy "%XBUILD_DIR%\lib\include\jxl\*.h" "%XSRC_DIR%\JPEGView\libjxl\include\jxl\" /Y /C /D
+IF ERRORLEVEL 1 exit /b 1
+IF NOT EXIST "%XSRC_DIR%\JPEGView\libjxl\bin%XJPV_ARCH_PATH%\jxl_dec.dll" exit /b 1
+IF NOT EXIST "%XSRC_DIR%\JPEGView\libjxl\lib%XJPV_ARCH_PATH%\jxl_dec.lib" exit /b 1
 
 exit /b 0

@@ -8,8 +8,7 @@ SET XLIB_DIR=%~dp0..\third_party\libwebp
 SET XOUT_DIR=%~dp0libwebp
 
 IF EXIST "%XOUT_DIR%" (
-	echo libwebp output exists, please delete folder before trying to build
-	exit /b 1
+	rd /s /q "%XOUT_DIR%"
 )
 
 call :BUILD_COPY_WEBP x86 lib
@@ -17,10 +16,12 @@ IF ERRORLEVEL 1 exit /b 1
 call :BUILD_COPY_WEBP x64 lib64
 IF ERRORLEVEL 1 exit /b 1
 
+xcopy "%XLIB_DIR%\src\webp\*.h" "%XSRC_DIR%\include\webp\" /Y /C /D
+IF ERRORLEVEL 1 exit /b 1
 
-echo === HEADER FILES NOT MAINTAINED BY SCRIPT ===
-echo NOTE: as for the header files, copy/replace files AS NEEDED
-echo extras\third_party\libwebp\src\webp -to- src\JPEGView\libwebp\include
+rd /s /q "%XOUT_DIR%" 2>nul
+
+echo === HEADER FILES SYNCHRONIZED ===
 
 exit /b 0
 

@@ -12,10 +12,35 @@ SET XOUT_DIR=%~dp0libheif_libavif
 
 SET XVENV_DIR=%~dp0venv-meson
 
-IF EXIST "%XOUT_DIR%" (
-	echo libheif output exists, please delete folder before trying to build
+findstr /C:"version: '1.5.4'" "%XLIB_DIR%\dav1d\meson.build" >nul
+IF ERRORLEVEL 1 (
+	echo ERROR: dav1d source must be v1.5.4
 	exit /b 1
 )
+findstr /C:"VERSION 1.0.18" "%XLIB_DIR%\libde265\CMakeLists.txt" >nul
+IF ERRORLEVEL 1 (
+	echo ERROR: libde265 source must be v1.0.18
+	exit /b 1
+)
+findstr /C:"VERSION 1.23.1" "%XLIB_DIR%\libheif\CMakeLists.txt" >nul
+IF ERRORLEVEL 1 (
+	echo ERROR: libheif source must be v1.23.1
+	exit /b 1
+)
+findstr /C:"VERSION 1.4.2" "%XLIBAVIF_DIR%\CMakeLists.txt" >nul
+IF ERRORLEVEL 1 (
+	echo ERROR: libavif source must be v1.4.2
+	exit /b 1
+)
+
+IF EXIST "%XOUT_DIR%" (
+	rd /s /q "%XOUT_DIR%"
+)
+
+IF EXIST "%LOCALAPPDATA%\bin\NASM" SET "PATH=%LOCALAPPDATA%\bin\NASM;%PATH%"
+IF EXIST "C:\Program Files\NASM" SET "PATH=C:\Program Files\NASM;%PATH%"
+IF EXIST "%LOCALAPPDATA%\Programs\Python\Python312" SET "PATH=%LOCALAPPDATA%\Programs\Python\Python312;%LOCALAPPDATA%\Programs\Python\Python312\Scripts;%PATH%"
+IF EXIST "C:\Program Files\Python312" SET "PATH=C:\Program Files\Python312;C:\Program Files\Python312\Scripts;%PATH%"
 
 echo + Looking up NASM
 where nasm.exe
@@ -68,15 +93,9 @@ IF ERRORLEVEL 1 exit /b 1
 
 
 
-echo === HEADER FILES NOT MAINTAINED BY SCRIPT ===
-echo NOTE: as for the header files, copy/replace files AS NEEDED
-echo TO: src\JPEGView\libheif\include\libheif
-echo .h FROM: extras\third_party\libheif\libheif\libheif
-echo FROM: %OUT_DIR%\libheif-[arch]\libheif\heif_version.h
+rd /s /q "%XOUT_DIR%" 2>nul
 
-echo;
-echo TO: src\JPEGView\libheif\include\libavif
-echo .h FROM: extras\third_party\libavif\include\avif
+echo === HEADER FILES SYNCHRONIZED ===
 
 exit /b 0
 
@@ -108,22 +127,28 @@ REM part of the commands came from dav1d.cmd in libheif third-party
 
 REM meson.exe from pip install venv\scripts
 REM if you want to build static DLL do this:  meson setup --default-library=static --buildtype release --prefix "%XDIST_DIR%" "%XBUILD_DIR%"
-meson setup --buildtype release --prefix "%XDIST_DIR%" "%XBUILD_DIR%"
+meson setup --default-library=shared --buildtype release --prefix "%XDIST_DIR%" --libdir lib "%XBUILD_DIR%"
 IF ERRORLEVEL 1 exit /b 1
 
 REM ninja.exe from pip install venv\scripts
 ninja -C "%XBUILD_DIR%"
 IF ERRORLEVEL 1 exit /b 1
-REM libheif building requires things to be "installed" to work
+REM libheif and libavif consume the installed dav1d layout
 ninja -C "%XBUILD_DIR%" install
 IF ERRORLEVEL 1 exit /b 1
 
-REM when dynamic, will copy this out
-REM copy /y "%XBUILD_DIR%\src\dav1d.dll" "%XSRC_DIR%\bin%~2\"
+IF NOT EXIST "%XDIST_DIR%\bin\dav1d.dll" exit /b 1
+IF EXIST "%XDIST_DIR%\lib\libdav1d.lib" (
+	SET XDAV1D_LIB=%XDIST_DIR%\lib\libdav1d.lib
+) ELSE IF EXIST "%XDIST_DIR%\lib\dav1d.lib" (
+	SET XDAV1D_LIB=%XDIST_DIR%\lib\dav1d.lib
+) ELSE (
+	echo ERROR: dav1d import library was not produced
+	exit /b 1
+)
+
 copy /y "%XDIST_DIR%\bin\dav1d.dll" "%XAVIFSRC_DIR%\bin%~2\"
 IF ERRORLEVEL 1 exit /b 1
-::copy /y "%XDIST_DIR%\lib\dav1d.lib" "%XAVIFSRC_DIR%\lib%~2\"
-::IF ERRORLEVEL 1 exit /b 1
 
 popd
 
@@ -152,8 +177,24 @@ IF ERRORLEVEL 1 exit /b 1
 msbuild.exe /p:Platform=%2 /p:configuration="Release" libde265.sln /t:de265
 IF ERRORLEVEL 1 exit /b 1
 
+IF NOT EXIST "%XBUILD_DIR%\libde265\Release\libde265.dll" exit /b 1
+IF EXIST "%XBUILD_DIR%\libde265\Release\libde265.lib" (
+	SET "XDE265_OUT_LIB=%XBUILD_DIR%\libde265\Release\libde265.lib"
+) ELSE IF EXIST "%XBUILD_DIR%\libde265\Release\de265.lib" (
+	SET "XDE265_OUT_LIB=%XBUILD_DIR%\libde265\Release\de265.lib"
+) ELSE (
+	echo ERROR: libde265 import library was not produced
+	exit /b 1
+)
+IF NOT EXIST "%XBUILD_DIR%\libde265\de265-version.h" exit /b 1
 
 copy /y "%XBUILD_DIR%\libde265\Release\libde265.dll" "%XSRC_DIR%\bin%~3\"
+IF ERRORLEVEL 1 exit /b 1
+copy /y "%XDE265_OUT_LIB%" "%XSRC_DIR%\lib%~3\libde265.lib"
+IF ERRORLEVEL 1 exit /b 1
+copy /y "%XDE265_OUT_LIB%" "%XSRC_DIR%\lib%~3\de265.lib"
+IF ERRORLEVEL 1 exit /b 1
+copy /y "%XBUILD_DIR%\libde265\de265-version.h" "%XBUILD_DIR%\libde265\libde265-version.h" >nul
 IF ERRORLEVEL 1 exit /b 1
 
 
@@ -187,22 +228,58 @@ mkdir "%XBUILD_DIR%" 2>nul
 
 call "%~dp0vs-init.bat" %XARCH%
 
-copy /y "%XDE265_BUILD%\libde265\de265-version.h" "%XDE265_DIR%\libde265"
+IF NOT EXIST "%XDE265_BUILD%\libde265\de265-version.h" exit /b 1
+copy /y "%XDE265_BUILD%\libde265\de265-version.h" "%XDE265_DIR%\libde265" >nul
 IF ERRORLEVEL 1 exit /b 1
+
+IF EXIST "%XDAV1D_DIST%\lib\libdav1d.lib" (
+	SET XDAV1D_LIB=%XDAV1D_DIST%\lib\libdav1d.lib
+) ELSE IF EXIST "%XDAV1D_DIST%\lib\dav1d.lib" (
+	SET XDAV1D_LIB=%XDAV1D_DIST%\lib\dav1d.lib
+) ELSE (
+	echo ERROR: dav1d import library was not found
+	exit /b 1
+)
+IF EXIST "%XDE265_BUILD%\libde265\Release\libde265.lib" (
+	SET XDE265_LIB=%XDE265_BUILD%\libde265\Release\libde265.lib
+) ELSE IF EXIST "%XDE265_BUILD%\libde265\Release\de265.lib" (
+	SET XDE265_LIB=%XDE265_BUILD%\libde265\Release\de265.lib
+) ELSE (
+	echo ERROR: libde265 import library was not found
+	exit /b 1
+)
 
 pushd "%XBUILD_DIR%"
 
-cmake.exe -DCMAKE_BUILD_TYPE=Release -A %2 -DDAV1D_LIBRARY="%XDAV1D_DIST%\lib\dav1d.lib" -DDAV1D_INCLUDE_DIR="%XDAV1D_DIST%\include" -DLIBDE265_LIBRARY="%XDE265_BUILD%\libde265\Release\de265.lib" -DLIBDE265_INCLUDE_DIR="%XDE265_DIR%" "%XLIB_DIR%\libheif"
+cmake.exe -DCMAKE_BUILD_TYPE=Release -A %2 -DCMAKE_PREFIX_PATH="%XDAV1D_DIST%;%XDE265_BUILD%" -DENABLE_PLUGIN_LOADING=OFF -DWITH_LIBDE265=ON -DWITH_LIBDE265_PLUGIN=OFF -DWITH_DAV1D=ON -DWITH_DAV1D_PLUGIN=OFF -DDAV1D_LIBRARY="%XDAV1D_LIB%" -DDAV1D_INCLUDE_DIR="%XDAV1D_DIST%\include" -DLIBDE265_LIBRARY="%XDE265_LIB%" -DLIBDE265_INCLUDE_DIR="%XLIB_DIR%\libde265" "%XLIB_DIR%\libheif"
 IF ERRORLEVEL 1 exit /b 1
 msbuild.exe /p:Platform=%2 /p:configuration="Release" libheif.sln /t:heif
 IF ERRORLEVEL 1 exit /b 1
 
-popd
+IF NOT EXIST "%XBUILD_DIR%\libheif\Release\heif.dll" exit /b 1
+IF NOT EXIST "%XBUILD_DIR%\libheif\Release\heif.lib" exit /b 1
 
+popd
 
 copy /y "%XBUILD_DIR%\libheif\Release\heif.dll" "%XSRC_DIR%\bin%~3\"
 IF ERRORLEVEL 1 exit /b 1
 copy /y "%XBUILD_DIR%\libheif\Release\heif.lib" "%XSRC_DIR%\lib%~3\"
+IF ERRORLEVEL 1 exit /b 1
+IF EXIST "%XBUILD_DIR%\libheif\heif_version.h" (
+	copy /y "%XBUILD_DIR%\libheif\heif_version.h" "%XSRC_DIR%\include\libheif\heif_version.h"
+) ELSE IF EXIST "%XBUILD_DIR%\heif_version.h" (
+	copy /y "%XBUILD_DIR%\heif_version.h" "%XSRC_DIR%\include\libheif\heif_version.h"
+) ELSE (
+	exit /b 1
+)
+IF ERRORLEVEL 1 exit /b 1
+copy /y "%XDE265_BUILD%\libde265\Release\libde265.dll" "%XSRC_DIR%\bin%~3\"
+IF ERRORLEVEL 1 exit /b 1
+IF EXIST "%XLIB_DIR%\libheif\libheif\api\libheif" (
+	xcopy "%XLIB_DIR%\libheif\libheif\api\libheif\*.h" "%XSRC_DIR%\include\libheif\" /Y /C /D
+) ELSE (
+	xcopy "%XLIB_DIR%\libheif\api\libheif\*.h" "%XSRC_DIR%\include\libheif\" /Y /C /D
+)
 IF ERRORLEVEL 1 exit /b 1
 
 
@@ -237,20 +314,31 @@ pushd "%XBUILD_DIR%"
 
 REM not sure if there's any diff using nmake vs ninja
 
-REM derived from https://github.com/AOMediaCodec/libavif/blob/main/.github/workflows/ci-windows.yml
-::cmake.exe -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DAVIF_CODEC_DAV1D=ON -DDAV1D_LIBRARY="%XDAV1D_DIST%\lib\dav1d.lib" -DDAV1D_INCLUDE_DIR="%XDAV1D_DIST%\include" "%XLIBAVIF_DIR%"
-cmake.exe -G Ninja -DCMAKE_BUILD_TYPE=Release -DAVIF_CODEC_DAV1D=ON -DDAV1D_LIBRARY="%XDAV1D_DIST%\lib\dav1d.lib" -DDAV1D_INCLUDE_DIR="%XDAV1D_DIST%\include" "%XLIBAVIF_DIR%"
+IF EXIST "%XDAV1D_DIST%\lib\libdav1d.lib" (
+	SET XDAV1D_LIB=%XDAV1D_DIST%\lib\libdav1d.lib
+) ELSE IF EXIST "%XDAV1D_DIST%\lib\dav1d.lib" (
+	SET XDAV1D_LIB=%XDAV1D_DIST%\lib\dav1d.lib
+) ELSE (
+	echo ERROR: dav1d import library was not found
+	exit /b 1
+)
+
+cmake.exe -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="%XDAV1D_DIST%" -DCMAKE_C_STANDARD=11 -DCMAKE_C_STANDARD_REQUIRED=ON -DBUILD_SHARED_LIBS=ON -DAVIF_BUILD_APPS=OFF -DAVIF_BUILD_TESTS=OFF -DAVIF_LIBYUV=OFF -DAVIF_CODEC_AOM=OFF -DAVIF_CODEC_DAV1D=SYSTEM -DAVIF_CODEC_LIBGAV1=OFF -DAVIF_CODEC_RAV1E=OFF -DAVIF_CODEC_SVT=OFF -DAVIF_ZLIBPNG=OFF -DDAV1D_LIBRARY="%XDAV1D_LIB%" -DDAV1D_INCLUDE_DIR="%XDAV1D_DIST%\include" "%XLIBAVIF_DIR%"
 IF ERRORLEVEL 1 exit /b 1
 ::nmake.exe
 ninja.exe
 IF ERRORLEVEL 1 exit /b 1
 
-popd
+IF NOT EXIST "%XBUILD_DIR%\avif.dll" exit /b 1
+IF NOT EXIST "%XBUILD_DIR%\avif.lib" exit /b 1
 
+popd
 
 copy /y "%XBUILD_DIR%\avif.dll" "%XAVIFSRC_DIR%\bin%~2\"
 IF ERRORLEVEL 1 exit /b 1
 copy /y "%XBUILD_DIR%\avif.lib" "%XAVIFSRC_DIR%\lib%~2\"
+IF ERRORLEVEL 1 exit /b 1
+xcopy "%XLIBAVIF_DIR%\include\avif\*.h" "%XAVIFSRC_DIR%\include\avif\" /Y /C /D
 IF ERRORLEVEL 1 exit /b 1
 
 

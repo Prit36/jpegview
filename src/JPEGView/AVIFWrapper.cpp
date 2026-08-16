@@ -100,7 +100,7 @@ void* AvifReader::ReadImage(int& width,
 		avifCleanApertureBox* clap = &cache.decoder->image->clap;
 		avifCropRect crop;
 		avifDiagnostics diag;
-		if (avifCropRectConvertCleanApertureBox(&crop, clap, width, height, cache.decoder->image->yuvFormat, &diag)) {
+		if (avifCropRectFromCleanApertureBox(&crop, clap, width, height, &diag)) {
 			POINT point = { crop.x, crop.y };
 			SIZE sz = { crop.width, crop.height };
 			void* pixels = CBasicProcessing::Crop32bpp(width, height, cache.rgb.pixels, CRect(point, sz));

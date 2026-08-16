@@ -27,11 +27,12 @@ IF ERRORLEVEL 1 exit /b 1
 
 
 
-echo === HEADER FILES NOT MAINTAINED BY SCRIPT ===
-echo NOTE: as for the header files, copy/replace files AS NEEDED
-echo;
-echo TO:   src\JPEGView\lcms2\include
-echo FROM: extras\third_party\Little-CMS\include
+copy /y "%XLIB_DIR%\include\lcms2.h" "%XSRC_DIR%\include\"
+IF ERRORLEVEL 1 exit /b 1
+copy /y "%XLIB_DIR%\include\lcms2_plugin.h" "%XSRC_DIR%\include\"
+IF ERRORLEVEL 1 exit /b 1
+
+echo === HEADER FILES SYNCHRONIZED ===
 
 exit /b 0
 

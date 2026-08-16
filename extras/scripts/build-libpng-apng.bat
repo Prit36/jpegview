@@ -27,16 +27,25 @@ SET XOUT_DIR_64=%XLIB_DIR%\projects\vstudio\x64\Release Library
 
 SET XPATCH_DIR=%~dp0..\third_party\libpng-apng.src-patch
 
-REM this script doesn't "clean" you do it yourself
-
-IF EXIST "%XOUT_DIR_32%" (
-	echo libpng-apng 32-bit output exists, please delete folder before trying to build
+findstr /C:"libpng version 1.6.58" "%XLIB_DIR%\png.h" >nul
+IF ERRORLEVEL 1 (
+	echo ERROR: libpng source must be v1.6.58
 	exit /b 1
 )
 
-IF EXIST "%XOUT_DIR_64%" (
-	echo libpng-apng 64-bit output exists, please delete folder before trying to build
+IF NOT EXIST "%XPATCH_DIR%\libpng-apng\libpng-1.6.58-apng.patch" (
+	echo ERROR: libpng 1.6.58 APNG patch is missing
 	exit /b 1
+)
+
+REM this script doesn't "clean" you do it yourself
+
+IF EXIST "%XOUT_DIR_32%" (
+	rd /s /q "%XOUT_DIR_32%"
+)
+
+IF EXIST "%XOUT_DIR_64%" (
+	rd /s /q "%XOUT_DIR_64%"
 )
 
 call :PATCH_PNG
@@ -60,11 +69,21 @@ IF ERRORLEVEL 1 exit /b 1
 copy /y "%XOUT_DIR_64%\zlib.lib" "%XSRC_DIR%\JPEGView\libpng-apng\lib64\"
 IF ERRORLEVEL 1 exit /b 1
 
+copy /y "%XLIB_DIR%\png.h" "%XSRC_DIR%\JPEGView\libpng-apng\include\"
+IF ERRORLEVEL 1 exit /b 1
+copy /y "%XLIB_DIR%\pngconf.h" "%XSRC_DIR%\JPEGView\libpng-apng\include\"
+IF ERRORLEVEL 1 exit /b 1
+IF EXIST "%XOUT_DIR_64%\pnglibconf.h" (
+	copy /y "%XOUT_DIR_64%\pnglibconf.h" "%XSRC_DIR%\JPEGView\libpng-apng\include\pnglibconf.h"
+) ELSE (
+	copy /y "%XLIB_DIR%\scripts\pnglibconf.h.prebuilt" "%XSRC_DIR%\JPEGView\libpng-apng\include\pnglibconf.h"
+)
+IF ERRORLEVEL 1 exit /b 1
+copy /y "%~dp0..\third_party\libpng-apng.src-patch\zlib\zconf.h" "%XSRC_DIR%\JPEGView\libpng-apng\include\"
+IF ERRORLEVEL 1 exit /b 1
 
-echo === HEADER FILES NOT MAINTAINED BY SCRIPT ===
-echo NOTE: as for the header files, copy/replace files AS NEEDED
-echo TO: src\JPEGView\libpng-apng\include
-echo FROM: extras\third_party\libpng-apng.src-patch\libpng
+
+echo === HEADER FILES SYNCHRONIZED ===
 
 
 exit /b 0
@@ -80,7 +99,7 @@ setlocal
 
 call "%~dp0vs-init.bat" %1
 
-msbuild.exe /property:Platform=%2 /property:configuration="Release Library" "%XLIB_DIR%\projects\vstudio\vstudio.sln"
+msbuild.exe /property:Platform=%2 /property:configuration="Release Library" /property:PlatformToolset=v143 "%XLIB_DIR%\projects\vstudio\vstudio.sln"
 exit /b %ERRORLEVEL%
 
 

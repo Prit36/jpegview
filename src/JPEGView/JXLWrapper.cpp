@@ -12,7 +12,7 @@ struct JxlReader::jxl_cache {
 	JxlDecoderPtr decoder;
 	JxlResizableParallelRunnerPtr runner;
 	JxlBasicInfo info;
-	uint8_t* data;
+	std::vector<uint8_t> data;
 	size_t data_size;
 	int prev_frame_timestamp;
 	int width;
@@ -28,7 +28,12 @@ JxlReader::jxl_cache JxlReader::cache = { 0 };
 bool JxlReader::DecodeJpegXlOneShot(const uint8_t* jxl, size_t size, std::vector<uint8_t>* pixels, int& xsize,
 	int& ysize, bool& have_animation, int& frame_count, int& frame_time, std::vector<uint8_t>* icc_profile, bool& outOfMemory) {
 
+	if (cache.decoder.get() != NULL && (cache.data_size != size || memcmp(cache.data.data(), jxl, size) != 0))
+		DeleteCache();
+
 	if (cache.decoder.get() == NULL) {
+		cache.data.assign(jxl, jxl + size);
+		cache.data_size = size;
 		cache.runner = JxlResizableParallelRunnerMake(nullptr);
 
 		cache.decoder = JxlDecoderMake(nullptr);
@@ -51,10 +56,8 @@ bool JxlReader::DecodeJpegXlOneShot(const uint8_t* jxl, size_t size, std::vector
 			return false;
 		}
 
-		JxlDecoderSetInput(cache.decoder.get(), jxl, size);
+		JxlDecoderSetInput(cache.decoder.get(), cache.data.data(), cache.data_size);
 		JxlDecoderCloseInput(cache.decoder.get());
-		cache.data = (uint8_t*)jxl;
-		cache.data_size = size;
 	}
 
 	JxlBasicInfo info;
@@ -145,7 +148,7 @@ bool JxlReader::DecodeJpegXlOneShot(const uint8_t* jxl, size_t size, std::vector
 			loop_check = true;
 			JxlDecoderRewind(cache.decoder.get());
 			JxlDecoderSubscribeEvents(cache.decoder.get(), JXL_DEC_FRAME | JXL_DEC_FULL_IMAGE);
-			JxlDecoderSetInput(cache.decoder.get(), cache.data, cache.data_size);
+			JxlDecoderSetInput(cache.decoder.get(), cache.data.data(), cache.data_size);
 			JxlDecoderCloseInput(cache.decoder.get());
 		} else if (status == JXL_DEC_BOX) {
 			if (!cache.exif.empty()) {
@@ -231,7 +234,6 @@ void* JxlReader::ReadImage(int& width,
 }
 
 void JxlReader::DeleteCache() {
-	free(cache.data);
 	ICCProfileTransform::DeleteTransform(cache.transform);
 	// Setting the decoder and runner to 0 (NULL) will automatically destroy them
 	cache = { 0 };

@@ -1,21 +1,27 @@
 #!/usr/bin/env bash
 
-# --forward is optional, and added to make scripting calls to this easier
+set -e
 
-# apng support
-echo "--- Patching libpng with apng support ---"
-patch -d libpng -p0 --forward < libpng-apng/libpng-1.6.40-apng.patch
-# error check, fail and return error if failed
-if [ $? -ne 0 ]; then
-	echo apng patch failed
+if ! grep -q 'libpng version 1.6.58' libpng/png.h; then
+	echo 'libpng source must be v1.6.58'
 	exit 1
 fi
 
+if grep -q 'png_read_frame_head' libpng/png.h; then
+	echo 'libpng already contains APNG changes'
+else
+	echo '--- Patching libpng with APNG support ---'
+	patch -d libpng -p1 --forward < libpng-apng/libpng-1.6.58-apng.patch
+fi
 
-# 64-bit support
-echo "--- Patching libpng with 64-bit support ---"
-patch -d libpng -p1 --forward < libpng-x64.patch
-if [ $? -ne 0 ]; then
-	echo x64 patch failed
+if ! grep -q 'png_read_frame_head' libpng/png.h; then
+	echo 'libpng APNG patch did not provide the required API'
 	exit 1
+fi
+
+if grep -q 'Release Library|x64' libpng/projects/vstudio/libpng/libpng.vcxproj; then
+	echo 'libpng already contains 64-bit changes'
+else
+	echo '--- Patching libpng with 64-bit support ---'
+	patch -d libpng -p1 --forward < libpng-x64.patch
 fi
