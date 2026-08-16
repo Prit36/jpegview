@@ -54,12 +54,12 @@ void * TurboJpeg::ReadImage(int &width,
 					outOfMemory = true;
 				}
 			} else {
-				// Decompress directly to 32-bit BGRA/BGRX for maximum AVX2/SSE SIMD write throughput
-				nchannels = 4;
-				size_t pitch = (size_t)width * 4;
+				// Decompress to 3-channel BGR (72 MB instead of 96 MB for 24MP)
+				nchannels = 3;
+				size_t pitch = (size_t)TJPAD(width * 3);
 				pPixelData = new(std::nothrow) unsigned char[pitch * height];
 				if (pPixelData != NULL) {
-					nResult = tj3Decompress8(hDecoder, (unsigned char*)buffer, sizebytes, pPixelData, (int)pitch, TJPF_BGRX);
+					nResult = tj3Decompress8(hDecoder, (unsigned char*)buffer, sizebytes, pPixelData, (int)pitch, TJPF_BGR);
 					if (nResult != 0) {
 						delete[] pPixelData;
 						pPixelData = NULL;

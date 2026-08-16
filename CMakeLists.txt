@@ -33,8 +33,12 @@ if(MSVC)
         /utf-8
         /EHsc
         /openmp
+        $<$<CONFIG:Release>:/O2>
         $<$<CONFIG:Release>:/Oi>
         $<$<CONFIG:Release>:/Ot>
+        $<$<CONFIG:Release>:/Ob3>
+        $<$<CONFIG:Release>:/fp:fast>
+        $<$<CONFIG:Release>:/GA>
         $<$<CONFIG:Release>:/Gy>
         $<$<CONFIG:Release>:/Gw>
     )

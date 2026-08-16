@@ -344,16 +344,19 @@ void* CBasicProcessing::Apply3ChannelLUT32bpp(int nWidth, int nHeight, const voi
 		return NULL;
 	}
 
-	uint32* pTarget = new(std::nothrow) uint32[nWidth * nHeight];
+	uint32* pTarget = new(std::nothrow) uint32[(size_t)nWidth * nHeight];
 	if (pTarget == NULL) return NULL;
-	const uint32* pSrc = (uint32*)pDIBPixels;
-	uint32* pTgt = pTarget;
+
+	#pragma omp parallel for schedule(static)
 	for (int j = 0; j < nHeight; j++) {
+		const uint32* pSrc = (const uint32*)pDIBPixels + (size_t)j * nWidth;
+		uint32* pTgt = pTarget + (size_t)j * nWidth;
 		for (int i = 0; i < nWidth; i++) {
-			uint32 nSrcPixels = *pSrc;
-			*pTgt = pLUT[nSrcPixels & 0xFF] + pLUT[256 + ((nSrcPixels >> 8) & 0xFF)] * 256 + 
-				pLUT[512 + ((nSrcPixels >> 16) & 0xFF)] * 65536 + ALPHA_OPAQUE;
-			pTgt++; pSrc++;
+			uint32 nSrcPixels = pSrc[i];
+			pTgt[i] = (uint32)pLUT[nSrcPixels & 0xFF] | 
+				((uint32)pLUT[256 + ((nSrcPixels >> 8) & 0xFF)] << 8) | 
+				((uint32)pLUT[512 + ((nSrcPixels >> 16) & 0xFF)] << 16) | 
+				ALPHA_OPAQUE;
 		}
 	}
 	return pTarget;
@@ -366,22 +369,25 @@ void* CBasicProcessing::ApplySaturationAnd3ChannelLUT32bpp(int nWidth, int nHeig
 
 	const int cnScaler = 1 << 16;
 	const int cnMax = 255 * cnScaler;
-	uint32* pTarget = new(std::nothrow) uint32[nWidth * nHeight];
+	uint32* pTarget = new(std::nothrow) uint32[(size_t)nWidth * nHeight];
 	if (pTarget == NULL) return NULL;
-	const uint32* pSrc = (uint32*)pDIBPixels;
-	uint32* pTgt = pTarget;
+
+	#pragma omp parallel for schedule(static)
 	for (int j = 0; j < nHeight; j++) {
+		const uint32* pSrc = (const uint32*)pDIBPixels + (size_t)j * nWidth;
+		uint32* pTgt = pTarget + (size_t)j * nWidth;
 		for (int i = 0; i < nWidth; i++) {
-			uint32 nSrcPixels = *pSrc;
+			uint32 nSrcPixels = pSrc[i];
 			int32 nSrcBlue = nSrcPixels & 0xFF;
 			int32 nSrcGreen = (nSrcPixels >> 8) & 0xFF;
 			int32 nSrcRed = (nSrcPixels >> 16) & 0xFF;
 			int32 nRed = pSatLUTs[nSrcRed] + pSatLUTs[256 + nSrcGreen] + pSatLUTs[512 + nSrcBlue];
 			int32 nGreen = pSatLUTs[768 + nSrcRed] + pSatLUTs[1024 + nSrcGreen] + pSatLUTs[512 + nSrcBlue];
 			int32 nBlue = pSatLUTs[768 + nSrcRed] + pSatLUTs[256 + nSrcGreen] + pSatLUTs[1280 + nSrcBlue];
-			*pTgt = pLUT[max(0, min(cnMax, nBlue)) >> 16] + pLUT[256 + (max(0, min(cnMax, nGreen)) >> 16)] * 256 + 
-				pLUT[512 + (max(0, min(cnMax, nRed)) >> 16)] * 65536 + ALPHA_OPAQUE;
-			pTgt++; pSrc++;
+			pTgt[i] = (uint32)pLUT[max(0, min(cnMax, nBlue)) >> 16] | 
+				((uint32)pLUT[256 + (max(0, min(cnMax, nGreen)) >> 16)] << 8) | 
+				((uint32)pLUT[512 + (max(0, min(cnMax, nRed)) >> 16)] << 16) | 
+				ALPHA_OPAQUE;
 		}
 	}
 	return pTarget;
@@ -1977,18 +1983,12 @@ static CXMMImage* ApplyFilter_SSE(int nSourceHeight, int nTargetHeight, int nWid
 	const uint8* pSourceStart = (const uint8*)pSourceImg->AlignedPtr() + nStartXAligned * sizeof(short);
 	XMMFilterKernel** pKernelIndexStart = filter.Indices;
 
+	const int nRowLenDestBytes = nNumberOfBlocksX * 3 * (int)sizeof(__m128i);
 	const __m128i xmm0 = _mm_set1_epi16(16383 - 42); // 1.0 in fixed point notation, minus rounding correction
-	__m128i xmm1 = _mm_setzero_si128();
-	__m128i xmm2;
-	__m128i xmm3;
-	__m128i xmm4 = _mm_setzero_si128();
-	__m128i xmm5 = _mm_setzero_si128();
-	__m128i xmm6 = _mm_setzero_si128();
-	__m128i xmm7;
 
-	__m128i* pDestination = (__m128i*)tempImage->AlignedPtr();
-
+	#pragma omp parallel for schedule(static)
 	for (int y = 0; y < nTargetHeight; y++) {
+		int nCurY = nStartY_FP + y * nIncrementY_FP;
 		uint32 nCurYInt = (uint32)nCurY >> 16; // integer part of Y
 		int filterIndex = y + nFilterOffset;
 		XMMFilterKernel* pKernel = pKernelIndexStart[filterIndex];
@@ -1996,18 +1996,19 @@ static CXMMImage* ApplyFilter_SSE(int nSourceHeight, int nTargetHeight, int nWid
 		int filterOffset = pKernel->FilterOffset;
 		const __m128i* pFilterStart = (__m128i*)&(pKernel->Kernel);
 		const __m128i* pSourceRow = (const __m128i*)(pSourceStart + ((int)nCurYInt - filterOffset) * nRowLenBytes);
+		__m128i* pDestination = (__m128i*)((uint8*)tempImage->AlignedPtr() + (size_t)y * nRowLenDestBytes);
 
 		for (int x = 0; x < nNumberOfBlocksX; x++) {
 			const __m128i* pSource = pSourceRow;
 			const __m128i* pFilter = pFilterStart;
-			xmm4 = _mm_setzero_si128();
-			xmm5 = _mm_setzero_si128();
-			xmm6 = _mm_setzero_si128();
+			__m128i xmm4 = _mm_setzero_si128();
+			__m128i xmm5 = _mm_setzero_si128();
+			__m128i xmm6 = _mm_setzero_si128();
 			for (int i = 0; i < filterLen; i++) {
-				xmm7 = *pFilter;
+				__m128i xmm7 = *pFilter;
 
 				// the pixel data RED channel
-				xmm2 = *pSource;
+				__m128i xmm2 = *pSource;
 				xmm2 = _mm_add_epi16(xmm2, xmm2);
 				xmm2 = _mm_mulhi_epi16(xmm2, xmm7);
 				xmm2 = _mm_add_epi16(xmm2, xmm2);
@@ -2015,7 +2016,7 @@ static CXMMImage* ApplyFilter_SSE(int nSourceHeight, int nTargetHeight, int nWid
 				pSource = (__m128i*)((uint8*)pSource + nChannelLenBytes);
 
 				// the pixel data GREEN channel
-				xmm3 = *pSource;
+				__m128i xmm3 = *pSource;
 				xmm3 = _mm_add_epi16(xmm3, xmm3);
 				xmm3 = _mm_mulhi_epi16(xmm3, xmm7);
 				xmm3 = _mm_add_epi16(xmm3, xmm3);
@@ -2038,7 +2039,7 @@ static CXMMImage* ApplyFilter_SSE(int nSourceHeight, int nTargetHeight, int nWid
 			xmm5 = _mm_min_epi16(xmm5, xmm0);
 			xmm6 = _mm_min_epi16(xmm6, xmm0);
 
-			xmm1 = _mm_setzero_si128();
+			__m128i xmm1 = _mm_setzero_si128();
 
 			xmm4 = _mm_max_epi16(xmm4, xmm1);
 			xmm5 = _mm_max_epi16(xmm5, xmm1);
@@ -2050,10 +2051,8 @@ static CXMMImage* ApplyFilter_SSE(int nSourceHeight, int nTargetHeight, int nWid
 			*pDestination++ = xmm6;
 
 			pSourceRow++;
-		};
-
-		nCurY += nIncrementY_FP;
-	};
+		}
+	}
 
 	return tempImage;
 }

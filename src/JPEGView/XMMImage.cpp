@@ -59,14 +59,15 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirs
 					pDstR[i] = (uint16)(((sourcePixel >> 16) & 0xFF) << 6);
 				}
 			} else {
-				for (int i = 0; i < nSectionWidth; i++) {
-					int s = i*3;
-					int d = i;
-					pDst[d] = ((uint16)pSrc[s] << 6);
-					d += m_nPaddedWidth;
-					pDst[d] = ((uint16)pSrc[s+1] << 6);
-					d += m_nPaddedWidth;
-					pDst[d] = ((uint16)pSrc[s+2] << 6);
+				uint16* pDstB = pDst;
+				uint16* pDstG = pDst + m_nPaddedWidth;
+				uint16* pDstR = pDst + 2 * m_nPaddedWidth;
+				int i = 0;
+				for (; i < nSectionWidth; i++) {
+					int s = i * 3;
+					pDstB[i] = ((uint16)pSrc[s]) << 6;
+					pDstG[i] = ((uint16)pSrc[s + 1]) << 6;
+					pDstR[i] = ((uint16)pSrc[s + 2]) << 6;
 				}
 			}
 		}

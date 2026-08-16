@@ -42,6 +42,9 @@ public:
 	CJPEGImage* RequestImage(CFileList* pFileList, EReadAheadDirection eDirection, LPCTSTR strFileName, int nFrameIndex,
 		const CProcessParams & processParams, bool& bOutOfMemory, bool& bExceptionError);
 
+	// Asynchronously kicks off loading/decoding of the image without blocking
+	void PrefetchImage(LPCTSTR strFileName, int nFrameIndex, const CProcessParams & processParams);
+
 	// Notifies that the specified image is no longer used and its memory can be freed.
 	// The CJPEGProvider class may decide to keep the image cached.
 	// In all cases, accessing the image after having called this method may causes access violation.

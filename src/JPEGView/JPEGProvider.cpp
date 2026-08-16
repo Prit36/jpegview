@@ -31,6 +31,13 @@ CJPEGProvider::~CJPEGProvider(void) {
 	}
 }
 
+void CJPEGProvider::PrefetchImage(LPCTSTR strFileName, int nFrameIndex, const CProcessParams & processParams) {
+	if (strFileName == NULL) return;
+	if (FindRequest(strFileName, nFrameIndex) == NULL) {
+		StartNewRequest(strFileName, nFrameIndex, processParams);
+	}
+}
+
 CJPEGImage* CJPEGProvider::RequestImage(CFileList* pFileList, EReadAheadDirection eDirection,
                                         LPCTSTR strFileName, int nFrameIndex, const CProcessParams & processParams,
                                         bool& bOutOfMemory, bool& bExceptionError) {
