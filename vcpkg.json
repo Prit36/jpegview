@@ -1,0 +1,23 @@
+﻿{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "jpegview",
+  "version-string": "2.0.0",
+  "description": "Modernized high-performance image viewer for Windows with Direct2D, HDR, and modern codecs.",
+  "homepage": "https://github.com/sylikc/jpegview",
+  "license": "GPL-2.0-or-later",
+  "dependencies": [
+    "libjpeg-turbo",
+    "libspng",
+    "libdeflate",
+    "libwebp",
+    "libjxl",
+    "libavif",
+    "dav1d",
+    "libheif",
+    "libraw",
+    "lcms2",
+    "highway",
+    "mimalloc",
+    "wtl"
+  ]
+}

@@ -1,32 +1,27 @@
-JPEGView source code readme
-***************************
+JPEGView Modern Compilation Guide
+*********************************
 
-To compile JPEGView you need:
+Requirements:
+- Visual Studio 2022 (v143/v144 toolset) with C++20 support
+- CMake 3.28+ (or Ninja)
+- Windows 10/11 SDK (10.0.22621+)
+- Windows Template Library (WTL) submodule (located in deps/WTL-sf)
+- Optional: vcpkg for package management (vcpkg.json manifest mode)
 
-- Visual Studio 2019 professional or community editions (JPEGView 32 and 64 bit versions supported)
-- Visual Studio 2017 professional or community editions (JPEGView 32 and 64 bit versions supported)
-  (Configured to build XP-compatible versions only, does not include all current features, does not include MSI installer)
-- Windows Template Library (WTL), Version 8.1+ (http://sourceforge.net/projects/wtl/) installed to
-  $(ProjectDir)..\..\deps\WTL-sf (This can be be automatically populated by cloning the submodule)
+Building with CMake:
+-------------------
+1. Clone submodules:
+   git submodule update --init --recursive
 
+2. Configure and build with CMake:
+   cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+   cmake --build build --config Release
 
-To compile the MSI installer, you need:
-- WiX Toolset v3.11 or later (https://wixtoolset.org/releases/)
-- WiX Toolset Visual Studio Extension for your version of Visual Studio
-
-
-Please note:
-- Windows XP SP2 or later is needed to run the 32-bit version (When built from VS2017).
-- 64-bit Windows 7 or later is needed to run the 64-bit version.
-
-
-NOTE: VS2019 is the current active JPEGView development environment.
-
-
-Legacy Solution files
-*********************
-
-NOTE: after the tag "last-cpp14-code", there is code that requires C++17.  This code will not work on previous versions of Visual Studio.
+Building with Visual Studio 2022:
+--------------------------------
+1. Open src/JPEGView.sln in Visual Studio 2022
+2. Select 'Release' and 'x64' configuration
+3. Build Solution (Ctrl+Shift+B)
       An #ifdef is used to disable that feature when compiling for standard below C++17
 
 Older solution files have been removed from the source tree.  If you still need them, clone the tag v1.2.45

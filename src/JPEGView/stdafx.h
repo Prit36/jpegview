@@ -8,15 +8,30 @@
 #pragma warning(disable:4018)
 #pragma warning(disable:4800)
 
-// Change these values to use different versions
-#define WINVER		0x0501
-#define _WIN32_WINNT	0x0501
-#define _WIN32_IE	0x0600
-#define _RICHEDIT_VER	0x0300
+// Modern Windows 10/11 Targeting
+#ifndef WINVER
+#define WINVER          0x0A00
+#endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT    0x0A00
+#endif
+#ifndef _WIN32_IE
+#define _WIN32_IE       0x0A00
+#endif
+#define _RICHEDIT_VER   0x0300
 
 #define _CRT_SECURE_NO_DEPRECATE
 
 #include <tchar.h>
+#include <dwmapi.h>
+#include <d2d1_3.h>
+#include <dwrite_3.h>
+#include <d3d11_4.h>
+#include <dxgi1_6.h>
+#include <wrl/client.h>
+#include <span>
+#include <memory>
+#include <string_view>
 #include <atlbase.h>
 #pragma warning(push)
 #pragma warning(disable:4996)

@@ -3,6 +3,13 @@
 **/Debug
 **/Release
 
+# CMake & build output directories
+build/
+out/
+CMakeUserPresets.json
+vcpkg_installed/
+.cache/
+
 # Compiled Object files
 *.slo
 *.lo
