@@ -1,11 +1,14 @@
 """
 Interactive HTML Dashboard Report Generator for JPEGView Benchmarks.
 Produces a modern, dark-theme visual report with interactive charts and breakdowns.
+Modern Python 3.12+ implementation.
 """
+
+from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any
 
 
 class HTMLReporter:
@@ -13,48 +16,25 @@ class HTMLReporter:
 
     def generate_report(
         self,
-        comparison: Dict[str, Any],
-        all_results: Dict[str, Any],
-        system_info: Dict[str, Any],
+        comparison: dict[str, Any],
+        all_results: dict[str, Any],
+        system_info: dict[str, Any],
         out_path: Path
     ) -> Path:
-        baseline = comparison.get("baseline_target", "original-fork")
-        targets = comparison.get("targets", [])
+        baseline: str = comparison.get("baseline_target", "original-fork")
+        targets: list[str] = comparison.get("targets", [])
 
-        # Prepare data for Chart.js
         target_labels_json = json.dumps(targets)
 
-        # TTFP data
         ttfp_means = [
             all_results.get(t, {}).get("e2e", {}).get("large_image_load", {}).get("ttfp_ms", {}).get("mean", 0.0)
             for t in targets
         ]
-        ttfp_mins = [
-            all_results.get(t, {}).get("e2e", {}).get("large_image_load", {}).get("ttfp_ms", {}).get("min", 0.0)
-            for t in targets
-        ]
 
-        # FPS data
         fps_means = [
             all_results.get(t, {}).get("e2e", {}).get("folder_navigation", {}).get("fps", {}).get("mean", 0.0)
             for t in targets
         ]
-
-        # Memory data
-        ram_means = [
-            all_results.get(t, {}).get("e2e", {}).get("large_image_load", {}).get("peak_working_set_mb", {}).get("mean", 0.0)
-            for t in targets
-        ]
-
-        # Micro-benchmark data if available
-        micro_tests = []
-        micro_data_by_target = {}
-        for t in targets:
-            mb_list = all_results.get(t, {}).get("micro", {}).get("micro_benchmarks", [])
-            for item in mb_list:
-                name = item.get("name")
-                if name not in micro_tests:
-                    micro_tests.append(name)
 
         html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -150,9 +130,6 @@ class HTMLReporter:
       font-weight: 600;
     }}
     tr:hover td {{ background-color: rgba(56, 139, 253, 0.05); }}
-    .tag-faster {{ color: var(--accent-green); font-weight: 600; }}
-    .tag-slower {{ color: var(--accent-red); font-weight: 600; }}
-    .tag-parity {{ color: var(--accent-yellow); font-weight: 600; }}
     .chart-container {{ position: relative; height: 260px; width: 100%; }}
   </style>
 </head>
@@ -170,7 +147,6 @@ class HTMLReporter:
       </div>
     </header>
 
-    <!-- System Telemetry Card -->
     <div class="card" style="margin-bottom: 24px;">
       <div class="card-title">Hardware & System Telemetry</div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
@@ -182,7 +158,6 @@ class HTMLReporter:
       </div>
     </div>
 
-    <!-- Charts Grid -->
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Large Image TTFP (Lower is Better) <span>Latency (ms)</span></div>
@@ -198,7 +173,6 @@ class HTMLReporter:
       </div>
     </div>
 
-    <!-- Results Table -->
     <div class="card" style="margin-bottom: 24px;">
       <div class="card-title">Target Comparison Matrix</div>
       <table>
@@ -214,8 +188,6 @@ class HTMLReporter:
         </thead>
         <tbody>
 """
-
-        base_ttfp = all_results.get(baseline, {}).get("e2e", {}).get("large_image_load", {}).get("ttfp_ms", {}).get("mean", 0.0)
 
         for target in targets:
             ttfp_d = all_results.get(target, {}).get("e2e", {}).get("large_image_load", {})
@@ -248,7 +220,6 @@ class HTMLReporter:
     const ttfpMeans = {json.dumps(ttfp_means)};
     const fpsMeans = {json.dumps(fps_means)};
 
-    // Chart: TTFP
     new Chart(document.getElementById('chartTtfp'), {{
       type: 'bar',
       data: {{
@@ -272,7 +243,6 @@ class HTMLReporter:
       }}
     }});
 
-    // Chart: FPS
     new Chart(document.getElementById('chartFps'), {{
       type: 'bar',
       data: {{
@@ -301,8 +271,7 @@ class HTMLReporter:
 """
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
+        out_path.write_text(html_content, encoding="utf-8")
 
         print(f"[+] Exported interactive HTML report to {out_path}")
         return out_path

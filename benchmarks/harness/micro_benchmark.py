@@ -1,22 +1,25 @@
 """
 Native Micro-Benchmark Subsystem Runner.
 Compiles and invokes the C++ benchmark executable, collecting metrics across test categories.
+Modern Python 3.12+ implementation.
 """
 
+from __future__ import annotations
+
 import os
-import sys
 import json
 import time
 import tempfile
 import subprocess
+import shutil
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 
 class MicroBenchmarkRunner:
     """Manages building and execution of native C++ micro-benchmarks."""
 
-    def __init__(self, repo_root: Optional[Path] = None):
+    def __init__(self, repo_root: Path | str | None = None) -> None:
         if repo_root is None:
             self.repo_root = Path(__file__).resolve().parent.parent.parent
         else:
@@ -27,7 +30,7 @@ class MicroBenchmarkRunner:
         self.engine_exe = self.engine_bin_dir / "JPEGViewBenchmark.exe"
         self.cmake_path = self._find_cmake()
 
-    def _find_cmake(self) -> Optional[str]:
+    def _find_cmake(self) -> str | None:
         paths = [
             r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
             r"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
@@ -36,7 +39,6 @@ class MicroBenchmarkRunner:
         for p in paths:
             if os.path.isfile(p):
                 return p
-        import shutil
         return shutil.which("cmake")
 
     def build_engine(self, force: bool = False) -> Path:
@@ -65,14 +67,13 @@ class MicroBenchmarkRunner:
         )
 
         if not self.engine_exe.exists():
-            # Search if built in different location
             candidates = list(build_dir.glob("**/JPEGViewBenchmark.exe")) + list(self.repo_root.glob("**/JPEGViewBenchmark.exe"))
             if candidates:
                 self.engine_exe = candidates[0]
 
         return self.engine_exe
 
-    def run_micro_suite(self, iterations: int = 10) -> Dict[str, Any]:
+    def run_micro_suite(self, iterations: int = 10) -> dict[str, Any]:
         """Runs the micro-benchmark suite and returns structured metrics."""
         self.build_engine()
 
@@ -87,11 +88,10 @@ class MicroBenchmarkRunner:
         print(f"[*] Running Native Micro-Benchmarks ({iterations} iterations per kernel)...")
         proc = subprocess.run(cmd, capture_output=True, text=True)
 
-        results = {}
+        results: dict[str, Any] = {}
         if temp_json.exists():
             try:
-                with open(temp_json, "r", encoding="utf-8") as f:
-                    results = json.load(f)
+                results = json.loads(temp_json.read_text(encoding="utf-8"))
                 temp_json.unlink(missing_ok=True)
             except Exception:
                 pass
@@ -100,9 +100,3 @@ class MicroBenchmarkRunner:
             print(f"[-] Output parsing fallback: {proc.stdout}")
 
         return results
-
-
-if __name__ == "__main__":
-    runner = MicroBenchmarkRunner()
-    res = runner.run_micro_suite(iterations=3)
-    print("Parsed Micro Results:", len(res.get("micro_benchmarks", [])))

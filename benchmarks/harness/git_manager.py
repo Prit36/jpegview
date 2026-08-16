@@ -1,21 +1,21 @@
 """
-Git Worktree and Target Version Manager.
-Extracts and isolates comparison targets (Original Fork, Last Commit, Current Changes)
-into separate build worktrees without modifying the active working copy.
+Git Repository & Worktree Isolation Manager for Benchmarks.
+Creates and manages isolated worktree environments for target comparisons without disturbing dirty working trees.
+Modern Python 3.12+ implementation.
 """
 
-import os
-import sys
+from __future__ import annotations
+
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any
 
 
 class GitManager:
-    """Manages git checkouts and isolated worktrees for benchmark comparison."""
+    """Manages git branches, commits, worktrees, and working tree snapshots."""
 
-    def __init__(self, repo_root: Optional[Path] = None):
+    def __init__(self, repo_root: Path | str | None = None) -> None:
         if repo_root is None:
             self.repo_root = Path(__file__).resolve().parent.parent.parent
         else:
@@ -24,80 +24,66 @@ class GitManager:
         self.worktrees_dir = self.repo_root / "benchmarks" / ".worktrees"
         self.worktrees_dir.mkdir(parents=True, exist_ok=True)
 
-    def _run_git(self, args: list, cwd: Optional[Path] = None) -> Tuple[int, str, str]:
-        work_dir = str(cwd or self.repo_root)
-        proc = subprocess.run(
-            ["git"] + args,
-            cwd=work_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace"
-        )
+    def _run_git(self, args: list[str], cwd: Path | None = None) -> tuple[int, str, str]:
+        cmd = ["git"] + args
+        work_dir = str(cwd if cwd is not None else self.repo_root)
+        proc = subprocess.run(cmd, cwd=work_dir, capture_output=True, text=True)
         return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
 
-    def get_commit_hash(self, ref: str = "HEAD") -> str:
-        """Resolves a git reference to full commit SHA."""
-        rc, out, _ = self._run_git(["rev-parse", ref])
-        if rc == 0:
-            return out
-        return ref
+    def get_commit_hash(self, git_ref: str = "HEAD") -> str:
+        rc, out, _ = self._run_git(["rev-parse", git_ref])
+        return out if rc == 0 else "unknown"
 
-    def get_commit_summary(self, ref: str = "HEAD") -> str:
-        """Retrieves single-line commit summary."""
-        rc, out, _ = self._run_git(["log", "-n", "1", "--format=%h %s (%an, %cd)", "--date=short", ref])
-        if rc == 0:
-            return out
-        return ref
+    def get_commit_summary(self, git_ref: str = "HEAD") -> str:
+        rc, out, _ = self._run_git(["log", "-1", "--format=%h - %s (%cr)", git_ref])
+        return out if rc == 0 else git_ref
 
     def has_uncommitted_changes(self) -> bool:
-        """Checks if working tree has modified/staged/untracked files."""
         rc, out, _ = self._run_git(["status", "--porcelain"])
-        return rc == 0 and len(out) > 0
+        return rc == 0 and len(out.strip()) > 0
 
-    def resolve_target_ref(self, target_name: str, config: Dict) -> Tuple[str, str]:
-        """
-        Resolves target name into (git_ref, description).
-        Handles 'original-fork', 'last-commit', 'current'.
-        """
-        target_cfg = config.get("targets_config", {}).get(target_name, {})
-        git_ref = target_cfg.get("git_ref", target_name)
-        desc = target_cfg.get("description", target_name)
+    def resolve_target_ref(self, target_name: str, config: dict[str, Any]) -> tuple[str, str]:
+        """Resolves target names to specific git refs and human descriptions."""
+        target_defs = config.get("target_definitions", {})
 
-        if target_name == "original-fork":
-            # Check if upstream/master exists, otherwise fallback to efd55a1
-            rc, _, _ = self._run_git(["rev-parse", "--verify", "upstream/master"])
-            if rc == 0:
-                git_ref = "upstream/master"
-            else:
-                git_ref = target_cfg.get("fallback_ref", "efd55a1")
+        match target_name:
+            case "original-fork":
+                git_ref = target_defs.get("original-fork", {}).get("git_ref", "upstream/master")
+                rc, _, _ = self._run_git(["rev-parse", "--verify", git_ref])
+                if rc != 0:
+                    git_ref = "efd55a1"
+                desc = "Upstream master fork baseline before modern optimizations"
 
-        elif target_name == "last-commit":
-            git_ref = "HEAD~1"
+            case "last-commit":
+                git_ref = target_defs.get("last-commit", {}).get("git_ref", "HEAD~1")
+                desc = "Previous git commit in current branch history"
 
-        elif target_name == "current":
-            git_ref = "WORKING_TREE"
+            case "current":
+                git_ref = "WORKING_TREE"
+                desc = "Current working copy with uncommitted changes"
+
+            case _ if target_name in target_defs:
+                t_info = target_defs[target_name]
+                git_ref = t_info.get("git_ref", target_name)
+                desc = t_info.get("description", f"Target ref: {git_ref}")
+
+            case _:
+                git_ref = target_name
+                desc = f"Custom git target ref: {target_name}"
 
         return git_ref, desc
 
     def prepare_target_source(self, target_name: str, git_ref: str) -> Path:
         """
         Prepares an isolated directory containing the exact source tree for the target.
-        For 'WORKING_TREE', uses the current repo root (or an rsync/copy if desired).
-        For git refs, creates a git worktree.
         """
         if git_ref == "WORKING_TREE":
             return self.repo_root
 
         target_dir = self.worktrees_dir / target_name
 
-        # If worktree already exists, verify its commit
         if target_dir.exists() and (target_dir / ".git").exists():
             resolved_sha = self.get_commit_hash(git_ref)
-            current_sha = self.get_commit_hash(f"{target_dir}:HEAD") if (target_dir / ".git").exists() else ""
-            
-            # Prune and recreate if commit differs
             print(f"[*] Updating worktree '{target_name}' to {git_ref} ({resolved_sha[:8]})...")
             self._run_git(["worktree", "remove", "--force", str(target_dir)])
             if target_dir.exists():
@@ -106,7 +92,6 @@ class GitManager:
         print(f"[*] Creating isolated git worktree for '{target_name}' at {git_ref}...")
         rc, out, err = self._run_git(["worktree", "add", "--force", "--detach", str(target_dir), git_ref])
         if rc != 0:
-            # Fallback: clone local repo to destination
             print(f"[-] worktree add failed ({err}), falling back to direct checkout clone...")
             if target_dir.exists():
                 shutil.rmtree(target_dir, ignore_errors=True)
@@ -136,8 +121,7 @@ class GitManager:
   </ItemDefinitionGroup>
 </Project>
 """
-            with open(target_dir / "Directory.Build.props", "w", encoding="utf-8") as f:
-                f.write(props_content)
+            (target_dir / "Directory.Build.props").write_text(props_content, encoding="utf-8")
 
             # Also ensure stdafx.cpp has ATL thunks
             root_stdafx_cpp = self.repo_root / "src" / "JPEGView" / "stdafx.cpp"
@@ -147,15 +131,8 @@ class GitManager:
 
         return target_dir
 
-    def cleanup_worktrees(self):
+    def cleanup_worktrees(self) -> None:
         """Removes temporary worktrees."""
         if self.worktrees_dir.exists():
             self._run_git(["worktree", "prune"])
             shutil.rmtree(self.worktrees_dir, ignore_errors=True)
-
-
-if __name__ == "__main__":
-    gm = GitManager()
-    print("Repo Root:", gm.repo_root)
-    print("HEAD:", gm.get_commit_summary("HEAD"))
-    print("Has uncommitted:", gm.has_uncommitted_changes())

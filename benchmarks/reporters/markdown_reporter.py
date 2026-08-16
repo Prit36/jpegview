@@ -1,10 +1,13 @@
 """
 Markdown Report Generator for JPEGView Benchmarks.
 Generates GitHub Flavored Markdown reports with summary tables, delta percentages, and alerts.
+Modern Python 3.12+ implementation.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any
 
 
 class MarkdownReporter:
@@ -12,13 +15,13 @@ class MarkdownReporter:
 
     def generate_report(
         self,
-        comparison: Dict[str, Any],
-        all_results: Dict[str, Any],
-        system_info: Dict[str, Any],
+        comparison: dict[str, Any],
+        all_results: dict[str, Any],
+        system_info: dict[str, Any],
         out_path: Path
     ) -> Path:
-        baseline = comparison.get("baseline_target", "original-fork")
-        targets = comparison.get("targets", [])
+        baseline: str = comparison.get("baseline_target", "original-fork")
+        targets: list[str] = comparison.get("targets", [])
 
         lines = [
             "# JPEGView Systematic Performance Benchmark Report",
@@ -98,7 +101,6 @@ class MarkdownReporter:
 
             lines.append(f"| **`{target}`** | {fps_mean:.1f} FPS | {avg_frame:.2f} ms | {p99_frame:.2f} ms | {jitter:.2f} ms | {delta_str} |")
 
-        # Regressions & Highlights
         regressions = comparison.get("regression_alerts", [])
         speedups = comparison.get("speedup_highlights", [])
 
@@ -120,8 +122,7 @@ class MarkdownReporter:
                 lines.append(f"> - `[{sp.get('target')}]` **{sp.get('metric')}**: `{sp.get('delta_pct'):+.1f}%` (Speedup: `{sp.get('speedup_ratio')}x`)")
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+        out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
         print(f"[+] Exported Markdown report to {out_path}")
         return out_path

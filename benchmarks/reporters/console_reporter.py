@@ -1,26 +1,28 @@
 """
 Console Reporter with ANSI-Colored Comparison Tables.
+Modern Python 3.12+ implementation.
 """
 
-from typing import Dict, Any, List
+from __future__ import annotations
+
+from typing import Any
 
 
 class ConsoleReporter:
     """Renders benchmark comparisons and results directly to terminal."""
 
-    # ANSI Colors
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    GREEN = "\033[32m"
-    RED = "\033[31m"
-    YELLOW = "\033[33m"
-    CYAN = "\033[36m"
-    MAGENTA = "\033[35m"
+    RESET: str = "\033[0m"
+    BOLD: str = "\033[1m"
+    GREEN: str = "\033[32m"
+    RED: str = "\033[31m"
+    YELLOW: str = "\033[33m"
+    CYAN: str = "\033[36m"
+    MAGENTA: str = "\033[35m"
 
-    def print_comparison_table(self, comparison: Dict[str, Any], all_results: Dict[str, Any]):
+    def print_comparison_table(self, comparison: dict[str, Any], all_results: dict[str, Any]) -> None:
         """Prints formatted comparison table across all targets."""
-        baseline = comparison.get("baseline_target", "original-fork")
-        targets = comparison.get("targets", [])
+        baseline: str = comparison.get("baseline_target", "original-fork")
+        targets: list[str] = comparison.get("targets", [])
 
         print("\n" + "=" * 90)
         print(f"{self.BOLD}{self.CYAN} JPEGView Benchmark Systematic Target Comparison{self.RESET}")

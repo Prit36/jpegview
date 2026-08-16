@@ -2,14 +2,16 @@
 """
 JPEGView Systematic Performance Benchmark Suite
 Unified CLI entry point for running, comparing, and profiling JPEGView across git targets.
+Modern Python 3.12+ implementation.
 """
 
-import os
+from __future__ import annotations
+
 import sys
 import json
-import time
 import argparse
 from pathlib import Path
+from typing import Any
 
 # Add benchmarks directory to python path
 BENCHMARKS_DIR = Path(__file__).resolve().parent
@@ -29,14 +31,16 @@ from reporters.json_reporter import JSONReporter
 from reporters.html_reporter import HTMLReporter
 
 
-def load_json(path: Path) -> dict:
+def load_json(path: Path) -> dict[str, Any]:
     if path.exists():
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
     return {}
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="JPEGView Systematic Performance Benchmark Suite",
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -102,29 +106,30 @@ def main():
     print("=" * 80)
     print(f"[*] Profile: {profile_name.upper()} ({profile_cfg.get('description', '')})")
 
-    # Ensure test assets
-    assets = asset_gen.ensure_profile_assets(profile_cfg)
-
     # Telemetry
     sys_info = get_system_telemetry()
 
-    if args.command == "generate-assets":
-        print("[+] Test assets generated successfully in benchmarks/assets/")
-        return
+    match args.command:
+        case "generate-assets":
+            asset_gen.ensure_profile_assets(profile_cfg)
+            print("[+] Test assets generated successfully in benchmarks/assets/")
+            return
 
-    elif args.command == "micro":
-        micro_results = micro_runner.run_micro_suite(iterations=args.iterations)
-        return
+        case "micro":
+            micro_runner.run_micro_suite(iterations=args.iterations)
+            return
+
+        case "compare" | "run" | _:
+            pass
+
+    # Ensure test assets
+    assets = asset_gen.ensure_profile_assets(profile_cfg)
 
     # Benchmark Execution (compare or run)
-    target_names = args.targets.split(",") if hasattr(args, "targets") else [args.target]
-    all_target_results = {}
+    target_names: list[str] = [t.strip() for t in (args.targets.split(",") if hasattr(args, "targets") else [args.target]) if t.strip()]
+    all_target_results: dict[str, dict[str, Any]] = {}
 
     for t_name in target_names:
-        t_name = t_name.strip()
-        if not t_name:
-            continue
-
         print(f"\n[{t_name.upper()}] Preparing and evaluating target '{t_name}'...")
         git_ref, desc = git_mgr.resolve_target_ref(t_name, config)
         commit_hash = git_mgr.get_commit_hash(git_ref if git_ref != "WORKING_TREE" else "HEAD")

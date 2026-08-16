@@ -2,7 +2,10 @@
 Process Execution, Windows HWND Automation, and High-Precision Telemetry Monitor.
 Measures process lifecycle, Time-to-First-Paint (TTFP), peak working set RAM, and navigation pacing.
 Compatible with modern JPEGView (/benchmark flag) and legacy binaries (via Win32 GUI automation).
+Modern Python 3.12+ implementation.
 """
+
+from __future__ import annotations
 
 import os
 import sys
@@ -11,7 +14,8 @@ import json
 import tempfile
 import subprocess
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from dataclasses import dataclass, asdict
+from typing import Any
 
 if sys.platform == "win32":
     import ctypes
@@ -33,10 +37,39 @@ if sys.platform == "win32":
         ]
 
 
+@dataclass(slots=True, frozen=True)
+class ImageLoadMetric:
+    ttfp_ms: float
+    load_ms: float
+    last_op_ms: float
+    unsharp_mask_ms: float
+    peak_working_set_mb: float
+    exit_code: int | None
+    has_internal_telemetry: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True, frozen=True)
+class FolderNavMetric:
+    fps: float
+    avg_frame_ms: float
+    p95_frame_ms: float
+    p99_frame_ms: float
+    frame_jitter_ms: float
+    peak_working_set_mb: float
+    frames_measured: int
+    has_internal_telemetry: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 class ProcessRunner:
     """Manages spawning, precision profiling, and telemetry harvesting of JPEGView."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.is_win32 = (sys.platform == "win32")
         if self.is_win32:
             self.psapi = ctypes.WinDLL("psapi.dll")
@@ -53,7 +86,7 @@ class ProcessRunner:
             return (t.value * 1000.0) / self._freq.value
         return time.perf_counter() * 1000.0
 
-    def _get_process_memory_mb(self, h_process) -> Tuple[float, float]:
+    def _get_process_memory_mb(self, h_process: Any) -> tuple[float, float]:
         if not self.is_win32 or not h_process:
             return 0.0, 0.0
         counters = PROCESS_MEMORY_COUNTERS_EX()
@@ -68,12 +101,12 @@ class ProcessRunner:
             return working_set_mb, peak_working_set_mb
         return 0.0, 0.0
 
-    def _find_window_for_pid(self, pid: int) -> Optional[int]:
+    def _find_window_for_pid(self, pid: int) -> int | None:
         if not self.is_win32:
             return None
-        found_hwnds = []
+        found_hwnds: list[int] = []
 
-        def enum_cb(hwnd, extra):
+        def enum_cb(hwnd: int, extra: Any) -> bool:
             if self.user32.IsWindowVisible(hwnd):
                 lpdw_pid = wintypes.DWORD()
                 self.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(lpdw_pid))
@@ -90,7 +123,7 @@ class ProcessRunner:
         exe_path: Path,
         image_path: Path,
         timeout_sec: float = 30.0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Runs Time to First Paint (TTFP) benchmark on an image file.
         Compatible with both modern (/benchmark) and legacy JPEGView binaries.
@@ -99,8 +132,8 @@ class ProcessRunner:
 
         cmd = [
             str(exe_path),
-            f'"{str(image_path)}"',
-            f'/benchmark:"{str(temp_json)}"',
+            f'"{image_path}"',
+            f'/benchmark:"{temp_json}"',
             "/benchmark_exit",
             "/autoexit"
         ]
@@ -120,17 +153,15 @@ class ProcessRunner:
         if self.is_win32:
             h_proc = self.kernel32.OpenProcess(0x0400 | 0x0010, False, proc.pid)
 
-        t_first_paint = None
-        window_handle = None
+        t_first_paint: float | None = None
+        window_handle: int | None = None
 
         try:
-            # Wait for process initialization and first window / exit
             poll_interval = 0.002
             deadline = self._now_ms() + (timeout_sec * 1000.0)
 
             while self._now_ms() < deadline:
                 if proc.poll() is not None:
-                    # Process exited normally (e.g. /benchmark_exit)
                     if t_first_paint is None:
                         t_first_paint = self._now_ms()
                     break
@@ -140,12 +171,10 @@ class ProcessRunner:
                     if cur_peak > peak_rss_mb:
                         peak_rss_mb = cur_peak
 
-                # Check if window is visible and responsive (for legacy binaries)
                 if not window_handle:
                     window_handle = self._find_window_for_pid(proc.pid)
                     if window_handle:
                         t_first_paint = self._now_ms()
-                        # Give legacy window a brief moment to finish paint, then send WM_CLOSE
                         time.sleep(0.05)
                         WM_CLOSE = 0x0010
                         self.user32.PostMessageW(window_handle, WM_CLOSE, 0, 0)
@@ -153,7 +182,6 @@ class ProcessRunner:
                 time.sleep(poll_interval)
 
             if proc.poll() is None:
-                # Force kill if still lingering
                 proc.kill()
                 proc.wait(timeout=2)
 
@@ -164,12 +192,10 @@ class ProcessRunner:
         t_end = self._now_ms()
         external_wall_time_ms = (t_first_paint or t_end) - t_start
 
-        # Parse internal telemetry if available
-        telemetry = {}
+        telemetry: dict[str, Any] = {}
         if temp_json.exists():
             try:
-                with open(temp_json, "r", encoding="utf-8") as f:
-                    telemetry = json.load(f)
+                telemetry = json.loads(temp_json.read_text(encoding="utf-8"))
                 temp_json.unlink(missing_ok=True)
             except Exception:
                 pass
@@ -180,24 +206,25 @@ class ProcessRunner:
         usm_ms = telemetry.get("first_image_unsharp_mask_ms", 0.0)
         reported_ram = telemetry.get("peak_working_set_mb", peak_rss_mb)
 
-        return {
-            "ttfp_ms": ttfp_ms,
-            "load_ms": load_ms,
-            "last_op_ms": last_op_ms,
-            "unsharp_mask_ms": usm_ms,
-            "peak_working_set_mb": max(reported_ram, peak_rss_mb),
-            "exit_code": proc.returncode,
-            "has_internal_telemetry": bool(telemetry)
-        }
+        metric = ImageLoadMetric(
+            ttfp_ms=ttfp_ms,
+            load_ms=load_ms,
+            last_op_ms=last_op_ms,
+            unsharp_mask_ms=usm_ms,
+            peak_working_set_mb=max(reported_ram, peak_rss_mb),
+            exit_code=proc.returncode,
+            has_internal_telemetry=bool(telemetry)
+        )
+        return metric.to_dict()
 
     def run_folder_navigation_benchmark(
         self,
         exe_path: Path,
         folder_or_image_path: Path,
         nav_count: int = 50,
-        nav_steps: Optional[int] = None,
+        nav_steps: int | None = None,
         timeout_sec: float = 30.0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Runs folder navigation benchmark traversing `nav_steps` files.
         Works via internal /benchmark_nav or simulated high-speed VK_RIGHT key messages.
@@ -213,8 +240,8 @@ class ProcessRunner:
 
         cmd = [
             str(exe_path),
-            f'"{str(first_image_path)}"',
-            f'/benchmark:"{str(temp_json)}"',
+            f'"{first_image_path}"',
+            f'/benchmark:"{temp_json}"',
             f'/benchmark_nav:{steps}',
             "/benchmark_exit"
         ]
@@ -233,10 +260,10 @@ class ProcessRunner:
         if self.is_win32:
             h_proc = self.kernel32.OpenProcess(0x0400 | 0x0010, False, proc.pid)
 
-        window_handle = None
+        window_handle: int | None = None
         deadline = self._now_ms() + (timeout_sec * 1000.0)
-
         peak_rss_mb = 0.0
+
         try:
             while self._now_ms() < deadline:
                 if proc.poll() is not None:
@@ -250,7 +277,6 @@ class ProcessRunner:
                 if not window_handle and self.is_win32:
                     window_handle = self._find_window_for_pid(proc.pid)
                     if window_handle:
-                        # Legacy fallback: send VK_RIGHT key events to navigate
                         WM_KEYDOWN = 0x0100
                         WM_KEYUP = 0x0101
                         VK_RIGHT = 0x27
@@ -277,17 +303,16 @@ class ProcessRunner:
         t_end = self._now_ms()
         total_duration_ms = t_end - t_start
 
-        telemetry = {}
+        telemetry: dict[str, Any] = {}
         if temp_json.exists():
             try:
-                with open(temp_json, "r", encoding="utf-8") as f:
-                    telemetry = json.load(f)
+                telemetry = json.loads(temp_json.read_text(encoding="utf-8"))
                 temp_json.unlink(missing_ok=True)
             except Exception:
                 pass
 
         if telemetry and "nav_render_times_ms" in telemetry:
-            render_times = telemetry.get("nav_render_times_ms", [])
+            render_times: list[float] = telemetry.get("nav_render_times_ms", [])
             avg_frame_ms = telemetry.get("avg_frame_ms", 1.0)
             fps = telemetry.get("fps", 0.0)
         else:
@@ -296,7 +321,6 @@ class ProcessRunner:
             fps = (1000.0 / avg_frame_ms) if avg_frame_ms > 0 else 0.0
             render_times = [avg_frame_ms] * steps_done
 
-        # Compute jitter (standard deviation of frame intervals)
         if len(render_times) > 1:
             mean = sum(render_times) / len(render_times)
             variance = sum((x - mean) ** 2 for x in render_times) / (len(render_times) - 1)
@@ -313,15 +337,14 @@ class ProcessRunner:
 
         reported_ram = telemetry.get("peak_working_set_mb", peak_rss_mb)
 
-        return {
-            "fps": fps,
-            "avg_frame_ms": avg_frame_ms,
-            "p95_frame_ms": p95_frame_ms,
-            "p99_frame_ms": p99_frame_ms,
-            "frame_jitter_ms": jitter_ms,
-            "peak_working_set_mb": max(reported_ram, peak_rss_mb),
-            "frames_measured": len(render_times),
-            "has_internal_telemetry": bool(telemetry)
-        }
-
-
+        metric = FolderNavMetric(
+            fps=fps,
+            avg_frame_ms=avg_frame_ms,
+            p95_frame_ms=p95_frame_ms,
+            p99_frame_ms=p99_frame_ms,
+            frame_jitter_ms=jitter_ms,
+            peak_working_set_mb=max(reported_ram, peak_rss_mb),
+            frames_measured=len(render_times),
+            has_internal_telemetry=bool(telemetry)
+        )
+        return metric.to_dict()

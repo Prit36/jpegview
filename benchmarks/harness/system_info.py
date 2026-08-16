@@ -1,44 +1,55 @@
 """
 System and Hardware Telemetry Collector for Benchmarks.
 Detects CPU model, core topology, SIMD features (AVX2, AVX-512), RAM capacity, and OS version.
+Modern Python 3.12+ implementation with structured dataclasses.
 """
+
+from __future__ import annotations
 
 import os
 import sys
 import platform
-import subprocess
 import ctypes
-from typing import Dict, Any
+from dataclasses import dataclass, asdict
+from contextlib import suppress
+from typing import Any
 
 
-def get_system_telemetry() -> Dict[str, Any]:
+@dataclass(slots=True, frozen=True)
+class SystemTelemetry:
+    """Structured telemetry data container."""
+    os_name: str
+    os_version: str
+    os_release: str
+    architecture: str
+    python_version: str
+    cpu_model: str
+    cpu_cores_logical: int
+    cpu_cores_physical: int
+    ram_total_gb: float
+    ram_available_gb: float
+    avx2_supported: bool
+    avx512_supported: bool
+    qpc_frequency_hz: int
+    query_error: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def get_system_telemetry() -> dict[str, Any]:
     """Collects comprehensive hardware and OS information."""
-    info: Dict[str, Any] = {
-        "os_name": platform.system(),
-        "os_version": platform.version(),
-        "os_release": platform.release(),
-        "architecture": platform.machine(),
-        "python_version": platform.python_version(),
-        "cpu_model": "Unknown CPU",
-        "cpu_cores_logical": os.cpu_count() or 1,
-        "cpu_cores_physical": os.cpu_count() or 1,
-        "ram_total_gb": 0.0,
-        "ram_available_gb": 0.0,
-        "avx2_supported": False,
-        "avx512_supported": False,
-        "qpc_frequency_hz": 0
-    }
+    cpu_cores = os.cpu_count() or 1
+    cpu_model = os.environ.get("PROCESSOR_IDENTIFIER") or platform.processor() or "Unknown CPU"
+    ram_total = 0.0
+    ram_avail = 0.0
+    avx2_supported = False
+    avx512_supported = False
+    qpc_freq = 0
+    query_error: str | None = None
 
-    # Query Windows-specific CPU and Memory Info
     if sys.platform == "win32":
         try:
-            # Query CPU via wmic or environment
-            cpu_brand = os.environ.get("PROCESSOR_IDENTIFIER", "")
-            if not cpu_brand:
-                cpu_brand = platform.processor()
-            info["cpu_model"] = cpu_brand
-
-            # Query RAM via GlobalMemoryStatusEx
             class MEMORYSTATUSEX(ctypes.Structure):
                 _fields_ = [
                     ("dwLength", ctypes.c_ulong),
@@ -55,28 +66,38 @@ def get_system_telemetry() -> Dict[str, Any]:
             stat = MEMORYSTATUSEX()
             stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
             if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
-                info["ram_total_gb"] = round(stat.ullTotalPhys / (1024 ** 3), 2)
-                info["ram_available_gb"] = round(stat.ullAvailPhys / (1024 ** 3), 2)
+                ram_total = round(stat.ullTotalPhys / (1024 ** 3), 2)
+                ram_avail = round(stat.ullAvailPhys / (1024 ** 3), 2)
 
-            # Query QPC frequency
             freq = ctypes.c_int64()
             if ctypes.windll.kernel32.QueryPerformanceFrequency(ctypes.byref(freq)):
-                info["qpc_frequency_hz"] = freq.value
+                qpc_freq = freq.value
 
-            # Check AVX2 / AVX512 support via IsProcessorFeaturePresent or CPUID
-            # Windows API feature flags
-            # PF_AVX2_INSTRUCTIONS_AVAILABLE = 40
-            # PF_AVX512F_INSTRUCTIONS_AVAILABLE = 41
-            try:
-                info["avx2_supported"] = bool(ctypes.windll.kernel32.IsProcessorFeaturePresent(40))
-                info["avx512_supported"] = bool(ctypes.windll.kernel32.IsProcessorFeaturePresent(41))
-            except Exception:
-                info["avx2_supported"] = True
+            with suppress(Exception):
+                # PF_AVX2_INSTRUCTIONS_AVAILABLE = 40, PF_AVX512F_INSTRUCTIONS_AVAILABLE = 41
+                avx2_supported = bool(ctypes.windll.kernel32.IsProcessorFeaturePresent(40))
+                avx512_supported = bool(ctypes.windll.kernel32.IsProcessorFeaturePresent(41))
 
         except Exception as e:
-            info["query_error"] = str(e)
+            query_error = str(e)
 
-    return info
+    telemetry = SystemTelemetry(
+        os_name=platform.system(),
+        os_version=platform.version(),
+        os_release=platform.release(),
+        architecture=platform.machine(),
+        python_version=platform.python_version(),
+        cpu_model=cpu_model,
+        cpu_cores_logical=cpu_cores,
+        cpu_cores_physical=cpu_cores,
+        ram_total_gb=ram_total,
+        ram_available_gb=ram_avail,
+        avx2_supported=avx2_supported,
+        avx512_supported=avx512_supported,
+        qpc_frequency_hz=qpc_freq,
+        query_error=query_error
+    )
+    return telemetry.to_dict()
 
 
 if __name__ == "__main__":

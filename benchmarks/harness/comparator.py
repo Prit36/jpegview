@@ -1,15 +1,31 @@
 """
 Target Performance Comparator and Regression Analyzer.
 Computes multi-target metric deltas, percentage speedups/regressions, and regression alerts.
+Modern Python 3.12+ implementation.
 """
 
-from typing import Dict, Any, List, Optional, Tuple
+from __future__ import annotations
+
+from dataclasses import dataclass, field, asdict
+from typing import Any
+
+
+@dataclass(slots=True)
+class TargetComparisonResult:
+    baseline_target: str
+    targets: list[str]
+    comparisons: dict[str, Any] = field(default_factory=dict)
+    regression_alerts: list[dict[str, Any]] = field(default_factory=list)
+    speedup_highlights: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 class PerformanceComparator:
     """Compares benchmark metrics across multiple targets."""
 
-    def __init__(self, thresholds: Optional[Dict[str, float]] = None):
+    def __init__(self, thresholds: dict[str, float] | None = None) -> None:
         self.thresholds = thresholds or {
             "significant_regression_pct": 5.0,
             "warning_regression_pct": 2.5,
@@ -18,9 +34,9 @@ class PerformanceComparator:
 
     def compare_targets(
         self,
-        target_results: Dict[str, Dict[str, Any]],
+        target_results: dict[str, dict[str, Any]],
         baseline_target: str = "original-fork"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Performs systematic comparative analysis against the baseline target.
         """
@@ -28,13 +44,10 @@ class PerformanceComparator:
         if baseline_target not in target_results and targets:
             baseline_target = targets[0]
 
-        comparison: Dict[str, Any] = {
-            "baseline_target": baseline_target,
-            "targets": targets,
-            "comparisons": {},
-            "regression_alerts": [],
-            "speedup_highlights": []
-        }
+        result = TargetComparisonResult(
+            baseline_target=baseline_target,
+            targets=targets
+        )
 
         baseline_data = target_results.get(baseline_target, {})
 
@@ -44,37 +57,35 @@ class PerformanceComparator:
 
             current_data = target_results[target]
             target_cmp = self._compare_single_target(baseline_data, current_data, baseline_target, target)
-            comparison["comparisons"][target] = target_cmp
+            result.comparisons[target] = target_cmp
 
-            # Accumulate alerts
             for alert in target_cmp.get("regressions", []):
-                comparison["regression_alerts"].append({
+                result.regression_alerts.append({
                     "target": target,
                     **alert
                 })
             for highlight in target_cmp.get("speedups", []):
-                comparison["speedup_highlights"].append({
+                result.speedup_highlights.append({
                     "target": target,
                     **highlight
                 })
 
-        return comparison
+        return result.to_dict()
 
     def _compare_single_target(
         self,
-        base: Dict[str, Any],
-        curr: Dict[str, Any],
+        base: dict[str, Any],
+        curr: dict[str, Any],
         base_name: str,
         curr_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compares a specific target against the baseline."""
-        diffs: Dict[str, Any] = {
+        diffs: dict[str, Any] = {
             "metrics": {},
             "regressions": [],
             "speedups": []
         }
 
-        # Compare E2E metrics
         base_e2e = base.get("e2e", {})
         curr_e2e = curr.get("e2e", {})
 
@@ -82,7 +93,7 @@ class PerformanceComparator:
         base_ttfp = base_e2e.get("large_image_load", {}).get("ttfp_ms", {}).get("median", 0.0)
         curr_ttfp = curr_e2e.get("large_image_load", {}).get("ttfp_ms", {}).get("median", 0.0)
         if base_ttfp > 0 and curr_ttfp > 0:
-            delta_pct = ((curr_ttfp - base_ttfp) / base_ttfp) * 100.0 # Negative is faster (good)
+            delta_pct = ((curr_ttfp - base_ttfp) / base_ttfp) * 100.0
             status = "FASTER" if delta_pct < -self.thresholds["warning_regression_pct"] else \
                      ("SLOWER" if delta_pct > self.thresholds["warning_regression_pct"] else "EQUAL")
 
@@ -120,7 +131,7 @@ class PerformanceComparator:
         base_fps = base_e2e.get("folder_navigation", {}).get("fps", {}).get("median", 0.0)
         curr_fps = curr_e2e.get("folder_navigation", {}).get("fps", {}).get("median", 0.0)
         if base_fps > 0 and curr_fps > 0:
-            delta_pct = ((curr_fps - base_fps) / base_fps) * 100.0 # Positive is faster (good)
+            delta_pct = ((curr_fps - base_fps) / base_fps) * 100.0
             status = "FASTER" if delta_pct > self.thresholds["warning_regression_pct"] else \
                      ("SLOWER" if delta_pct < -self.thresholds["warning_regression_pct"] else "EQUAL")
 

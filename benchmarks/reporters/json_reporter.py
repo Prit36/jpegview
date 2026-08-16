@@ -1,11 +1,14 @@
 """
 JSON Report Exporter for JPEGView Benchmarks.
 Stores machine-readable test records, hardware metadata, and raw metric distributions.
+Modern Python 3.12+ implementation.
 """
+
+from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
 class JSONReporter:
@@ -13,12 +16,12 @@ class JSONReporter:
 
     def generate_report(
         self,
-        comparison: Dict[str, Any],
-        all_results: Dict[str, Any],
-        system_info: Dict[str, Any],
+        comparison: dict[str, Any],
+        all_results: dict[str, Any],
+        system_info: dict[str, Any],
         out_path: Path
     ) -> Path:
-        data = {
+        data: dict[str, Any] = {
             "schema_version": "1.0.0",
             "system_info": system_info,
             "comparison_summary": comparison,
@@ -26,8 +29,7 @@ class JSONReporter:
         }
 
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        out_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
         print(f"[+] Exported structured JSON results to {out_path}")
         return out_path
