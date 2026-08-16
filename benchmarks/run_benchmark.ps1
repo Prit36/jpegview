@@ -23,13 +23,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Locate Python (Prioritize Python 3.14+)
+# Locate Python 3.14
 $CandidatePaths = @(
     "C:\Users\My_Home\AppData\Local\Programs\Python\Python314\python.exe",
-    "C:\Program Files\Python314\python.exe",
-    "C:\Users\My_Home\AppData\Local\Programs\Python\Python313\python.exe",
-    "C:\Program Files\Python313\python.exe",
-    "C:\Users\My_Home\AppData\Local\Programs\Python\Python312\python.exe"
+    "C:\Program Files\Python314\python.exe"
 )
 
 $PythonExe = $null
