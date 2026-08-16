@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <windows.h>
 #include <span>
@@ -89,6 +89,12 @@ public:
             Close();
             return false;
         }
+
+        // Asynchronously pre-fault file memory pages into RAM
+        WIN32_MEMORY_RANGE_ENTRY memRange;
+        memRange.VirtualAddress = m_pData;
+        memRange.NumberOfBytes = m_size;
+        ::PrefetchVirtualMemory(::GetCurrentProcess(), 1, &memRange, 0);
 
         return true;
     }

@@ -25,18 +25,12 @@ CXMMImage* ApplyFilter_AVX(int nSourceHeight, int nTargetHeight, int nWidth,
 	const uint8* pSourceStart = (const uint8*)pSourceImg->AlignedPtr() + nStartXAligned * sizeof(short);
 	AVXFilterKernel** pKernelIndexStart = filter.Indices;
 
+	const int nRowLenDestBytes = nNumberOfBlocksX * 3 * (int)sizeof(__m256i);
 	const __m256i ymm0 = _mm256_set1_epi16(16383 - 42); // 1.0 in fixed point notation, minus rounding correction
-	__m256i ymm1 = _mm256_setzero_si256();
-	__m256i ymm2;
-	__m256i ymm3;
-	__m256i ymm4 = _mm256_setzero_si256();
-	__m256i ymm5 = _mm256_setzero_si256();
-	__m256i ymm6 = _mm256_setzero_si256();
-	__m256i ymm7;
 
-	__m256i* pDestination = (__m256i*)tempImage->AlignedPtr();
-
+	#pragma omp parallel for schedule(static)
 	for (int y = 0; y < nTargetHeight; y++) {
+		int nCurY = nStartY_FP + y * nIncrementY_FP;
 		uint32 nCurYInt = (uint32)nCurY >> 16; // integer part of Y
 		int filterIndex = y + nFilterOffset;
 		AVXFilterKernel* pKernel = pKernelIndexStart[filterIndex];
@@ -44,18 +38,19 @@ CXMMImage* ApplyFilter_AVX(int nSourceHeight, int nTargetHeight, int nWidth,
 		int filterOffset = pKernel->FilterOffset;
 		const __m256i* pFilterStart = (__m256i*)&(pKernel->Kernel);
 		const __m256i* pSourceRow = (const __m256i*)(pSourceStart + ((int)nCurYInt - filterOffset) * nRowLenBytes);
+		__m256i* pDestination = (__m256i*)((uint8*)tempImage->AlignedPtr() + (size_t)y * nRowLenDestBytes);
 
 		for (int x = 0; x < nNumberOfBlocksX; x++) {
 			const __m256i* pSource = pSourceRow;
 			const __m256i* pFilter = pFilterStart;
-			ymm4 = _mm256_setzero_si256();
-			ymm5 = _mm256_setzero_si256();
-			ymm6 = _mm256_setzero_si256();
+			__m256i ymm4 = _mm256_setzero_si256();
+			__m256i ymm5 = _mm256_setzero_si256();
+			__m256i ymm6 = _mm256_setzero_si256();
 			for (int i = 0; i < filterLen; i++) {
-				ymm7 = *pFilter;
+				__m256i ymm7 = *pFilter;
 
 				// the pixel data RED channel
-				ymm2 = *pSource;
+				__m256i ymm2 = *pSource;
 				ymm2 = _mm256_add_epi16(ymm2, ymm2);
 				ymm2 = _mm256_mulhi_epi16(ymm2, ymm7);
 				ymm2 = _mm256_add_epi16(ymm2, ymm2);
@@ -63,7 +58,7 @@ CXMMImage* ApplyFilter_AVX(int nSourceHeight, int nTargetHeight, int nWidth,
 				pSource = (__m256i*)((uint8*)pSource + nChannelLenBytes);
 
 				// the pixel data GREEN channel
-				ymm3 = *pSource;
+				__m256i ymm3 = *pSource;
 				ymm3 = _mm256_add_epi16(ymm3, ymm3);
 				ymm3 = _mm256_mulhi_epi16(ymm3, ymm7);
 				ymm3 = _mm256_add_epi16(ymm3, ymm3);
@@ -86,7 +81,7 @@ CXMMImage* ApplyFilter_AVX(int nSourceHeight, int nTargetHeight, int nWidth,
 			ymm5 = _mm256_min_epi16(ymm5, ymm0);
 			ymm6 = _mm256_min_epi16(ymm6, ymm0);
 
-			ymm1 = _mm256_setzero_si256();
+			__m256i ymm1 = _mm256_setzero_si256();
 
 			ymm4 = _mm256_max_epi16(ymm4, ymm1);
 			ymm5 = _mm256_max_epi16(ymm5, ymm1);
@@ -98,10 +93,8 @@ CXMMImage* ApplyFilter_AVX(int nSourceHeight, int nTargetHeight, int nWidth,
 			*pDestination++ = ymm6;
 
 			pSourceRow++;
-		};
-
-		nCurY += nIncrementY_FP;
-	};
+		}
+	}
 
 	return tempImage;
 }

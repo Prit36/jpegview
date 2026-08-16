@@ -1890,18 +1890,19 @@ static CXMMImage* Rotate(const CXMMImage* pSourceImg, int simdPixelsPerRegister)
 	int16* pTarget = (int16*) targetImage->AlignedPtr();
 
 	const int cnBlockSize = 32;
-	int nX = 0, nY = 0;
-	while (nY < pSourceImg->GetHeight()) {
-		nX = 0;
-		while (nX < pSourceImg->GetWidth()) {
-			RotateBlock(pSource, pTarget, pSourceImg->GetWidth(), pSourceImg->GetHeight(),
+	int nHeight = pSourceImg->GetHeight();
+	int nWidth = pSourceImg->GetWidth();
+	int nPaddedWidth = pSourceImg->GetPaddedWidth();
+
+	#pragma omp parallel for schedule(static)
+	for (int nY = 0; nY < nHeight; nY += cnBlockSize) {
+		for (int nX = 0; nX < nWidth; nX += cnBlockSize) {
+			RotateBlock(pSource, pTarget, nWidth, nHeight,
 				nX, nY, 
-				min(cnBlockSize, pSourceImg->GetPaddedWidth() - nX), // !! here we need to use the padded width
-				min(cnBlockSize, pSourceImg->GetHeight() - nY),
+				min(cnBlockSize, nPaddedWidth - nX), // !! here we need to use the padded width
+				min(cnBlockSize, nHeight - nY),
 				simdPixelsPerRegister);
-			nX += cnBlockSize;
 		}
-		nY += cnBlockSize;
 	}
 
 	return targetImage;
@@ -1917,19 +1918,19 @@ static void* RotateToDIB(const CXMMImage* pSourceImg, int simdPixelsPerRegister,
 	}
 
 	const int cnBlockSize = 32;
-	int nX = 0, nY = 0;
-	while (nY < pSourceImg->GetHeight()) {
-		nX = 0;
-		while (nX < pSourceImg->GetWidth()) {
-			RotateBlockToDIB(pSource, pTarget, pSourceImg->GetWidth(), pSourceImg->GetHeight(),
-				nX, nY, 
-				min(cnBlockSize, pSourceImg->GetPaddedWidth() - nX),  // !! here we need to use the padded width
-				min(cnBlockSize, pSourceImg->GetHeight() - nY),
-				simdPixelsPerRegister);
+	int nHeight = pSourceImg->GetHeight();
+	int nWidth = pSourceImg->GetWidth();
+	int nPaddedWidth = pSourceImg->GetPaddedWidth();
 
-			nX += cnBlockSize;
+	#pragma omp parallel for schedule(static)
+	for (int nY = 0; nY < nHeight; nY += cnBlockSize) {
+		for (int nX = 0; nX < nWidth; nX += cnBlockSize) {
+			RotateBlockToDIB(pSource, pTarget, nWidth, nHeight,
+				nX, nY, 
+				min(cnBlockSize, nPaddedWidth - nX),  // !! here we need to use the padded width
+				min(cnBlockSize, nHeight - nY),
+				simdPixelsPerRegister);
 		}
-		nY += cnBlockSize;
 	}
 
 	return pTarget;

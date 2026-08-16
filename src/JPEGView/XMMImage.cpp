@@ -20,14 +20,15 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirs
 
 	if (m_pMemory != NULL) {
 		int nSrcLineWidthPadded = Helpers::DoPadding(nWidth * nChannels, 4);
-		const uint8* pSrc = (uint8*)pDIB + (long long)nFirstY*(long long)nSrcLineWidthPadded + (long long)nFirstX*(long long)nChannels;
-		uint16* pDst = (unsigned short*) m_pMemory;
-
 		const __m128i mask_b = _mm_setr_epi8(0, -1, 4, -1, 8, -1, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 		const __m128i mask_g = _mm_setr_epi8(1, -1, 5, -1, 9, -1, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 		const __m128i mask_r = _mm_setr_epi8(2, -1, 6, -1, 10, -1, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 
+		#pragma omp parallel for schedule(static)
 		for (int j = 0; j < nSectionHeight; j++) {
+			const uint8* pSrc = (const uint8*)pDIB + ((size_t)nFirstY + j) * (size_t)nSrcLineWidthPadded + (size_t)nFirstX * nChannels;
+			uint16* pDst = (unsigned short*)m_pMemory + (size_t)j * 3 * (size_t)m_nPaddedWidth;
+
 			if (nChannels == 4) {
 				const uint32* pSrc32 = (const uint32*)pSrc;
 				uint16* pDstB = pDst;
@@ -68,15 +69,12 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirs
 					pDst[d] = ((uint16)pSrc[s+2] << 6);
 				}
 			}
-			pDst += 3*m_nPaddedWidth;
-			pSrc += nSrcLineWidthPadded;
 		}
 	}
 }
 
 CXMMImage::~CXMMImage(void) {
 	if (m_pMemory != NULL) {
-		// free the memory pages
 		::VirtualFree(m_pMemory, 0, MEM_RELEASE);
 		m_pMemory = NULL;
 	}
@@ -146,7 +144,6 @@ void CXMMImage::Init(int nWidth, int nHeight, bool bPadHeight, int padding) {
 	m_nWidth = nWidth;
 	m_nHeight = nHeight;
 	int nMemSize = GetMemSize();
-
 	// Allocate memory aligned on page boundaries
 	m_pMemory = ::VirtualAlloc(
 						NULL,	  // let the call determine the start address

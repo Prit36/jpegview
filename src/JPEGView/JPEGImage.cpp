@@ -145,14 +145,14 @@ CJPEGImage::CJPEGImage(int nWidth, int nHeight, void* pPixels, void* pEXIFData, 
 	m_dRotationLQ = 0.0;
 	m_bTrapezoidValid = false;
 
-	// Create the LDC object on the image
-	m_pLDC = (pLDC == NULL) ? (new CLocalDensityCorr(*this, true)) : pLDC;
+	// Create the LDC object on the image (lazy second-phase evaluation)
+	m_pLDC = (pLDC == NULL) ? (new CLocalDensityCorr(*this, false)) : pLDC;
 	m_bLDCOwned = pLDC == NULL;
 	if (nJPEGHash == 0) {
 		// Use the decompressed pixel hash in this case
 		m_nPixelHash = m_pLDC->GetPixelHash();
 	}
-	m_fLightenShadowFactor = (1.0f - m_pLDC->GetHistogram()->IsNightShot())*(1.0f - m_pLDC->IsSunset());
+	m_fLightenShadowFactor = 1.0f - m_pLDC->GetHistogram()->IsNightShot();
 
 	// Initialize to INI value, may be overriden later by parameter DB
 	memcpy(m_fColorCorrectionFactors, CSettingsProvider::This().ColorCorrectionAmounts(), sizeof(m_fColorCorrectionFactors));

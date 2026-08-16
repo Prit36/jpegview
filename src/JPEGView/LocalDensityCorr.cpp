@@ -218,7 +218,7 @@ void CLocalDensityCorr::VerifyFullyConstructed() {
 }
 
 const uint8* CLocalDensityCorr::GetLDCMap() {
-	assert(m_pLDCMap != NULL);
+	VerifyFullyConstructed();
 	if (m_pLDCMapMultiplied == NULL) {
 		m_pLDCMapMultiplied = MultiplyMap(0.5, 0.25);
 	}
@@ -226,9 +226,14 @@ const uint8* CLocalDensityCorr::GetLDCMap() {
 }
 
 void CLocalDensityCorr::SetLDCAmount(double dLightenShadows, double dDarkenHighlights) {
-	assert(m_pLDCMap != NULL);
+	VerifyFullyConstructed();
 	delete[] m_pLDCMapMultiplied;
 	m_pLDCMapMultiplied = MultiplyMap(min(1.0, max(0.0, dLightenShadows)), min(1.0, max(0.0, dDarkenHighlights)));
+}
+
+float CLocalDensityCorr::IsSunset() {
+	VerifyFullyConstructed();
+	return m_fIsSunset;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

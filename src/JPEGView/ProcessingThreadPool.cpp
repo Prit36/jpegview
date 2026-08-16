@@ -133,9 +133,8 @@ void CProcessingThread::StartProcess(CWrappedRequest* pRequest) {
 }
 
 void CProcessingThread::DoProcess(CProcessingRequest* pRequest, int nOffsetY, int nSizeY) {
-	// Processing is done in strips to reduce memory consumption and increase cache hit rate.
-	// The following constant gives the number of pixels to process per strip.
-	const uint32 MAX_SRC_PIXELS_PER_STRIP = 1024 * 100;
+	// Processing is done in strips sized to match modern L2/L3 caches and maintain low memory footprint.
+	const uint32 MAX_SRC_PIXELS_PER_STRIP = 1024 * 512;
 	uint32 nNumberOfPixelsInSource = (uint32)((pRequest->SourceSize.cx * (double)pRequest->ClippedTargetSize.cx / pRequest->FullTargetSize.cx) *
 		(pRequest->SourceSize.cy * (double)nSizeY / pRequest->FullTargetSize.cy));
 	uint32 nStrips = 1 + nNumberOfPixelsInSource / MAX_SRC_PIXELS_PER_STRIP;

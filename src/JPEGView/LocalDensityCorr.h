@@ -28,7 +28,7 @@ public:
 	__int64 GetPixelHash() const { return m_nPixelHash; }
 
 	// Gets the size of the LDC map
-	CSize GetLDCMapSize() const { return CSize(m_nLDCWidth, m_nLDCHeight); }
+	CSize GetLDCMapSize() { VerifyFullyConstructed(); return CSize(m_nLDCWidth, m_nLDCHeight); }
 
 	// Get black or white point of image (in grey channel)
 	float GetBlackPt() const { return m_fBlackPt; }
@@ -39,7 +39,7 @@ public:
 
 	// Returns if this could be a sunset picture.
 	// The returned number is between 0 (no sunset) and 1 (sunset)
-	float IsSunset() const { return m_fIsSunset; }
+	float IsSunset();
 
 	bool IsMaskAvailable() const { return m_pLDCMap != NULL; }
 

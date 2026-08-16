@@ -32,6 +32,7 @@ if(MSVC)
         /Zc:preprocessor
         /utf-8
         /EHsc
+        /openmp
         $<$<CONFIG:Release>:/Oi>
         $<$<CONFIG:Release>:/Ot>
         $<$<CONFIG:Release>:/Gy>
