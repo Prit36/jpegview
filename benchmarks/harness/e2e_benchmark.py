@@ -41,10 +41,12 @@ class E2EBenchmarkSuite:
         exe_path: Path,
         assets: dict[str, Path],
         warmup_iterations: int = 2,
-        measure_iterations: int = 5
+        measure_iterations: int = 5,
+        nav_steps: int = 20
     ) -> dict[str, Any]:
         """
         Executes all E2E test suites on the given executable.
+        nav_steps: how many folder images to navigate per run (passed from --nav-steps CLI arg).
         """
         results: dict[str, Any] = {}
 
@@ -93,11 +95,18 @@ class E2EBenchmarkSuite:
         folder = assets.get("folder_dataset")
         if folder and folder.exists():
             file_count = len(list(folder.glob("*.*")))
-            nav_steps = min(50, file_count)
-            print(f"[*] Running Folder Navigation Benchmark on '{folder.name}' ({nav_steps} steps, {measure_iterations} runs)...")
+            actual_steps = min(nav_steps, file_count)
+
+            # Timeout: allow ~0.5s per nav step + 20s startup overhead.
+            # This kills legacy binaries (that don't understand /benchmark_nav
+            # and just sit open forever) within a predictable window instead of
+            # hanging the entire benchmark run.
+            nav_timeout = max(20.0, actual_steps * 0.5 + 20.0)
+            print(f"[*] Running Folder Navigation Benchmark on '{folder.name}' ({actual_steps} steps, {measure_iterations} runs)...")
 
             for _ in range(warmup_iterations):
-                self.runner.run_folder_navigation_benchmark(exe_path, folder, nav_count=nav_steps)
+                self.runner.run_folder_navigation_benchmark(
+                    exe_path, folder, nav_count=actual_steps, timeout_sec=nav_timeout)
 
             fps_samples: list[float] = []
             avg_frame_samples: list[float] = []
@@ -107,7 +116,8 @@ class E2EBenchmarkSuite:
             peak_ram_samples: list[float] = []
 
             for _ in range(measure_iterations):
-                sample = self.runner.run_folder_navigation_benchmark(exe_path, folder, nav_count=nav_steps)
+                sample = self.runner.run_folder_navigation_benchmark(
+                    exe_path, folder, nav_count=actual_steps, timeout_sec=nav_timeout)
                 fps_samples.append(sample["fps"])
                 avg_frame_samples.append(sample["avg_frame_ms"])
                 p95_samples.append(sample["p95_frame_ms"])
@@ -117,7 +127,7 @@ class E2EBenchmarkSuite:
 
             results["folder_navigation"] = {
                 "folder": str(folder.name),
-                "nav_steps": nav_steps,
+                "nav_steps": actual_steps,
                 "iterations": measure_iterations,
                 "fps": self._calc_stats(fps_samples),
                 "avg_frame_ms": self._calc_stats(avg_frame_samples),

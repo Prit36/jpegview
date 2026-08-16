@@ -390,13 +390,17 @@ __int64 CalculateJPEGFileHash(void* pJPEGStream, int nStreamLength) {
 	int nIncrement = (nStreamLength - nIndex)/nTotalLookups;
 	nIncrement = max(1, nIncrement);
 
-	unsigned int crc_table[256];
-	CalcCRCTable(crc_table);
+	static unsigned int s_crc_table[256];
+	static bool s_crc_init = false;
+	if (!s_crc_init) {
+		CalcCRCTable(s_crc_table);
+		s_crc_init = true;
+	}
 	uint32 crcValue = 0xffffffff;
 	unsigned int sumValue = 0;
 	while (nIndex < nStreamLength) {
 		sumValue += pStream[nIndex];
-		crcValue = crc_table[(crcValue ^ pStream[nIndex]) & 0xff] ^ (crcValue >> 8);
+		crcValue = s_crc_table[(crcValue ^ pStream[nIndex]) & 0xff] ^ (crcValue >> 8);
 		nIndex += nIncrement;
 	}
 

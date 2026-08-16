@@ -1138,6 +1138,16 @@ LRESULT CMainDlg::OnImageLoadCompleted(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	return 0;
 }
 
+LRESULT CMainDlg::OnCommand(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled) {
+	int nID = LOWORD(wParam);
+	if (nID == IDOK || nID == IDCANCEL) {
+		bHandled = FALSE;
+		return 0;
+	}
+	ExecuteCommand(nID);
+	return 0;
+}
+
 LRESULT CMainDlg::OnDisplayedFileChangedOnDisk(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) {
 	if (CSettingsProvider::This().ReloadWhenDisplayedImageChanged() && m_pCurrentImage != NULL && !m_pCurrentImage->IsClipboardImage() &&
 		m_pFileList != NULL && m_pFileList->CanOpenCurrentFileForReading()) {

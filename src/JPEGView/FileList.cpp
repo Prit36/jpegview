@@ -4,6 +4,8 @@
 #include "Helpers.h"
 #include "DirectoryWatcher.h"
 #include "Shlwapi.h"
+#include <unordered_set>
+#include <string>
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Helpers
@@ -135,6 +137,7 @@ static const TCHAR* csFileEndingsRAW = _T("*.pef;*.dng;*.crw;*.nef;*.cr2;*.mrw;*
 static const int MAX_ENDINGS = 48;
 static int nNumEndings;
 static LPCTSTR* sFileEndings;
+static std::unordered_set<std::wstring> s_supportedExtensions;
 
 __declspec(dllimport) bool __stdcall WICPresent(void);
 
@@ -163,6 +166,9 @@ static void ParseAndAddFileEndings(LPCTSTR sEndings) {
 			}
 			if (_tcslen(sStart) > 2) {
 				sFileEndings[nNumEndings++] = sStart + 2;
+				CString s(sStart + 2);
+				s.MakeLower();
+				s_supportedExtensions.insert(std::wstring((LPCTSTR)s));
 			}
 			sStart = sCurrent;
 		}
@@ -174,8 +180,12 @@ static void ParseAndAddFileEndings(LPCTSTR sEndings) {
 static LPCTSTR* GetSupportedFileEndingList() {
 	if (sFileEndings == NULL) {
 		sFileEndings = new LPCTSTR[MAX_ENDINGS];
+		s_supportedExtensions.clear();
 		for (nNumEndings = 0; nNumEndings < cnNumEndingsInternal; nNumEndings++) {
 			sFileEndings[nNumEndings] = csFileEndingsInternal[nNumEndings];
+			CString s(csFileEndingsInternal[nNumEndings]);
+			s.MakeLower();
+			s_supportedExtensions.insert(std::wstring((LPCTSTR)s));
 		}
 
 		LPCTSTR sFileEndingsWIC = CSettingsProvider::This().FilesProcessedByWIC();
@@ -814,15 +824,29 @@ CFileList* CFileList::TryCreateFileList(const CString& directory, int nNewLevel)
 void CFileList::FindFiles() {
 	m_fileList.clear();
 	if (!m_sDirectory.IsEmpty()) {
-		CFindFile fileFind;
-		LPCTSTR* allFileEndings = GetSupportedFileEndingList();
-		for (int i = 0; i < nNumEndings; i++) {
-			if (fileFind.FindFile(m_sDirectory + _T("\\*.") + allFileEndings[i])) {
-				AddToFileList(m_fileList, fileFind, allFileEndings[i]);
-				while (fileFind.FindNextFile()) {
-					AddToFileList(m_fileList, fileFind, allFileEndings[i]);
+		if (s_supportedExtensions.empty()) {
+			GetSupportedFileEndingList();
+		}
+
+		WIN32_FIND_DATAW findData;
+		CString searchPattern = m_sDirectory + _T("\\*.*");
+		HANDLE hFind = ::FindFirstFileExW(searchPattern, FindExInfoBasic, &findData, FindExSearchNameMatch, NULL, FIND_FIRST_EX_LARGE_FETCH);
+		if (hFind != INVALID_HANDLE_VALUE) {
+			do {
+				if ((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+					LPCTSTR pDot = _tcsrchr(findData.cFileName, _T('.'));
+					if (pDot != NULL && *(pDot + 1) != 0) {
+						CString ext(pDot + 1);
+						ext.MakeLower();
+						if (s_supportedExtensions.find(std::wstring((LPCTSTR)ext)) != s_supportedExtensions.end()) {
+							CString fullPath = m_sDirectory + _T('\\') + findData.cFileName;
+							__int64 fileSize = ((__int64)findData.nFileSizeHigh << 32) | findData.nFileSizeLow;
+							m_fileList.push_back(CFileDesc(fullPath, &findData.ftLastWriteTime, &findData.ftCreationTime, fileSize));
+						}
+					}
 				}
-			}
+			} while (::FindNextFileW(hFind, &findData));
+			::FindClose(hFind);
 		}
 	}
 
@@ -842,15 +866,12 @@ void CFileList::VerifyFiles() {
 }
 
 bool CFileList::IsImageFile(const CString & sEnding) {
+	if (s_supportedExtensions.empty()) {
+		GetSupportedFileEndingList();
+	}
 	CString sEndingLC = sEnding;
 	sEndingLC.MakeLower();
-	LPCTSTR* allFileEndings = GetSupportedFileEndingList();
-	for (int i = 0; i < nNumEndings; i++) {
-		if (allFileEndings[i] == sEndingLC) {
-			return true;
-		}
-	}
-	return false;
+	return s_supportedExtensions.find(std::wstring((LPCTSTR)sEndingLC)) != s_supportedExtensions.end();
 }
 
 bool CFileList::TryReadingSlideShowList(const CString & sSlideShowFile) {

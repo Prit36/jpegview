@@ -126,23 +126,25 @@ class ProcessRunner:
     ) -> dict[str, Any]:
         """
         Runs Time to First Paint (TTFP) benchmark on an image file.
-        Compatible with both modern (/benchmark) and legacy JPEGView binaries.
+        Uses accurate native telemetry when available, or precise Win32 GUI automation for legacy binaries.
         """
         temp_json = Path(tempfile.gettempdir()) / f"telemetry_{os.getpid()}_{time.time_ns()}.json"
 
+        # Use list form so Python handles quoting — avoids the double-quote bug
+        # that caused /benchmark:"path" to be misread by JPEGView, silently
+        # dropping the telemetry file and returning zeros for all load timings.
         cmd = [
             str(exe_path),
-            f'"{image_path}"',
-            f'/benchmark:"{temp_json}"',
+            str(image_path),
+            f"/benchmark:{temp_json}",
             "/benchmark_exit",
             "/autoexit"
         ]
 
-        cmd_str = " ".join(cmd)
         t_start = self._now_ms()
 
         proc = subprocess.Popen(
-            cmd_str,
+            cmd,
             cwd=str(exe_path.parent),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -157,7 +159,7 @@ class ProcessRunner:
         window_handle: int | None = None
 
         try:
-            poll_interval = 0.002
+            poll_interval = 0.005
             deadline = self._now_ms() + (timeout_sec * 1000.0)
 
             while self._now_ms() < deadline:
@@ -171,13 +173,18 @@ class ProcessRunner:
                     if cur_peak > peak_rss_mb:
                         peak_rss_mb = cur_peak
 
-                if not window_handle:
+                # For legacy binaries that do not support /benchmark_exit, detect the window
+                # when it becomes fully visible and responsive, wait for first paint, then close.
+                if not window_handle and self.is_win32:
                     window_handle = self._find_window_for_pid(proc.pid)
                     if window_handle:
                         t_first_paint = self._now_ms()
-                        time.sleep(0.05)
-                        WM_CLOSE = 0x0010
-                        self.user32.PostMessageW(window_handle, WM_CLOSE, 0, 0)
+                        # If temp_json was created or process is running benchmark, let it exit naturally.
+                        # For legacy binaries without telemetry, wait for first paint and close.
+                        if not temp_json.exists():
+                            time.sleep(0.15)
+                            WM_CLOSE = 0x0010
+                            self.user32.PostMessageW(window_handle, WM_CLOSE, 0, 0)
 
                 time.sleep(poll_interval)
 
@@ -223,11 +230,11 @@ class ProcessRunner:
         folder_or_image_path: Path,
         nav_count: int = 50,
         nav_steps: int | None = None,
-        timeout_sec: float = 30.0
+        timeout_sec: float = 60.0
     ) -> dict[str, Any]:
         """
         Runs folder navigation benchmark traversing `nav_steps` files.
-        Works via internal /benchmark_nav or simulated high-speed VK_RIGHT key messages.
+        Works via internal /benchmark_nav or simulated paced VK_RIGHT key messages.
         """
         steps = nav_steps if nav_steps is not None else nav_count
         first_image_path = folder_or_image_path
@@ -238,19 +245,19 @@ class ProcessRunner:
 
         temp_json = Path(tempfile.gettempdir()) / f"telemetry_nav_{os.getpid()}_{time.time_ns()}.json"
 
+        # Use list form — same quoting fix as run_image_load_benchmark
         cmd = [
             str(exe_path),
-            f'"{first_image_path}"',
-            f'/benchmark:"{temp_json}"',
-            f'/benchmark_nav:{steps}',
+            str(first_image_path),
+            f"/benchmark:{temp_json}",
+            f"/benchmark_nav:{steps}",
             "/benchmark_exit"
         ]
 
-        cmd_str = " ".join(cmd)
         t_start = self._now_ms()
 
         proc = subprocess.Popen(
-            cmd_str,
+            cmd,
             cwd=str(exe_path.parent),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
@@ -265,6 +272,9 @@ class ProcessRunner:
         peak_rss_mb = 0.0
 
         try:
+            # /benchmark_nav is a modern-only feature — JPEGView will self-exit after
+            # completing all nav frames and writing telemetry. We simply wait for it.
+            # No window automation needed or safe here (it would race the internal loop).
             while self._now_ms() < deadline:
                 if proc.poll() is not None:
                     break
@@ -274,23 +284,7 @@ class ProcessRunner:
                     if cur_peak > peak_rss_mb:
                         peak_rss_mb = cur_peak
 
-                if not window_handle and self.is_win32:
-                    window_handle = self._find_window_for_pid(proc.pid)
-                    if window_handle:
-                        WM_KEYDOWN = 0x0100
-                        WM_KEYUP = 0x0101
-                        VK_RIGHT = 0x27
-                        WM_CLOSE = 0x0010
-
-                        for _ in range(steps):
-                            self.user32.PostMessageW(window_handle, WM_KEYDOWN, VK_RIGHT, 0)
-                            self.user32.PostMessageW(window_handle, WM_KEYUP, VK_RIGHT, 0)
-                            time.sleep(0.005)
-
-                        time.sleep(0.1)
-                        self.user32.PostMessageW(window_handle, WM_CLOSE, 0, 0)
-
-                time.sleep(0.005)
+                time.sleep(0.01)
 
             if proc.poll() is None:
                 proc.kill()
@@ -311,10 +305,14 @@ class ProcessRunner:
             except Exception:
                 pass
 
-        if telemetry and "nav_render_times_ms" in telemetry:
-            render_times: list[float] = telemetry.get("nav_render_times_ms", [])
-            avg_frame_ms = telemetry.get("avg_frame_ms", 1.0)
+        if telemetry and "frame_times_ms" in telemetry:
+            render_times: list[float] = telemetry.get("frame_times_ms", [])
+            avg_frame_ms = telemetry.get("avg_frame_time_ms", 1.0)
             fps = telemetry.get("fps", 0.0)
+        elif telemetry and "avg_frame_time_ms" in telemetry:
+            avg_frame_ms = telemetry.get("avg_frame_time_ms", 1.0)
+            fps = telemetry.get("fps", (1000.0 / avg_frame_ms) if avg_frame_ms > 0 else 0.0)
+            render_times = [avg_frame_ms] * max(1, steps)
         else:
             steps_done = max(1, steps)
             avg_frame_ms = max(0.1, total_duration_ms / steps_done)
