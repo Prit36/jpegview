@@ -2,26 +2,42 @@ JPEGView Modern Compilation Guide
 *********************************
 
 Requirements:
-- Visual Studio 2022 (v143/v144 toolset) with C++20 support
-- CMake 3.28+ (or Ninja)
-- Windows 10/11 SDK (10.0.22621+)
+- Visual Studio 2026 (v145 toolset) or Visual Studio 2022 (v143/v144 toolset) with C++23 support
+- CMake 3.28+ / 4.x+ (and optionally Ninja for high-speed builds)
+- Windows 10 / 11 / Server 2025 SDK (10.0.22621+)
 - Windows Template Library (WTL) submodule (located in deps/WTL-sf)
 - Optional: vcpkg for package management (vcpkg.json manifest mode)
 
-Building with CMake:
--------------------
+Building with CMake & Presets:
+-----------------------------
 1. Clone submodules:
    git submodule update --init --recursive
 
-2. Configure and build with CMake:
+2. Configure and build using CMake Presets:
+   - For Visual Studio 2026 (x64 Release):
+     cmake --preset vs2026-x64-release
+     cmake --build --preset vs2026-x64-release
+
+   - For Visual Studio 2022 (x64 Release):
+     cmake --preset vs2022-x64-release
+     cmake --build --preset vs2022-x64-release
+
+   - For Ninja (ultra-fast builds):
+     cmake --preset x64-release
+     cmake --build --preset x64-release
+
+3. Or direct CMake commands:
    cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
    cmake --build build --config Release
 
-Building with Visual Studio 2022:
+Building with Visual Studio IDE:
 --------------------------------
-1. Open src/JPEGView.sln in Visual Studio 2022
+1. Open src/JPEGView.sln in Visual Studio 2026 or Visual Studio 2022
 2. Select 'Release' and 'x64' configuration
 3. Build Solution (Ctrl+Shift+B)
-      An #ifdef is used to disable that feature when compiling for standard below C++17
 
-Older solution files have been removed from the source tree.  If you still need them, clone the tag v1.2.45
+Continuous Integration (GitHub Actions):
+----------------------------------------
+- Modern GitHub Actions CI uses `windows-latest` (Windows Server 2025 / VS 2026) targeting C++23 with modern link-time optimizations and artifact bundling.
+
+

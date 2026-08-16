@@ -3,9 +3,6 @@
 #include "ICCProfileTransform.h"
 #include "SettingsProvider.h"
 
-
-#ifndef WINXP
-
 // This define is necessary for 32-bit builds to work, for some reason
 #define CMS_DLL
 #include "lcms2.h"
@@ -124,23 +121,3 @@ void* ICCProfileTransform::CreateLabTransform(PixelFormat format) {
 	cmsCloseProfile(hLabProfile);
 	return transform;
 }
-
-#else
-
-// stub out lcms2 methods in an elegant way in XP build, as per suggestion https://github.com/sylikc/jpegview/commit/4b62f07e2a147a04a5014a5711d159670162e799#commitcomment-102738193
-
-void* ICCProfileTransform::CreateTransform(const void* /* profile */, unsigned int /* size */, PixelFormat /* format */) {
-	return NULL;
-}
-
-bool ICCProfileTransform::DoTransform(void* /* transform */, const void* /* inputBuffer */, void* /* outputBuffer */, unsigned int /* width */, unsigned int /* height */, unsigned int /* stride */) {
-	return false;
-}
-
-void ICCProfileTransform::DeleteTransform(void* /* transform */) { }
-
-void* ICCProfileTransform::CreateLabTransform(PixelFormat /* format */) {
-	return NULL;
-}
-
-#endif

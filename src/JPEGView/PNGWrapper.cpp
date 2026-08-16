@@ -2,7 +2,6 @@
 
 #include "PNGWrapper.h"
 
-#ifndef WINXP
 #include "png.h"
 #include "MaxImageDef.h"
 #include <stdexcept>
@@ -413,9 +412,6 @@ bool PngReader::MustUseLibpng(const void* bufferIn, size_t sizebytes) {
 	}
 	return false;
 }
-#else
-#define PNG_UINT_31_MAX (0x7fffffff)
-#endif
 
 void* PngReader::GetEXIFBlock(void* buffer, size_t sizebytes) {
 	size_t offset = 8; // skip PNG signature

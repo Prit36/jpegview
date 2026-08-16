@@ -1,4 +1,4 @@
-﻿set(JPEGVIEW_SOURCES
+set(JPEGVIEW_SOURCES
     AboutDlg.cpp
     ApplyFilterAVX.cpp
     AVIFWrapper.cpp
@@ -7,6 +7,7 @@
     Clipboard.cpp
     CropCtl.cpp
     CropSizeDlg.cpp
+    D2DRenderer.cpp
     dcraw_mod.cpp
     DesktopWallpaper.cpp
     DirectoryWatcher.cpp

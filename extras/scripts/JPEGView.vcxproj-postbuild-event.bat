@@ -52,15 +52,6 @@ echo ~ ErrorLevel: %ErrorLevel%
 
 
 REM ----------- COPY DLL FILES -----------
-REM qbnu standardized JPEGView's DLL structure which puts DLLs in either the bin (32-bit) or bin64 (64-bit) folders
-
-IF /I "%PROJECT_NAME%" EQU "JPEGView_VS2017" (
-	REM specifically for VS2017:  Currently, VS2017 project file is used to build the XP-version ONLY
-	REM the XP version does NOT support any of the new DLLs at this time
-	exit /b 0
-)
-
-REM all other projects files get DLLs...
 call :COPY_DLLS libjxl
 call :COPY_DLLS libheif
 call :COPY_DLLS libavif

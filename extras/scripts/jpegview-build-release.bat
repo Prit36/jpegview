@@ -136,17 +136,6 @@ del /s "%XRAW_OUT%\*.exp" "%XRAW_OUT%\*.lib" "%XRAW_OUT%\*.pdb"
 
 REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-call :BUILD_COPY_XPED
-IF ERRORLEVEL 1 exit /b 1
-
-
-
-
-
-REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 REM ZIP up flat from RAW OUTPUT
 pushd "%XRAW_OUT%"
 
@@ -167,18 +156,7 @@ pushd JPEGView64
 IF ERRORLEVEL 1 exit /b 1
 popd
 
-pushd JPEGView32-WinXP
-REM intentionally not compressed max... to be the most compatible
-"%X7ZA%" a -tzip ..\..\JPEGView32_WinXP_%JPV_VER%.zip .
-IF ERRORLEVEL 1 exit /b 1
 popd
-
-
-popd
-
-
-
-
 
 REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -188,26 +166,14 @@ python.exe "%~dp0sha256sum.py" "JPEGView*" > SHA256SUMS
 IF ERRORLEVEL 1 exit /b 1
 popd
 
-
-
-
 REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
 echo + Autogenerate last chunk of changelog ...
-
-REM too lazy to make into a real script
 
 SET JPV_ROOT=..\..
 python.exe -c "from pathlib import Path; from util_common import get_all_text_between; print(get_all_text_between(Path(r'%JPV_ROOT%\CHANGELOG.txt'), '\[%JPV_VER%', '\['))"
 
-
-
-
-
-
 exit /b 0
-
 
 
 REM -----------------------------------------------------------------------------------------------------------
@@ -220,7 +186,6 @@ SET XARCH=%~1
 SET XPLATFORM=%~2
 SET XBIT=%~3
 
-
 call "%~dp0vs-init.bat" %XARCH%
 
 pushd "%JPV_ROOT%\src"
@@ -231,7 +196,6 @@ IF ERRORLEVEL 1 exit /b 1
 
 popd
 
-
 REM from JPEGView\x64\Release to OUTPUT\JPEGView64
 move "%JPV_ROOT%\src\JPEGView\bin\%XARCH%\Release" "%XRAW_OUT%\JPEGView%XBIT%"
 IF ERRORLEVEL 1 exit /b 1
@@ -241,154 +205,4 @@ move "%JPV_ROOT%\src\JPEGView.Setup\bin\%XARCH%\Release\en-us\JPEGView.Setup.msi
 IF ERRORLEVEL 1 exit /b 1
 
 exit /b 0
-
-
-
-REM -----------------------------------------------------------------------------------------------------------
-
-:BUILD_COPY_XPED
-REM build XP edition
-
-setlocal
-
-REM XP edition requires a bit more work
-echo + Build XP edition ...
-
-REM special flag for vs-init.bat which forces a version (need VS2017 to build for XP)
-SET XVS_INIT_VER=2017
-
-
-REM delete the directories if they exist (temp build directories), as we need to rebuild the libs
-rd /s /q "%~dp0libjpeg-turbo" "%~dp0libwebp" 2>nul
-
-
-REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-REM builds libjpegturbo and places the bins in the right place (NOTE: we only need the x86, but the script builds both)
-echo + Building libjpegturbo ...
-call build-libjpegturbo.bat
-IF ERRORLEVEL 1 exit /b 1
-
-
-REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-REM hack out the THREADS of libwebp
-
-REM NOTE: this is kinda hacky and depends on Git for Windows installed in a standard location,
-REM and Git-Bash set up in a default way
-REM (this is copied from implementation in build-libpng)
-
-REM set up path to find the required bin files
-echo + Find bash/sed/git ...
-SET PATH=%ProgramFiles%\Git\usr\bin;%ProgramFiles%\Git\bin;%PATH%
-where.exe bash.exe 2>nul
-IF ERRORLEVEL 1 (
-	echo bash.exe not found in PATH
-	exit /b 1
-)
-where.exe sed.exe 2>nul
-IF ERRORLEVEL 1 (
-	echo sed.exe not found in PATH
-	exit /b 1
-)
-where.exe git.exe 2>nul
-IF ERRORLEVEL 1 (
-	echo git.exe not found in PATH
-	exit /b 1
-)
-
-REM replace out Makefile.vc all instances of "/DWEBP_USE_THREAD" to "" (it shows up in 2 places, but there's only one that counts)
-REM on XP, it still works with that flag, but you keep getting errors about a Win32 API call that isn't supported
-echo + Patch libwebp to not use threads ...
-pushd "%JPV_ROOT%\extras\third_party\libwebp"
-sed.exe -i -e "s/\/DWEBP_USE_THREAD//g" Makefile.vc
-IF ERRORLEVEL 1 exit /b 1
-popd
-
-REM (NOTE: we only need the x86, but the script builds both)
-echo + Building libwebp ...
-call build-libwebp.bat
-IF ERRORLEVEL 1 exit /b 1
-
-REM libpng won't build, requires 2019
-REM build-libpng-apng.bat
-
-REM jxl builds, but uses a call InitializeCriticalSectionEx which isn't supported, likely also related to threads... i "could" investigate, but it's not worth it IMHO... who's on XP who needs to read JXL anyways?!
-REM build-libjxl.bat
-
-
-REM undo the modification
-echo + Unpatch libwebp using git ...
-REM git doesn't like this, as it's outside of the base repo
-::git.exe checkout -- "%JPV_ROOT%\extras\third_party\libwebp\Makefile.vc"
-pushd "%JPV_ROOT%\extras\third_party\libwebp"
-git.exe checkout -- Makefile.vc
-IF ERRORLEVEL 1 exit /b 1
-popd
-
-
-
-
-REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-REM build only win32
-
-rd /s /q "%JPV_ROOT%\src\JPEGView\bin" 2>nul
-rd /s /q "%JPV_ROOT%\src\JPEGView\obj" 2>nul
-
-rd /s /q "%JPV_ROOT%\src\WICLoader\obj" 2>nul
-
-
-REM initialize the 32-bit tools for VS2017
-call "%~dp0vs-init.bat" x86
-
-pushd "%JPV_ROOT%\src"
-msbuild.exe /property:Platform=Win32 /property:configuration="Release" JPEGView_VS2017.sln
-IF ERRORLEVEL 1 exit /b 1
-popd
-
-
-REM clean intermediates
-pushd "%JPV_ROOT%\src\JPEGView\bin\x86\Release"
-
-del *.lib *.pdb *.ipdb *.iobj *.exp
-
-
-REM for XP, regenerate the actual HTML by replacing the tag with content for all tranlated readme's
-echo + Fix KeyMap-README ...
-python.exe "%~dp0keymap_convert_readme_xp_compat.py" KeyMap-README.html
-IF ERRORLEVEL 1 exit /b 1
-move /y KeyMap-README.xp.html KeyMap-README.html
-IF ERRORLEVEL 1 exit /b 1
-REM TODO, when there are more translated KeyMap-README's this code needs to change
-
-popd
-
-
-move "%JPV_ROOT%\src\JPEGView\bin\x86\Release" "%XRAW_OUT%\JPEGView32-WinXP"
-IF ERRORLEVEL 1 exit /b 1
-
-
-
-REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-REM lastly, reset all the libs in the release
-pushd "%JPV_ROOT%"
-
-REM bash.exe is on the path somewhere, honor the path order
-REM reset all libs in repo (we don't need those hacked XP libs lying around)
-REM https://unix.stackexchange.com/questions/15308/how-to-use-find-command-to-search-for-multiple-extensions
-bash.exe -c "find src \( -name "*.lib" -o -name "*.dll" \) -exec git checkout -- {} \;"
-IF ERRORLEVEL 1 exit /b 1
-
-popd
-
-
-
-
-exit /b 0
-
-
-REM -----------------------------------------------------------------------------------------------------------
 

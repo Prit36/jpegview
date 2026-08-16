@@ -12,12 +12,10 @@
 #include "dcraw_mod.h"
 #include "TJPEGWrapper.h"
 #include "PNGWrapper.h"
-#ifndef WINXP
 #include "JXLWrapper.h"
 #include "HEIFWrapper.h"
 #include "AVIFWrapper.h"
 #include "RAWWrapper.h"
-#endif
 #include "WEBPWrapper.h"
 #include "QOIWrapper.h"
 #include "PSDWrapper.h"
@@ -330,7 +328,6 @@ void CImageLoadThread::ProcessRequest(CRequestBase& request) {
 			DeleteCachedAvifDecoder();
 			ProcessReadPNGRequest(&rq);
 			break;
-#ifndef WINXP
 		case IF_JXL:
 			DeleteCachedGDIBitmap();
 			DeleteCachedWebpDecoder();
@@ -369,7 +366,6 @@ void CImageLoadThread::ProcessRequest(CRequestBase& request) {
 			DeleteCachedAvifDecoder();
 			ProcessReadRAWRequest(&rq);
 			break;
-#endif
 		case IF_QOI:
 			DeleteCachedGDIBitmap();
 			DeleteCachedWebpDecoder();
@@ -446,21 +442,16 @@ void CImageLoadThread::DeleteCachedWebpDecoder() {
 }
 
 void CImageLoadThread::DeleteCachedPngDecoder() {
-#ifndef WINXP
 	PngReader::DeleteCache();
 	m_sLastPngFileName.Empty();
-#endif
 }
 
 void CImageLoadThread::DeleteCachedJxlDecoder() {
-#ifndef WINXP
 	JxlReader::DeleteCache();
 	m_sLastJxlFileName.Empty();
-#endif
 }
 
 void CImageLoadThread::DeleteCachedAvifDecoder() {
-#ifndef WINXP
 	// prevent crashing when libavif/dav1d fail or missing
 	UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 	try {
@@ -468,7 +459,6 @@ void CImageLoadThread::DeleteCachedAvifDecoder() {
 	} catch (...) {}
 	SetErrorMode(nPrevErrorMode);
 	m_sLastAvifFileName.Empty();
-#endif
 }
 
 void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
@@ -648,7 +638,6 @@ void CImageLoadThread::ProcessReadWEBPRequest(CRequest * request) {
 	}
 }
 
-#ifndef WINXP
 void CImageLoadThread::ProcessReadPNGRequest(CRequest* request) {
 	bool bUseCachedDecoder = false;
 	const wchar_t* sFileName;
@@ -697,12 +686,10 @@ void CImageLoadThread::ProcessReadPNGRequest(CRequest* request) {
 			uint8* pPixelData = NULL;
 			void* pEXIFData = NULL;
 
-#ifndef WINXP
 			// If UseEmbeddedColorProfiles is true and the image isn't animated, we should use GDI+ for better color management
 			bool bUseGDIPlus = CSettingsProvider::This().ForceGDIPlus() || CSettingsProvider::This().UseEmbeddedColorProfiles();
 			if (bUseCachedDecoder || !bUseGDIPlus || PngReader::MustUseLibpng(pBuffer, nFileSize))
 				pPixelData = (uint8*)PngReader::ReadImage(nWidth, nHeight, nBPP, bHasAnimation, nFrameCount, nFrameTimeMs, pEXIFData, request->OutOfMemory, pBuffer, nFileSize);
-#endif
 
 			if (pPixelData != NULL) {
 				if (bHasAnimation)
@@ -743,9 +730,7 @@ void CImageLoadThread::ProcessReadPNGRequest(CRequest* request) {
 		if (hFileBuffer) ::GlobalFree(hFileBuffer);
 	}
 }
-#endif
 
-#ifndef WINXP
 void CImageLoadThread::ProcessReadJXLRequest(CRequest* request) {
 	bool bUseCachedDecoder = false;
 	const wchar_t* sFileName;
@@ -815,9 +800,7 @@ void CImageLoadThread::ProcessReadJXLRequest(CRequest* request) {
 		// delete[] pBuffer;
 	}
 }
-#endif
 
-#ifndef WINXP
 void CImageLoadThread::ProcessReadAVIFRequest(CRequest* request) {
 	bool bSuccess = false;
 	bool bUseCachedDecoder = false;
@@ -892,9 +875,7 @@ void CImageLoadThread::ProcessReadAVIFRequest(CRequest* request) {
 	if (!bSuccess)
 		return ProcessReadHEIFRequest(request);
 }
-#endif
 
-#ifndef WINXP
 void CImageLoadThread::ProcessReadHEIFRequest(CRequest* request) {
 	HANDLE hFile;
 	hFile = ::CreateFile(request->FileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
@@ -956,8 +937,6 @@ void CImageLoadThread::ProcessReadPSDRequest(CRequest* request) {
 	}
 }
 
-#endif
-
 void CImageLoadThread::ProcessReadQOIRequest(CRequest* request) {
 	HANDLE hFile;
 	hFile = ::CreateFile(request->FileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
@@ -1008,7 +987,6 @@ void CImageLoadThread::ProcessReadRAWRequest(CRequest * request) {
 	try {
 		int fullsize = CSettingsProvider::This().DisplayFullSizeRAW();
 
-#ifndef WINXP
 		// Try with libraw
 		UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 		try {
@@ -1025,9 +1003,6 @@ void CImageLoadThread::ProcessReadRAWRequest(CRequest * request) {
 			// libraw.dll not found or VC++ Runtime not installed
 		}
 		SetErrorMode(nPrevErrorMode);
-#else
-		fullsize = fullsize == 1;
-#endif
 
 		// Try with dcraw_mod
 		if (request->Image == NULL && fullsize != 1 && fullsize != 2) {

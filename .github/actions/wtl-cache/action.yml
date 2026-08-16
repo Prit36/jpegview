@@ -35,7 +35,7 @@ runs:
   steps:
     - name: WTL Cache - Restore Download
       # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         # path where we would extract the WTL source files
         # NOTE: potential bug is that cache-name is not invalidated when wtl-url changes, which it should

@@ -7,7 +7,7 @@ SET XSRC_DIR=%~dp0..\..\src\JPEGView\lcms2
 SET XLIB_DIR=%~dp0..\third_party\Little-CMS
 SET XOUT_DIR=%~dp0lcms2
 
-SET XVS_VER=2019
+SET XVS_VER=2022
 IF /I "%XVS_INIT_VER%" NEQ "" (
 	REM override the build version for the solutions provided
 	SET XVS_VER=%XVS_INIT_VER%

@@ -24,15 +24,15 @@ runs:
       run: del /s *.lib *.dll
 
     - name: Setup Python (for dav1d build)
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         # any version will do for right now, but it's safer to just have it set fixed to a version
-        python-version: '3.10'
+        python-version: '3.12'
 
     - name: BIN Cache - Restore LIBs/DLLs from previous GH Action
       # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
       id: cache-bin
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         # cache key changes with every .gitmodules change, so you can run this again manually
         # but as long as the .gitmodules did not change, it won't try to rebuild
