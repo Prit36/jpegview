@@ -33,28 +33,28 @@ if(MSVC)
         /utf-8
         /EHsc
         /openmp
-        $<$<CONFIG:Release>:/O2>
+        $<$<CONFIG:Release>:/Ox>
         $<$<CONFIG:Release>:/Oi>
         $<$<CONFIG:Release>:/Ot>
         $<$<CONFIG:Release>:/Ob3>
         $<$<CONFIG:Release>:/fp:fast>
         $<$<CONFIG:Release>:/GA>
+        $<$<CONFIG:Release>:/GT>
+        $<$<CONFIG:Release>:/GS->
         $<$<CONFIG:Release>:/Gy>
         $<$<CONFIG:Release>:/Gw>
+        $<$<CONFIG:Release>:/GL>
     )
     # Enable AVX2 on x64 architectures for enhanced vectorization
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
         add_compile_options(/arch:AVX2)
     endif()
 
-    # Enable Interprocedural Optimization (Link-Time Code Generation) in Release
-    include(CheckIPOSupported OPTIONAL)
-    if(COMMAND check_ipo_supported)
-        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
-        if(ipo_supported)
-            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
-        endif()
-    endif()
+    add_link_options(
+        $<$<CONFIG:Release>:/LTCG>
+        $<$<CONFIG:Release>:/OPT:REF>
+        $<$<CONFIG:Release>:/OPT:ICF>
+    )
 endif()
 
 # Include ATL headers
