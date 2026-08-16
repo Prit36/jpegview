@@ -43,3 +43,6 @@ ipch/
 *.cachefile
 *.VC.db
 *.VC.VC.opendb
+
+# Downloaded ATL/MFC NuGet dependency
+deps/atlmfc/

@@ -1,4 +1,4 @@
-﻿#include "StdAfx.h"
+#include "StdAfx.h"
 #include "resource.h"
 #include "MainDlg.h"
 #include "JPEGImage.h"
@@ -50,7 +50,8 @@ void CRotationPanelCtl::UpdateAssistedRotationMode() {
 	m_pTransformPanel->GetTextHint()->SetText(m_bRotationModeAssisted ?
 		CNLS::GetString(_T("Use the mouse to draw a line that shall be horizontal or vertical.")) :
 		CNLS::GetString(_T("Rotate the image by dragging with the mouse.")));
-	m_pMainDlg->InvalidateRect(&(m_pTransformPanel->GetTextHint()->GetPosition()), FALSE);
+	CRect rectPos = m_pTransformPanel->GetTextHint()->GetPosition();
+	m_pMainDlg->InvalidateRect(&rectPos, FALSE);
 	((CRotationPanel*)m_pTransformPanel)->GetBtnAssistMode()->SetActive(m_bRotationModeAssisted);
 	bool bShowGrid;
 	if (m_bRotationModeAssisted) {

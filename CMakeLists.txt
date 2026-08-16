@@ -49,6 +49,11 @@ if(MSVC)
     endif()
 endif()
 
+# Include ATL headers
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/atlmfc/atlmfc/include")
+    include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/deps/atlmfc/atlmfc/include")
+endif()
+
 # Include WTL headers
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/WTL-sf/Include")
     include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/deps/WTL-sf/Include")

@@ -1,4 +1,4 @@
-﻿#include "StdAfx.h"
+#include "StdAfx.h"
 #include "D2DRenderer.h"
 
 #pragma comment(lib, "d2d1.lib")
@@ -25,8 +25,8 @@ bool CD2DRenderer::Initialize(HWND hWnd) {
 
     RECT rc;
     ::GetClientRect(hWnd, &rc);
-    m_width = std::max(1L, rc.right - rc.left);
-    m_height = std::max(1L, rc.bottom - rc.top);
+    m_width = (std::max)(1L, (long)(rc.right - rc.left));
+    m_height = (std::max)(1L, (long)(rc.bottom - rc.top));
 
     if (!CreateWindowSizeDependentResources()) {
         return false;

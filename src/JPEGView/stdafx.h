@@ -21,7 +21,15 @@
 #define _RICHEDIT_VER   0x0300
 
 #define _CRT_SECURE_NO_DEPRECATE
+#define _ATL_NO_DEFAULT_LIBS
+#define USE_ATL_THUNK1
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <winsock2.h>
+#include <windows.h>
 #include <tchar.h>
 #include <dwmapi.h>
 #include <d2d1_3.h>
