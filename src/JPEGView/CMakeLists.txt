@@ -150,3 +150,23 @@ target_link_libraries(JPEGView PRIVATE
 set_target_properties(JPEGView PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
 )
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(RUNTIME_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/x64/Release")
+else()
+    set(RUNTIME_DLL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/x86/Release")
+endif()
+
+file(GLOB RUNTIME_DLLS "${RUNTIME_DLL_DIR}/*.dll")
+foreach(DLL_PATH ${RUNTIME_DLLS})
+    get_filename_component(DLL_NAME "${DLL_PATH}" NAME)
+    if(NOT DLL_NAME STREQUAL "WICLoader.dll")
+        add_custom_command(TARGET JPEGView POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${DLL_PATH}"
+                "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/${DLL_NAME}"
+            COMMENT "Copying runtime dependency ${DLL_NAME}"
+        )
+    endif()
+endforeach()
+
