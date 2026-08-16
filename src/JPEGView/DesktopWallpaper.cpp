@@ -31,17 +31,11 @@ namespace SetDesktopWallpaper {
 
 	void SetProcessedImageAsWallpaper(CJPEGImage& image)
 	{
-		bool bitmapMatchesDesktop = false;
-		int windowsVersion = Helpers::GetWindowsVersion();
-		LPCTSTR wallpaperStyle = _T("0");
+		// Check if image spans all screens
+		CRect allScreens = CMultiMonitorSupport::GetVirtualDesktop();
+		bool bitmapMatchesDesktop = (allScreens.Size() == CSize(image.DIBWidth(), image.DIBHeight()));
+		LPCTSTR wallpaperStyle = bitmapMatchesDesktop ? _T("22") : _T("0");
 		LPCTSTR tileWallpaper = _T("0");
-		if (windowsVersion >= 601) {
-			// Check if image spans all screens
-			CRect allScreens = CMultiMonitorSupport::GetVirtualDesktop();
-			bitmapMatchesDesktop = (allScreens.Size() == CSize(image.DIBWidth(), image.DIBHeight()));
-			if (bitmapMatchesDesktop && windowsVersion >= 602) wallpaperStyle = _T("22"); // for Windows 8 ff
-			if (bitmapMatchesDesktop && windowsVersion == 601) tileWallpaper = _T("1"); // for Windows 7
-		}
 		SetRegistryStringValue(_T("WallpaperStyle"), wallpaperStyle);
 		SetRegistryStringValue(_T("TileWallpaper"), tileWallpaper);
 

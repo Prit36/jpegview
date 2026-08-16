@@ -242,9 +242,6 @@ namespace Helpers {
 	// Gets the content of the JPEG comment tag, empty string if no comment
 	CString GetJPEGComment(void* pJPEGStream, int nStreamLength);
 
-	// Clears the JPEG comment (by filling with NULL characters)
-	void ClearJPEGComment(void* pJPEGStream, int nStreamLength);
-
 	// Gets the image format given a file name (uses the file extension)
 	EImageFormat GetImageFormat(LPCTSTR sFileName);
 
@@ -271,9 +268,6 @@ namespace Helpers {
 
 	// replaces the file info format string by the actual values from the image and file list
 	CString GetFileInfoString(LPCTSTR sFormat, CJPEGImage* pImage, CFileList* pFilelist, double dZoom);
-
-	// Returns the windows version in the format Major * 100 + Minor, e.g. 602 for Windows 8
-	int GetWindowsVersion();
 
 	// Conversion class that replaces the | by null character in a string.
 	// Caution: Uses a static buffer and therefore only one string can be replaced concurrently

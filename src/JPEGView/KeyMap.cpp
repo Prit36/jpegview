@@ -2,8 +2,9 @@
 #include "KeyMap.h"
 #include "NLS.h"
 #include "resource.h"
-#include "Helpers.h"
 #include "SettingsProvider.h"
+#include "HashCompareLPCTSTR.h"
+#include <unordered_map>
 
 #define M_SHIFT 0x10000
 #define M_ALT   0x20000
@@ -115,9 +116,8 @@ static int _ParseKeys(LPTSTR sKeys) {
 	return nKeyCode;
 }
 
-static int _FindCommandId(stdext::hash_map<LPCTSTR, int, CHashCompareLPCTSTR> & symbolMap, LPCTSTR sSymbolName) {
-	stdext::hash_map<LPCTSTR, int, CHashCompareLPCTSTR>::const_iterator iter;
-	iter = symbolMap.find(sSymbolName);
+static int _FindCommandId(const std::unordered_map<LPCTSTR, int, CHashLPCTSTR, CEqualLPCTSTR> & symbolMap, LPCTSTR sSymbolName) {
+	auto iter = symbolMap.find(sSymbolName);
 	if (iter == symbolMap.end()) {
 		return -1;
 	} else {
@@ -201,7 +201,7 @@ CKeyMap::CKeyMap() {
 	TCHAR* pSymbolTableEnd = &(symbolTable[SYMBOL_TABLE_LEN - 1]);
 	TCHAR* pSymbolTable = &(symbolTable[0]);
 
-	stdext::hash_map<LPCTSTR, int, CHashCompareLPCTSTR> m_symbolMap;
+	std::unordered_map<LPCTSTR, int, CHashLPCTSTR, CEqualLPCTSTR> m_symbolMap;
 
 	// read the symbols file first to get all valid symbols
 	while (_fgetts(lineBuff, BUFF_LEN, fsym_ptr) != NULL) {
@@ -285,7 +285,7 @@ void CKeyMap::AddDefaultEscapeHandling() {
 
 int CKeyMap::GetCommandIdForKey(int nVirtualKeyCode, bool bAlt, bool bCtrl, bool bShift) {
 	int nKeyCode = GetCombinedKeyCode(nVirtualKeyCode, bAlt, bCtrl, bShift);
-	stdext::hash_map<int, int>::const_iterator iter = m_keyMap.find(nKeyCode);
+	auto iter = m_keyMap.find(nKeyCode);
 	if (iter == m_keyMap.end()) {
 		return -1;
 	} else {
@@ -294,7 +294,7 @@ int CKeyMap::GetCommandIdForKey(int nVirtualKeyCode, bool bAlt, bool bCtrl, bool
 }
 
 CString CKeyMap::GetKeyStringForCommand(int nCommandId) {
-	stdext::hash_map<int, int>::const_iterator iter = m_keyMap.begin();
+	auto iter = m_keyMap.begin();
 	std::list<CString> keys;
 	while (iter != m_keyMap.end()) {
 		if (nCommandId == iter->second) {

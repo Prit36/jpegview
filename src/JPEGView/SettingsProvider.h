@@ -5,10 +5,10 @@
 #include "UserCommand.h"
 #include "ProcessParams.h"
 #include "HashCompareLPCTSTR.h"
-#include <hash_map>
+#include <unordered_map>
 
 
-typedef stdext::hash_map<LPCTSTR, LPCTSTR, CHashCompareLPCTSTR> IniHashMap;
+typedef std::unordered_map<LPCTSTR, LPCTSTR, CHashLPCTSTR, CEqualLPCTSTR> IniHashMap;
 
 // INI settings
 // All settings are first searched in a file name JPEGView.ini located in User/AppData/Roaming/JPEGView

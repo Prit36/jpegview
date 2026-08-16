@@ -1,12 +1,28 @@
 #pragma once
 
-// For usage in stdext::hash_map, hash and compare of type LPCTSTR
-class CHashCompareLPCTSTR
+#include <cstddef>
+#include <tchar.h>
+
+// For high-performance inlined usage in std::unordered_map
+struct CHashLPCTSTR
 {
-public:
-	static const size_t bucket_size = 4;
-	static const size_t min_buckets = 8;
-	CHashCompareLPCTSTR() {}
-	size_t operator( )(const LPCTSTR& Key) const;
-	bool operator( )(const LPCTSTR& _Key1, const LPCTSTR& _Key2) const;
+	inline size_t operator()(LPCTSTR Key) const noexcept {
+		if (!Key) return 0;
+		size_t nHash = 0;
+		int nCnt = 0;
+		while (Key[nCnt] != 0 && nCnt++ < 16) {
+			nHash += Key[nCnt];
+			nHash = (nHash << 8) + nHash;
+		}
+		return nHash;
+	}
+};
+
+struct CEqualLPCTSTR
+{
+	inline bool operator()(LPCTSTR Key1, LPCTSTR Key2) const noexcept {
+		if (Key1 == Key2) return true;
+		if (!Key1 || !Key2) return false;
+		return _tcscmp(Key1, Key2) == 0;
+	}
 };

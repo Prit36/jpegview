@@ -39,6 +39,7 @@
 #include <wrl/client.h>
 #include <span>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <atlbase.h>
 #pragma warning(push)
@@ -63,7 +64,6 @@ extern CAppModule _Module;
 // STL stuff
 #include  <list>
 
-#define _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS
 
 // own stuff
 #include "ImageProcessingTypes.h"

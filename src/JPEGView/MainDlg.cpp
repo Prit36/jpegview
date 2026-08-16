@@ -25,7 +25,6 @@
 #include "TimerEventIDs.h"
 #include "FileOpenDialog.h"
 #include "BatchCopyDlg.h"
-#include "FileExtensionsDlg.h"
 #include "FileExtensionsRegistry.h"
 #include "ManageOpenWithDlg.h"
 #include "AboutDlg.h"
@@ -1255,10 +1254,7 @@ LRESULT CMainDlg::OnContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 		if (m_pCurrentImage->GetEXIFReader() == NULL || !m_pCurrentImage->GetEXIFReader()->GetAcquisitionTimePresent()) {
 			::EnableMenuItem(hMenuModDate, IDM_TOUCH_IMAGE_EXIF, MF_BYCOMMAND | MF_GRAYED);
 		}
-		int windowsVersion = Helpers::GetWindowsVersion();
-		if (m_pCurrentImage->IsClipboardImage() || (windowsVersion < 600 && m_pCurrentImage->GetImageFormat() != IF_WindowsBMP) || 
-			(windowsVersion < 602 && !(m_pCurrentImage->GetImageFormat() == IF_WindowsBMP || m_pCurrentImage->GetImageFormat() == IF_JPEG)) ||
-			!m_pCurrentImage->IsGDIPlusFormat()) {
+		if (m_pCurrentImage->IsClipboardImage() || !m_pCurrentImage->IsGDIPlusFormat()) {
 			::EnableMenuItem(hMenuWallpaper, IDM_SET_WALLPAPER_ORIG, MF_BYCOMMAND | MF_GRAYED);
 		}
 	}
@@ -1934,7 +1930,7 @@ void CMainDlg::ExecuteCommand(int nCommand) {
 		case IDM_ABOUT:
 			{
 				MouseOn();
-				HMODULE hMod = ::LoadLibrary(_T("RICHED32.DLL"));
+				HMODULE hMod = ::LoadLibrary(_T("Msftedit.dll"));
 				CAboutDlg dlgAbout;
 				dlgAbout.DoModal();
 				::FreeLibrary(hMod);
@@ -2283,20 +2279,14 @@ void CMainDlg::SetAsDefaultViewer() {
 	}
 	MouseOn();
 
-	if (Helpers::GetWindowsVersion() >= 602) {
-		// It is Windows 8 or later, launch the system provided assiciation setting dialog
-		CFileExtensionsRegistrationWindows8 registry;
-		if (registry.RegisterJPEGView()) {
-			registry.LaunchApplicationAssociationDialog();
-		} else {
-			CString sError = CNLS::GetString(_T("Error while writing the following registry key"));
-			sError += _T(":\n");
-			sError += registry.GetLastFailedRegistryKey();
-			::MessageBox(m_hWnd, sError, CNLS::GetString(_T("Error")), MB_OK | MB_ICONERROR);
-		}
+	CFileExtensionsRegistration registry;
+	if (registry.RegisterJPEGView()) {
+		registry.LaunchApplicationAssociationDialog();
 	} else {
-		CFileExtensionsDlg dlgSetAsDefaultViewer;
-		dlgSetAsDefaultViewer.DoModal();
+		CString sError = CNLS::GetString(_T("Error while writing the following registry key"));
+		sError += _T(":\n");
+		sError += registry.GetLastFailedRegistryKey();
+		::MessageBox(m_hWnd, sError, CNLS::GetString(_T("Error")), MB_OK | MB_ICONERROR);
 	}
 	Invalidate(FALSE);
 }

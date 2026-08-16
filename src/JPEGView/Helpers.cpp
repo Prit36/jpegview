@@ -6,6 +6,7 @@
 #include "JPEGImage.h"
 #include "FileList.h"
 #include "SettingsProvider.h"
+#include <shlobj.h>
 #include <math.h>
 
 namespace Helpers {
@@ -28,8 +29,12 @@ static TCHAR buffAppPath[MAX_PATH + 32] = _T("");
 
 LPCTSTR JPEGViewAppDataPath() {
 	if (buffAppPath[0] == 0) {
-		::SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, buffAppPath);
-		_tcscat_s(buffAppPath, MAX_PATH + 32, _T("\\JPEGView\\"));
+		PWSTR pPath = nullptr;
+		if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &pPath)) && pPath != nullptr) {
+			_tcscpy_s(buffAppPath, MAX_PATH + 32, pPath);
+			::CoTaskMemFree(pPath);
+			_tcscat_s(buffAppPath, MAX_PATH + 32, _T("\\JPEGView\\"));
+		}
 	}
 	return buffAppPath;
 }
@@ -176,79 +181,34 @@ void GetZoomParameters(float & fZoom, CPoint & offsets, CSize imageSize, CSize w
 	offsets = CPoint(nOffsetX, nOffsetY);
 }
 
-#ifdef _WIN64
-static CPUType ProbeSSEorAVX2() {
-	__try {
-		// check if CPU supports AVX and the xgetbv instruction
-		int abcd[4];
-		__cpuid(abcd, 1);
-		if ((abcd[2] & 0x18000000) != 0x18000000) // AVX and OSXSAVE bits
-			return CPU_SSE;
-		if ((abcd[2] & 0x04000000) == 0) // XSAVE bit, support for xgetbv
-			return CPU_SSE;
-
-		// check if operating system supports AVX(2)
-		unsigned long long xcr0 = _xgetbv(0);
-		if ((xcr0 & 6) != 6)
-			return CPU_SSE; // nope, only use SSE
-
-		// check if AVX2 instructions are supported
-		const int AVX2BITMASK = 1 << 5;
-		__cpuidex(abcd, 7, 0);
-		return (abcd[1] & AVX2BITMASK) ? CPU_AVX2 : CPU_SSE;
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER) {
-		return CPU_SSE;
-	}
-}
-#endif
-
 CPUType ProbeCPU(void) {
 	static CPUType cpuType = CPU_Unknown;
 	if (cpuType != CPU_Unknown) {
 		return cpuType;
 	}
 
-#ifdef _WIN64
-	return ProbeSSEorAVX2(); // 64 bit always supports at least SSE
-#else
-	// Structured exception handling is mandatory, try/catch(...) does not catch such severe stuff.
-	cpuType = CPU_Generic;
 	__try {
-		uint32 FeatureMask;
-		_asm {
-			mov eax, 1
-			cpuid
-			mov FeatureMask, edx
-		}
-		if ((FeatureMask & (1 << 26)) != 0) {
-			cpuType = CPU_SSE; // this means SSE2
-		} else if ((FeatureMask & (1 << 25)) != 0) {
-			cpuType = CPU_MMX; // yes, we need SSE as the pmax/pmin stuff was coming with the PIII and SSE
-		} else {
-			// last chance - check if AMD and if yes, test for AMD MMX extensions that also implement pmax/pmin
-			_asm {
-				mov eax, 0
-				cpuid
-				cmp ebx, 0x68747541 // is AMD processor?
-				jne GiveUp
-				mov eax, 0x80000001
-				cpuid
-				mov FeatureMask, edx
-GiveUp:
-				mov FeatureMask, 0
-			}
-			if ((FeatureMask & (1 << 22)) != 0) {
-				cpuType = CPU_MMX; // extended AMD MMX instructions
-			}
-		}
-		
-	} __except ( EXCEPTION_EXECUTE_HANDLER ) {
-		// even CPUID is not supported, use generic code
-		return cpuType;
+		// check if CPU supports AVX and the xgetbv instruction
+		int abcd[4];
+		__cpuid(abcd, 1);
+		if ((abcd[2] & 0x18000000) != 0x18000000) // AVX and OSXSAVE bits
+			return (cpuType = CPU_SSE);
+		if ((abcd[2] & 0x04000000) == 0) // XSAVE bit, support for xgetbv
+			return (cpuType = CPU_SSE);
+
+		// check if operating system supports AVX(2)
+		unsigned long long xcr0 = _xgetbv(0);
+		if ((xcr0 & 6) != 6)
+			return (cpuType = CPU_SSE); // nope, only use SSE
+
+		// check if AVX2 instructions are supported
+		const int AVX2BITMASK = 1 << 5;
+		__cpuidex(abcd, 7, 0);
+		return (cpuType = (abcd[1] & AVX2BITMASK) ? CPU_AVX2 : CPU_SSE);
 	}
-	return cpuType;
-#endif
+	__except (EXCEPTION_EXECUTE_HANDLER) {
+		return (cpuType = CPU_SSE);
+	}
 }
 
 // returns if the CPU supports some form of hardware multiprocessing, e.g. hyperthreading or multicore
@@ -505,22 +465,6 @@ CString GetJPEGComment(void* pJPEGStream, int nStreamLength) {
 	}
 
 	return (nGoodChars > nCommentLen * 8 / 10) ? CString((LPCSTR)pComment, nCommentLen) : CString("");
-}
-
-void ClearJPEGComment(void* pJPEGStream, int nStreamLength) {
-	uint8* pCommentSeg = (uint8*)FindJPEGMarker(pJPEGStream, nStreamLength, 0xFE);
-	if (pCommentSeg == NULL) {
-		return;
-	}
-	pCommentSeg += 2;
-	int nCommentLen = pCommentSeg[0]*256 + pCommentSeg[1] - 2;
-	if (nCommentLen <= 0) {
-		return;
-	}
-	pCommentSeg += 2;
-	if ((uint8*)pJPEGStream + nStreamLength > pCommentSeg + nCommentLen) {
-		memset(pCommentSeg, 0, nCommentLen);
-	}
 }
 
 double GetExactTickCount() {
@@ -958,17 +902,6 @@ CString GetFileInfoString(LPCTSTR sFormat, CJPEGImage* pImage, CFileList* pFilel
 	sFileInfo.TrimLeft();
 	sFileInfo.TrimRight();
 	return sFileInfo;
-}
-
-int GetWindowsVersion() {
-#pragma warning(push)
-#pragma warning(disable:4996)
-	OSVERSIONINFO osvi;
-	ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
-	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	GetVersionEx(&osvi);
-#pragma warning(pop)
-	return osvi.dwMajorVersion * 100 + osvi.dwMinorVersion;
 }
 
 }

@@ -74,10 +74,8 @@ struct AVXFilterKernelBlock {
 class CResizeFilter
 {
 public:
-	enum {
-		// 1.0 in our fixed point format (thus using 2.14 FP format)
-		FP_ONE = 16383
-	};
+	// 1.0 in our fixed point format (thus using 2.14 FP format)
+	static constexpr int FP_ONE = 16383;
 
 	// Creates a filter for resizing from nSourceSize to nTargetSize 
 	// dSharpen must be in [0..0.5] - it is ignored for upsampling kernels.
@@ -203,10 +201,8 @@ public:
 	// The returned filter must not be deleted by the caller
 	const FilterKernelBlock& GetFilterKernels() const { return m_kernels; }
 
-	enum {
-		// 1.0 in our fixed point format, thus using 2.14 FP format
-		FP_ONE = 16383
-	};
+	// 1.0 in our fixed point format, thus using 2.14 FP format
+	static constexpr int FP_ONE = 16383;
 private:
 	int m_nSourceSize;
 	double m_dRadius;

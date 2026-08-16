@@ -15,7 +15,6 @@ set(JPEGVIEW_SOURCES
     EXIFDisplayCtl.cpp
     EXIFHelpers.cpp
     EXIFReader.cpp
-    FileExtensionsDlg.cpp
     FileExtensionsRegistry.cpp
     FileList.cpp
     FileOpenDialog.cpp

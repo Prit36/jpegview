@@ -222,9 +222,6 @@
     <ClCompile Include="InfoButtonPanelCtl.cpp">
       <Filter>Source Files\Panels</Filter>
     </ClCompile>
-    <ClCompile Include="FileExtensionsDlg.cpp">
-      <Filter>Source Files\Dialogs</Filter>
-    </ClCompile>
     <ClCompile Include="FileExtensionsRegistry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -484,9 +481,6 @@
     </ClInclude>
     <ClInclude Include="InfoButtonPanelCtl.h">
       <Filter>Header Files\Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="FileExtensionsDlg.h">
-      <Filter>Header Files\Dialogs</Filter>
     </ClInclude>
     <ClInclude Include="FileExtensionsRegistry.h">
       <Filter>Header Files</Filter>
