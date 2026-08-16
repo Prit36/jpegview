@@ -1923,9 +1923,7 @@ static CXMMImage* ApplyFilter_SSE(int nSourceHeight, int nTargetHeight, int nWid
 	const uint8* pSourceStart = (const uint8*)pSourceImg->AlignedPtr() + nStartXAligned * sizeof(short);
 	XMMFilterKernel** pKernelIndexStart = filter.Indices;
 
-	DECLARE_ALIGNED_DQWORD(ONE_XMM, 16383 - 42); // 1.0 in fixed point notation, minus rounding correction
-
-	__m128i xmm0 = *((__m128i*)ONE_XMM);
+	const __m128i xmm0 = _mm_set1_epi16(16383 - 42); // 1.0 in fixed point notation, minus rounding correction
 	__m128i xmm1 = _mm_setzero_si128();
 	__m128i xmm2;
 	__m128i xmm3;

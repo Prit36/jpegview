@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include "ImageProcessingTypes.h"
 
 class CJPEGImage;
@@ -89,9 +90,9 @@ namespace Helpers {
 	// this particular variable will have limited usage, but is used to reflect that limitation.  DO NOT CHANGE
 	const int MAX_IMAGE_DIMENSION = 65535;
 
-	// Round to integer
+	// Round to integer using standard C++23 lround
 	inline int RoundToInt(double d) {
-		return (d < 0) ? (int)(d - 0.5) : (int)(d + 0.5);
+		return (int)std::lround(d);
 	}
 
 	// Exact tick count in milliseconds using the high resolution timer
@@ -107,26 +108,26 @@ namespace Helpers {
 		if (alpha == 0xFF000000)
 			return pixel;
 
-		uint8 bg_r = GetRValue(backgroundColor);
-		uint8 bg_g = GetGValue(backgroundColor);
-		uint8 bg_b = GetBValue(backgroundColor);
+		uint32 bg_r = GetRValue(backgroundColor);
+		uint32 bg_g = GetGValue(backgroundColor);
+		uint32 bg_b = GetBValue(backgroundColor);
 
 		if (alpha == 0) {
-			return (bg_r << 16) + (bg_g << 8) + (bg_b);
+			return 0xFF000000 | (bg_r << 16) | (bg_g << 8) | bg_b;
 		} else {
-			uint8 r = (pixel >> 16) & 0xFF;
-			uint8 g = (pixel >>  8) & 0xFF;
-			uint8 b = (pixel      ) & 0xFF;
-			uint8 a = alpha >> 24;
-			uint8 one_minus_a = 255 - a;
+			uint32 a = alpha >> 24;
+			uint32 one_minus_a = 255 - a;
+			uint32 r = (pixel >> 16) & 0xFF;
+			uint32 g = (pixel >>  8) & 0xFF;
+			uint32 b = (pixel      ) & 0xFF;
 
-			return
-				0xFF000000 + 
-				(  (uint8)(((r * a + bg_r * one_minus_a) / 255.0) + 0.5) << 16) +
-				(  (uint8)(((g * a + bg_g * one_minus_a) / 255.0) + 0.5) <<  8) + 
-				(  (uint8)(((b * a + bg_b * one_minus_a) / 255.0) + 0.5)      );
+			uint32 out_r = (r * a + bg_r * one_minus_a + 127) / 255;
+			uint32 out_g = (g * a + bg_g * one_minus_a + 127) / 255;
+			uint32 out_b = (b * a + bg_b * one_minus_a + 127) / 255;
+
+			return 0xFF000000 | (out_r << 16) | (out_g << 8) | out_b;
 		}
-}
+	}
 
 	// Gets the image size to be used when fitting the image to screen, either using 'fit to screen'
 	// or 'fill with crop' method. If 'fill with crop' is used, the bLimitAR can be set to avoid

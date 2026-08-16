@@ -33,23 +33,34 @@ void* QoiReaderWriter::ReadImage(int& width,
 	}
 	int decoded_stride = width * nchannels;
 	int padded_stride = Helpers::DoPadding(decoded_stride, 4);
-	int size = decoded_stride * height;
 	unsigned char* pPixelData = new(std::nothrow) unsigned char[padded_stride * height];
 	if (pPixelData != NULL) {
-		// Copy from RGB(A) to BGR(A)
-		for (int i = 0; i < size; i += nchannels) {
-			int j = i / decoded_stride * padded_stride + i % decoded_stride;
+		// Copy from RGB(A) to BGR(A) using efficient scanline indexing
+		for (int y = 0; y < height; ++y) {
+			const unsigned char* pSrcRow = pDecodedPixels + y * decoded_stride;
+			unsigned char* pDstRow = pPixelData + y * padded_stride;
+
 			if (desc.colorspace == QOI_LINEAR) {
-				pPixelData[j  ] = (unsigned char)LINEAR_TO_SRGB(pDecodedPixels[i+2]);
-				pPixelData[j+1] = (unsigned char)LINEAR_TO_SRGB(pDecodedPixels[i+1]);
-				pPixelData[j+2] = (unsigned char)LINEAR_TO_SRGB(pDecodedPixels[i  ]);
+				for (int x = 0; x < width; ++x) {
+					int srcIdx = x * nchannels;
+					int dstIdx = x * nchannels;
+					pDstRow[dstIdx    ] = (unsigned char)LINEAR_TO_SRGB(pSrcRow[srcIdx + 2]);
+					pDstRow[dstIdx + 1] = (unsigned char)LINEAR_TO_SRGB(pSrcRow[srcIdx + 1]);
+					pDstRow[dstIdx + 2] = (unsigned char)LINEAR_TO_SRGB(pSrcRow[srcIdx    ]);
+					if (nchannels == 4)
+						pDstRow[dstIdx + 3] = pSrcRow[srcIdx + 3];
+				}
 			} else {
-				pPixelData[j  ] = pDecodedPixels[i+2];
-				pPixelData[j+1] = pDecodedPixels[i+1];
-				pPixelData[j+2] = pDecodedPixels[i  ];
+				for (int x = 0; x < width; ++x) {
+					int srcIdx = x * nchannels;
+					int dstIdx = x * nchannels;
+					pDstRow[dstIdx    ] = pSrcRow[srcIdx + 2];
+					pDstRow[dstIdx + 1] = pSrcRow[srcIdx + 1];
+					pDstRow[dstIdx + 2] = pSrcRow[srcIdx    ];
+					if (nchannels == 4)
+						pDstRow[dstIdx + 3] = pSrcRow[srcIdx + 3];
+				}
 			}
-			if (nchannels == 4)
-				pPixelData[j+3] = pDecodedPixels[i+3];
 		}
 	} else {
 		outOfMemory = true;
@@ -73,16 +84,19 @@ void* QoiReaderWriter::Compress(const void* source,
 	desc.colorspace = QOI_SRGB;
 	int input_stride = width * nchannels;
 	int padded_stride = Helpers::DoPadding(input_stride, 4);
-	int size = input_stride * height;
 	unsigned char* pPixelData = new(std::nothrow) unsigned char[input_stride * height];
-	unsigned char* pSourcePixels = (unsigned char*)source;
+	const unsigned char* pSourcePixels = (const unsigned char*)source;
 	if (pPixelData != NULL) {
-		// Copy from BGR to RGB
-		for (int i = 0; i < size; i += nchannels) {
-			int j = i / input_stride * padded_stride + i % input_stride;
-			pPixelData[i  ] = pSourcePixels[j+2];
-			pPixelData[i+1] = pSourcePixels[j+1];
-			pPixelData[i+2] = pSourcePixels[j  ];
+		// Copy from BGR to RGB using efficient scanline indexing
+		for (int y = 0; y < height; ++y) {
+			const unsigned char* pSrcRow = pSourcePixels + y * padded_stride;
+			unsigned char* pDstRow = pPixelData + y * input_stride;
+			for (int x = 0; x < width; ++x) {
+				int idx = x * nchannels;
+				pDstRow[idx    ] = pSrcRow[idx + 2];
+				pDstRow[idx + 1] = pSrcRow[idx + 1];
+				pDstRow[idx + 2] = pSrcRow[idx    ];
+			}
 		}
 		pOutput = qoi_encode(pPixelData, &desc, &len);
 		delete[] pPixelData;

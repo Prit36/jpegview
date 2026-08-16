@@ -64,23 +64,46 @@ void* CXMMImage::ConvertToDIBRGBA() const {
 	if (m_pMemory == NULL) {
 		return NULL;
 	}
-	uint8* pDIB = new uint8[m_nWidth*4 * m_nHeight];
+	uint8* pDIB = new uint8[m_nWidth * 4 * m_nHeight];
 	
-	uint16* pSrc = (uint16*) m_pMemory;
+	const uint16* pSrc = (const uint16*)m_pMemory;
 	uint8* pDst = pDIB;
+	const __m128i a8 = _mm_set1_epi8(-1);
+
 	for (int j = 0; j < m_nHeight; j++) {
-		for (int i = 0; i < m_nWidth; i++) {
-			int d = i*4;
-			int s = i;
-			pDst[d] = (uint8)(pSrc[s] >> 6);
-			s += m_nPaddedWidth;
-			pDst[d+1] = (uint8)(pSrc[s] >> 6);
-			s += m_nPaddedWidth;
-			pDst[d+2] = (uint8)(pSrc[s] >> 6);
-			pDst[d+3] = 0xFF;
+		const uint16* pSrcB = pSrc;
+		const uint16* pSrcG = pSrc + m_nPaddedWidth;
+		const uint16* pSrcR = pSrc + 2 * m_nPaddedWidth;
+		uint8* pDstRow = pDst;
+
+		int i = 0;
+		for (; i + 8 <= m_nWidth; i += 8) {
+			__m128i b16 = _mm_srli_epi16(_mm_loadu_si128((const __m128i*)(pSrcB + i)), 6);
+			__m128i g16 = _mm_srli_epi16(_mm_loadu_si128((const __m128i*)(pSrcG + i)), 6);
+			__m128i r16 = _mm_srli_epi16(_mm_loadu_si128((const __m128i*)(pSrcR + i)), 6);
+
+			__m128i b8 = _mm_packus_epi16(b16, _mm_setzero_si128());
+			__m128i g8 = _mm_packus_epi16(g16, _mm_setzero_si128());
+			__m128i r8 = _mm_packus_epi16(r16, _mm_setzero_si128());
+
+			__m128i bg = _mm_unpacklo_epi8(b8, g8);
+			__m128i ra = _mm_unpacklo_epi8(r8, a8);
+			__m128i bgra_lo = _mm_unpacklo_epi16(bg, ra);
+			__m128i bgra_hi = _mm_unpackhi_epi16(bg, ra);
+
+			_mm_storeu_si128((__m128i*)(pDstRow + i * 4), bgra_lo);
+			_mm_storeu_si128((__m128i*)(pDstRow + i * 4 + 16), bgra_hi);
 		}
-		pSrc += 3*m_nPaddedWidth;
-		pDst += m_nWidth*4;
+
+		for (; i < m_nWidth; i++) {
+			pDstRow[i * 4 + 0] = (uint8)(pSrcB[i] >> 6);
+			pDstRow[i * 4 + 1] = (uint8)(pSrcG[i] >> 6);
+			pDstRow[i * 4 + 2] = (uint8)(pSrcR[i] >> 6);
+			pDstRow[i * 4 + 3] = 0xFF;
+		}
+
+		pSrc += 3 * m_nPaddedWidth;
+		pDst += m_nWidth * 4;
 	}
 
 	return pDIB;

@@ -220,7 +220,7 @@ CJPEGImage* PsdReader::ReadImage(LPCTSTR strFileName, bool& bOutOfMemory)
 					}
 					if (pICCProfile != NULL) {
 						ReadFromFile(pICCProfile, hFile, nResourceSize);
-						SeekFile(hFile, -nResourceSize);
+						SeekFile(hFile, -(long long)nResourceSize);
 						nICCProfileSize = nResourceSize;
 					}
 					break;
@@ -228,14 +228,14 @@ CJPEGImage* PsdReader::ReadImage(LPCTSTR strFileName, bool& bOutOfMemory)
 					if (bUseAlpha) {
 						bUseAlpha = false;
 						int i = 0;
-						while (i < nResourceSize / 4) {
+						while (i < (int)(nResourceSize / 4)) {
 							i++;
 							if (ReadUIntFromFile(hFile) == 0) {
 								bUseAlpha = true;
 								break;
 							}
 						}
-						SeekFile(hFile, -i * 4);
+						SeekFile(hFile, -(long long)(i * 4));
 					}
 					break;
 				case 0x0421: // 0x0421 1057 (Photoshop 6.0) Version Info. 4 bytes version, 1 byte hasRealMergedData, Unicode string : writer name, Unicode string : reader name, 4 bytes file version.
@@ -254,7 +254,7 @@ CJPEGImage* PsdReader::ReadImage(LPCTSTR strFileName, bool& bOutOfMemory)
 							memcpy(pEXIFData, "\xFF\xE1\0\0Exif\0\0", 10);
 							*((unsigned short*)pEXIFData + 1) = _byteswap_ushort(nResourceSize + 8);
 							ReadFromFile((char*)pEXIFData + 10, hFile, nResourceSize);
-							SeekFile(hFile, -nResourceSize);
+							SeekFile(hFile, -(long long)nResourceSize);
 						}
 					}
 					break;
@@ -328,7 +328,7 @@ CJPEGImage* PsdReader::ReadImage(LPCTSTR strFileName, bool& bOutOfMemory)
 				if (nColorMode == MODE_Lab) {
 					rchannel = channel;
 				} else {
-					rchannel = (-channel - 2) % nChannels;
+					rchannel = (channel < 3) ? (2 - channel) : channel;
 				}
 				for (unsigned row = 0; row < nHeight; row++) {
 					p = pOffset;
@@ -390,7 +390,7 @@ CJPEGImage* PsdReader::ReadImage(LPCTSTR strFileName, bool& bOutOfMemory)
 				if (nColorMode == MODE_Lab) {
 					rchannel = channel;
 				} else {
-					rchannel = (-channel - 2) % nChannels;
+					rchannel = (channel < 3) ? (2 - channel) : channel;
 				}
 				for (unsigned row = 0; row < nHeight; row++) {
 					for (unsigned count = 0; count < nWidth; count++) {
@@ -437,8 +437,7 @@ CJPEGImage* PsdReader::ReadImage(LPCTSTR strFileName, bool& bOutOfMemory)
 
 CJPEGImage* PsdReader::ReadThumb(LPCTSTR strFileName, bool& bOutOfMemory)
 {
-	HANDLE hFile;
-	hFile = ::CreateFile(strFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+	HANDLE hFile = ::CreateFile(strFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
 		return NULL;
 	}
@@ -446,9 +445,9 @@ CJPEGImage* PsdReader::ReadThumb(LPCTSTR strFileName, bool& bOutOfMemory)
 	void* pPixelData = NULL;
 	void* pEXIFData = NULL;
 	CJPEGImage* Image = NULL;
-	int nWidth, nHeight, nChannels;
-	int nJpegSize;
-	TJSAMP eChromoSubSampling;
+	int nWidth = 0, nHeight = 0, nChannels = 0;
+	int nJpegSize = 0;
+	TJSAMP eChromoSubSampling = (TJSAMP)0;
 
 	try {
 		// Skip file header
@@ -459,10 +458,10 @@ CJPEGImage* PsdReader::ReadThumb(LPCTSTR strFileName, bool& bOutOfMemory)
 		SeekFile(hFile, nColorDataSize);
 
 		// Skip resource section size
-		ReadUIntFromFile(hFile);
+		unsigned int nResourceSectionSize = ReadUIntFromFile(hFile);
+		unsigned long long nImageResourcesEnd = TellFile(hFile) + nResourceSectionSize;
 
-		for (;;) {
-			// Resource block signature
+		while (TellFile(hFile) < nImageResourcesEnd) {
 			try {
 				if (ReadUIntFromFile(hFile) != 0x3842494D) { // "8BIM"
 					break;
@@ -471,30 +470,20 @@ CJPEGImage* PsdReader::ReadThumb(LPCTSTR strFileName, bool& bOutOfMemory)
 				break;
 			}
 
-
 			unsigned short nResourceID = ReadUShortFromFile(hFile);
 
-			// Skip Pascal string (padded to be even length)
-			unsigned char nStringSize = ReadUCharFromFile(hFile);
-			SeekFile(hFile, nStringSize | 1);
+			// Resource Name (Pascal string, padded to make size even)
+			unsigned char nNameLength = ReadUCharFromFile(hFile);
+			SeekFile(hFile, nNameLength + (nNameLength % 2 == 0 ? 1 : 0));
 
-			// Resource size
 			unsigned int nResourceSize = ReadUIntFromFile(hFile);
 
-			// Parse image resources
 			switch (nResourceID) {
-				case 0x0409: // 0x0409 1033 (Photoshop 4.0) Thumbnail resource for Photoshop 4.0 only. See See Thumbnail resource format.
-				case 0x040C: // 0x040C 1036 (Photoshop 5.0) Thumbnail resource (supersedes resource 1033). See See Thumbnail resource format.
-					// Skip thumbnail resource header
-					SeekFile(hFile, 28);
-
-					// Read embedded JPEG thumbnail
-					nJpegSize = nResourceSize - 28;
-					if (nJpegSize > MAX_JPEG_FILE_SIZE) {
-						bOutOfMemory = true;
-						ThrowIf(true);
-					}
-
+				case 0x0409: // 0x0409 1033 (Photoshop 4.0) Thumbnail resource for Photoshop 4.0 only. See Thumbnail resource format.
+				case 0x040C: { // 0x040C 1036 (Photoshop 5.0) Thumbnail resource (supersedes resource 1033). See Thumbnail resource format.
+					// Skip Format, Width, Height, WidthBytes, Size, CompressedSize, BitsPerPixel, Planes
+					SeekFile(hFile, 20);
+					nJpegSize = nResourceSize - 20;
 					pBuffer = new(std::nothrow) char[nJpegSize];
 					if (pBuffer == NULL) {
 						bOutOfMemory = true;
@@ -502,24 +491,25 @@ CJPEGImage* PsdReader::ReadThumb(LPCTSTR strFileName, bool& bOutOfMemory)
 					}
 
 					ReadFromFile(pBuffer, hFile, nJpegSize);
-					SeekFile(hFile, -nResourceSize);
-
+					SeekFile(hFile, -(long long)nResourceSize);
 
 					pPixelData = TurboJpeg::ReadImage(nWidth, nHeight, nChannels, eChromoSubSampling, bOutOfMemory, pBuffer, nJpegSize);
 					break;
+				}
 
-				case 0x0422: // 0x0422 1058 (Photoshop 7.0) EXIF data 1. See http://www.kodak.com/global/plugins/acrobat/en/service/digCam/exifStandard2.pdf
-				case 0x0423: // 0x0423 1059 (Photoshop 7.0) EXIF data 3. See http://www.kodak.com/global/plugins/acrobat/en/service/digCam/exifStandard2.pdf
+				case 0x0422: // 0x0422 1058 (Photoshop 7.0) EXIF data 1.
+				case 0x0423: { // 0x0423 1059 (Photoshop 7.0) EXIF data 3.
 					if (pEXIFData == NULL && nResourceSize < 65526) {
 						pEXIFData = new(std::nothrow) char[nResourceSize + 10];
 						if (pEXIFData != NULL) {
 							memcpy(pEXIFData, "\xFF\xE1\0\0Exif\0\0", 10);
 							*((unsigned short*)pEXIFData + 1) = _byteswap_ushort(nResourceSize + 8);
 							ReadFromFile((char*)pEXIFData + 10, hFile, nResourceSize);
-							SeekFile(hFile, -nResourceSize);
+							SeekFile(hFile, -(long long)nResourceSize);
 						}
 					}
 					break;
+				}
 			}
 
 			// Skip resource data (padded to be even length)

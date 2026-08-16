@@ -32,6 +32,10 @@ if(MSVC)
         /Zc:preprocessor
         /utf-8
         /EHsc
+        $<$<CONFIG:Release>:/Oi>
+        $<$<CONFIG:Release>:/Ot>
+        $<$<CONFIG:Release>:/Gy>
+        $<$<CONFIG:Release>:/Gw>
     )
     # Enable AVX2 on x64 architectures for enhanced vectorization
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")

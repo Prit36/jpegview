@@ -3,13 +3,6 @@
 #include "ResizeFilter.h"
 #include "ApplyFilterAVX.h"
 
-// This macro allows for aligned definition of a 32 byte value with initialization of the 16 components
-// to a single value
-#define DECLARE_ALIGNED_QQWORD(name, initializer) \
-	int16 _tempVal##name[32]; \
-	int16* name = (int16*)((((PTR_INTEGRAL_TYPE)&(_tempVal##name) + 31) & ~31)); \
-	name[0] = name[1] = name[2] = name[3] = name[4] = name[5] = name[6] = name[7] = name[8] = name[9] = name[10] = name[11] = name[12] = name[13] = name[14] = name[15] = initializer;
-
 #ifdef _WIN64
 
 CXMMImage* ApplyFilter_AVX(int nSourceHeight, int nTargetHeight, int nWidth,
@@ -32,9 +25,7 @@ CXMMImage* ApplyFilter_AVX(int nSourceHeight, int nTargetHeight, int nWidth,
 	const uint8* pSourceStart = (const uint8*)pSourceImg->AlignedPtr() + nStartXAligned * sizeof(short);
 	AVXFilterKernel** pKernelIndexStart = filter.Indices;
 
-	DECLARE_ALIGNED_QQWORD(ONE_XMM, 16383 - 42); // 1.0 in fixed point notation, minus rounding correction
-
-	__m256i ymm0 = *((__m256i*)ONE_XMM);
+	const __m256i ymm0 = _mm256_set1_epi16(16383 - 42); // 1.0 in fixed point notation, minus rounding correction
 	__m256i ymm1 = _mm256_setzero_si256();
 	__m256i ymm2;
 	__m256i ymm3;
