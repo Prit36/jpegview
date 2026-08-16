@@ -383,14 +383,8 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	BOOL bDarkMode = TRUE;
 	::DwmSetWindowAttribute(m_hWnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &bDarkMode, sizeof(bDarkMode));
 
-	// Initialize Direct2D 1.3 & DirectWrite modern hardware rendering engine
-	CD2DRenderer::This().Initialize(m_hWnd);
-
-	// Start background asynchronous image prefetch queue
-	CPrefetchQueue::This().Start();
-
 	// set the scaling of the screen (DPI) compared to 96 DPI (design value)
-	CPaintDC dc(this->m_hWnd);
+	CClientDC dc(this->m_hWnd);
 	HelpersGUI::ScreenScaling = ::GetDeviceCaps(dc, LOGPIXELSX)/96.0f;
 
 	::SetClassLongPtr(m_hWnd, GCLP_HCURSOR, NULL);
@@ -787,7 +781,6 @@ void CMainDlg::DisplayFileName(const CRect& imageProcessingArea, CDC& dc, double
 LRESULT CMainDlg::OnSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/) {
 	bool bKeepFitToScreen = !m_bResizeForNewImage && fabs(m_dZoom - GetZoomFactorForFitToScreen(false, false)) < 0.01;
 	this->GetClientRect(&m_clientRect);
-	CD2DRenderer::This().Resize(m_clientRect.Width(), m_clientRect.Height());
 	this->Invalidate(FALSE);
 	if (m_clientRect.Width() < HelpersGUI::ScaleToScreen(800)) {
 		if (m_pImageProcPanelCtl != NULL) m_pImageProcPanelCtl->SetVisible(false);
@@ -849,8 +842,6 @@ LRESULT CMainDlg::OnLoadFileAsynch(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 }
 
 LRESULT CMainDlg::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled) {
-	CPrefetchQueue::This().Stop();
-	CD2DRenderer::This().Cleanup();
 	GetWindowRect(m_windowRectOnClose);
 	bHandled = FALSE;
 	return 0;

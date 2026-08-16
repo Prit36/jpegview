@@ -1,6 +1,8 @@
 #include "StdAfx.h"
 #include "XMMImage.h"
 #include "Helpers.h"
+#include <emmintrin.h>
+#include <tmmintrin.h>
 
 CXMMImage::CXMMImage(int nWidth, int nHeight, int padding) {
 	Init(nWidth, nHeight, false, padding);
@@ -20,30 +22,50 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirs
 		int nSrcLineWidthPadded = Helpers::DoPadding(nWidth * nChannels, 4);
 		const uint8* pSrc = (uint8*)pDIB + (long long)nFirstY*(long long)nSrcLineWidthPadded + (long long)nFirstX*(long long)nChannels;
 		uint16* pDst = (unsigned short*) m_pMemory;
+
+		const __m128i mask_b = _mm_setr_epi8(0, -1, 4, -1, 8, -1, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+		const __m128i mask_g = _mm_setr_epi8(1, -1, 5, -1, 9, -1, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+		const __m128i mask_r = _mm_setr_epi8(2, -1, 6, -1, 10, -1, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+
 		for (int j = 0; j < nSectionHeight; j++) {
 			if (nChannels == 4) {
-				for (int i = 0; i < nSectionWidth; i++) {
-					uint32 sourcePixel = ((uint32*)pSrc)[i];
-					int d = i;
-					uint32 nBlue = sourcePixel & 0xFF;
-					uint32 nGreen = (sourcePixel >> 8) & 0xFF;
-					uint32 nRed = (sourcePixel >> 16) & 0xFF;
-					// The commented out code actually is worse than the simple shift for precision of the fixed point arithmetic
-					pDst[d] = ((uint16)nBlue << 6); // ((((uint16)nBlue) << 8) + nBlue) >> 2;
-					d += m_nPaddedWidth;
-					pDst[d] = ((uint16)nGreen << 6); //((((uint16) nGreen) << 8) + nGreen) >> 2;
-					d += m_nPaddedWidth;
-					pDst[d] = ((uint16)nRed << 6); //((((uint16) nRed) << 8) + nRed) >> 2;
+				const uint32* pSrc32 = (const uint32*)pSrc;
+				uint16* pDstB = pDst;
+				uint16* pDstG = pDst + m_nPaddedWidth;
+				uint16* pDstR = pDst + 2 * m_nPaddedWidth;
+
+				int i = 0;
+				for (; i + 8 <= nSectionWidth; i += 8) {
+					__m128i px0 = _mm_loadu_si128((const __m128i*)(pSrc32 + i));
+					__m128i px1 = _mm_loadu_si128((const __m128i*)(pSrc32 + i + 4));
+
+					__m128i b0 = _mm_slli_epi16(_mm_shuffle_epi8(px0, mask_b), 6);
+					__m128i b1 = _mm_slli_epi16(_mm_shuffle_epi8(px1, mask_b), 6);
+					_mm_storeu_si128((__m128i*)(pDstB + i), _mm_unpacklo_epi64(b0, b1));
+
+					__m128i g0 = _mm_slli_epi16(_mm_shuffle_epi8(px0, mask_g), 6);
+					__m128i g1 = _mm_slli_epi16(_mm_shuffle_epi8(px1, mask_g), 6);
+					_mm_storeu_si128((__m128i*)(pDstG + i), _mm_unpacklo_epi64(g0, g1));
+
+					__m128i r0 = _mm_slli_epi16(_mm_shuffle_epi8(px0, mask_r), 6);
+					__m128i r1 = _mm_slli_epi16(_mm_shuffle_epi8(px1, mask_r), 6);
+					_mm_storeu_si128((__m128i*)(pDstR + i), _mm_unpacklo_epi64(r0, r1));
+				}
+				for (; i < nSectionWidth; i++) {
+					uint32 sourcePixel = pSrc32[i];
+					pDstB[i] = (uint16)((sourcePixel & 0xFF) << 6);
+					pDstG[i] = (uint16)(((sourcePixel >> 8) & 0xFF) << 6);
+					pDstR[i] = (uint16)(((sourcePixel >> 16) & 0xFF) << 6);
 				}
 			} else {
 				for (int i = 0; i < nSectionWidth; i++) {
 					int s = i*3;
 					int d = i;
-					pDst[d] = ((uint16)pSrc[s] << 6);//((((uint16) pSrc[s]) << 8) + pSrc[s]) >> 2;
+					pDst[d] = ((uint16)pSrc[s] << 6);
 					d += m_nPaddedWidth;
-					pDst[d] = ((uint16)pSrc[s+1] << 6);//((((uint16) pSrc[s+1]) << 8) + pSrc[s+1]) >> 2;
+					pDst[d] = ((uint16)pSrc[s+1] << 6);
 					d += m_nPaddedWidth;
-					pDst[d] = ((uint16)pSrc[s+2] << 6);//((((uint16) pSrc[s+2]) << 8) + pSrc[s+2]) >> 2;
+					pDst[d] = ((uint16)pSrc[s+2] << 6);
 				}
 			}
 			pDst += 3*m_nPaddedWidth;

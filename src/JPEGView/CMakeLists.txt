@@ -145,7 +145,22 @@ target_link_libraries(JPEGView PRIVATE
     ole32
     oleaut32
     uuid
+    delayimp
 )
+
+if(MSVC)
+    target_link_options(JPEGView PRIVATE
+        "/DELAYLOAD:avif.dll"
+        "/DELAYLOAD:heif.dll"
+        "/DELAYLOAD:libraw.dll"
+        "/DELAYLOAD:jxl_dec.dll"
+        "/DELAYLOAD:jxl_threads.dll"
+        "/DELAYLOAD:lcms2.dll"
+        "/DELAYLOAD:d3d11.dll"
+        "/DELAYLOAD:d2d1.dll"
+        "/DELAYLOAD:dwrite.dll"
+    )
+endif()
 
 set_target_properties(JPEGView PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/$<CONFIG>"
@@ -169,4 +184,12 @@ foreach(DLL_PATH ${RUNTIME_DLLS})
         )
     endif()
 endforeach()
+
+# Copy default configuration INI
+add_custom_command(TARGET JPEGView POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/Config/JPEGView.ini"
+        "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/JPEGView.ini"
+    COMMENT "Copying JPEGView.ini"
+)
 

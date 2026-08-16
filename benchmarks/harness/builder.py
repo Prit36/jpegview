@@ -78,15 +78,7 @@ class TargetBuilder:
             except Exception:
                 pass
 
-        if target_name == "current":
-            root_release_exe = self.repo_root / "build" / "bin" / "Release" / "JPEGView.exe"
-            if root_release_exe.exists() and not force_rebuild:
-                shutil.copy2(root_release_exe, exe_path)
-                wic_dll = self.repo_root / "build" / "bin" / "Release" / "WICLoader.dll"
-                if wic_dll.exists():
-                    shutil.copy2(wic_dll, out_target_dir / "WICLoader.dll")
-                print(f"[+] Copied current working tree binary from build/bin/Release/ to {exe_path}")
-                return exe_path
+
 
         print(f"[*] Building Release x64 binary for '{target_name}'...")
         start_t = time.perf_counter()

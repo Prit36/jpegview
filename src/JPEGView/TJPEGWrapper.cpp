@@ -14,12 +14,15 @@ void * TurboJpeg::ReadImage(int &width,
 {
 	outOfMemory = false;
 	width = height = 0;
-	nchannels = 3;
+	nchannels = 4;
 	chromoSubsampling = TJSAMP_420;
 
-	tjhandle hDecoder = tj3Init(TJINIT_DECOMPRESS);
+	thread_local tjhandle hDecoder = NULL;
 	if (hDecoder == NULL) {
-		return NULL;
+		hDecoder = tj3Init(TJINIT_DECOMPRESS);
+		if (hDecoder == NULL) {
+			return NULL;
+		}
 	}
 
 	unsigned char* pPixelData = NULL;
@@ -28,23 +31,45 @@ void * TurboJpeg::ReadImage(int &width,
 		width = tj3Get(hDecoder, TJPARAM_JPEGWIDTH);
 		height = tj3Get(hDecoder, TJPARAM_JPEGHEIGHT);
 		chromoSubsampling = (TJSAMP)tj3Get(hDecoder, TJPARAM_SUBSAMP);
+		int colorspace = tj3Get(hDecoder, TJPARAM_COLORSPACE);
+
 		if (abs((double)width * height) > MAX_IMAGE_PIXELS) {
 			outOfMemory = true;
 		} else if (width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION && chromoSubsampling != TJSAMP_UNKNOWN) {
-			pPixelData = new(std::nothrow) unsigned char[TJPAD(width * 3) * height];
-			if (pPixelData != NULL) {
-				nResult = tj3Decompress8(hDecoder, (unsigned char*)buffer, sizebytes, pPixelData, TJPAD(width * 3), TJPF_BGR);
-				if (nResult != 0) {
-					delete[] pPixelData;
-					pPixelData = NULL;
+			// Enable fast chrominance upsampling for maximum decode throughput
+			tj3Set(hDecoder, TJPARAM_FASTUPSAMPLE, 1);
+
+			// For grayscale JPEGs, decode to 1 channel
+			if (colorspace == TJCS_GRAY || chromoSubsampling == TJSAMP_GRAY) {
+				nchannels = 1;
+				size_t pitch = (size_t)TJPAD(width);
+				pPixelData = new(std::nothrow) unsigned char[pitch * height];
+				if (pPixelData != NULL) {
+					nResult = tj3Decompress8(hDecoder, (unsigned char*)buffer, sizebytes, pPixelData, (int)pitch, TJPF_GRAY);
+					if (nResult != 0) {
+						delete[] pPixelData;
+						pPixelData = NULL;
+					}
+				} else {
+					outOfMemory = true;
 				}
 			} else {
-				outOfMemory = true;
+				// Decompress directly to 32-bit BGRA/BGRX for maximum AVX2/SSE SIMD write throughput
+				nchannels = 4;
+				size_t pitch = (size_t)width * 4;
+				pPixelData = new(std::nothrow) unsigned char[pitch * height];
+				if (pPixelData != NULL) {
+					nResult = tj3Decompress8(hDecoder, (unsigned char*)buffer, sizebytes, pPixelData, (int)pitch, TJPF_BGRX);
+					if (nResult != 0) {
+						delete[] pPixelData;
+						pPixelData = NULL;
+					}
+				} else {
+					outOfMemory = true;
+				}
 			}
 		}
 	}
-
-	tj3Destroy(hDecoder);
 
 	return pPixelData;
 }

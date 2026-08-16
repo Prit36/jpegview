@@ -1,7 +1,7 @@
 
 #pragma once
 
-enum TJSAMP;
+#include "libjpeg-turbo/include/turbojpeg.h"
 
 class TurboJpeg
 {

@@ -19,6 +19,7 @@
 #include "WEBPWrapper.h"
 #include "QOIWrapper.h"
 #include "PSDWrapper.h"
+#include "MemoryMappedFile.h"
 #include "MaxImageDef.h"
 
 
@@ -462,42 +463,35 @@ void CImageLoadThread::DeleteCachedAvifDecoder() {
 }
 
 void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
-	HANDLE hFile = ::CreateFile(request->FileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-	if (hFile == INVALID_HANDLE_VALUE) {
+	CMemoryMappedFile mmFile;
+	if (!mmFile.Open(std::wstring((LPCTSTR)request->FileName))) {
 		return;
 	}
 
-	HGLOBAL hFileBuffer = NULL;
-	void* pBuffer = NULL;
+	const void* pBuffer = mmFile.Data();
+	int nFileSize = (int)mmFile.Size();
+	if (nFileSize <= 0 || nFileSize > MAX_JPEG_FILE_SIZE) {
+		request->OutOfMemory = (nFileSize > MAX_JPEG_FILE_SIZE);
+		return;
+	}
+
 	try {
-		// Don't read too huge files
-		long long nFileSize = Helpers::GetFileSize(hFile);
-		if (nFileSize > MAX_JPEG_FILE_SIZE) {
-			request->OutOfMemory = true;
-			::CloseHandle(hFile);
-			return;
-		}
-		hFileBuffer  = ::GlobalAlloc(GMEM_MOVEABLE, nFileSize);
-		pBuffer = (hFileBuffer == NULL) ? NULL : ::GlobalLock(hFileBuffer);
-		if (pBuffer == NULL) {
-			if (hFileBuffer) ::GlobalFree(hFileBuffer);
-			request->OutOfMemory = true;
-			::CloseHandle(hFile);
-			return;
-		}
-		unsigned int nNumBytesRead;
-		if (::ReadFile(hFile, pBuffer, nFileSize, (LPDWORD) &nNumBytesRead, NULL) && nNumBytesRead == nFileSize) {
-			bool bUseGDIPlus = CSettingsProvider::This().ForceGDIPlus() || CSettingsProvider::This().UseEmbeddedColorProfiles();
-			if (bUseGDIPlus) {
+		bool bUseGDIPlus = CSettingsProvider::This().ForceGDIPlus() || CSettingsProvider::This().UseEmbeddedColorProfiles();
+		if (bUseGDIPlus) {
+			HGLOBAL hFileBuffer = ::GlobalAlloc(GMEM_MOVEABLE, nFileSize);
+			void* pGDI = (hFileBuffer == NULL) ? NULL : ::GlobalLock(hFileBuffer);
+			if (pGDI != NULL) {
+				memcpy(pGDI, pBuffer, nFileSize);
+				::GlobalUnlock(hFileBuffer);
 				IStream* pStream = NULL;
-				if (::CreateStreamOnHGlobal(hFileBuffer, FALSE, &pStream) == S_OK) {
+				if (::CreateStreamOnHGlobal(hFileBuffer, TRUE, &pStream) == S_OK) {
 					Gdiplus::Bitmap* pBitmap = Gdiplus::Bitmap::FromStream(pStream, CSettingsProvider::This().UseEmbeddedColorProfiles());
 					bool isOutOfMemory, isAnimatedGIF;
-					request->Image = ConvertGDIPlusBitmapToJPEGImage(pBitmap, 0, Helpers::FindEXIFBlock(pBuffer, nFileSize),
-						Helpers::CalculateJPEGFileHash(pBuffer, nFileSize), isOutOfMemory, isAnimatedGIF);
+					request->Image = ConvertGDIPlusBitmapToJPEGImage(pBitmap, 0, Helpers::FindEXIFBlock((void*)pBuffer, nFileSize),
+						Helpers::CalculateJPEGFileHash((void*)pBuffer, nFileSize), isOutOfMemory, isAnimatedGIF);
 					request->OutOfMemory = request->Image == NULL && isOutOfMemory;
 					if (request->Image != NULL) {
-						request->Image->SetJPEGComment(Helpers::GetJPEGComment(pBuffer, nFileSize));
+						request->Image->SetJPEGComment(Helpers::GetJPEGComment((void*)pBuffer, nFileSize));
 					}
 					pStream->Release();
 					delete pBitmap;
@@ -505,34 +499,27 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 					request->OutOfMemory = true;
 				}
 			}
-			if (!bUseGDIPlus || request->OutOfMemory) {
-				int nWidth, nHeight, nBPP;
-				TJSAMP eChromoSubSampling;
-				bool bOutOfMemory;
-				// int nTicks = ::GetTickCount();
+		}
+		if (!bUseGDIPlus || request->OutOfMemory) {
+			int nWidth = 0, nHeight = 0, nBPP = 4;
+			TJSAMP eChromoSubSampling = TJSAMP_420;
+			bool bOutOfMemory = false;
 
-				void* pPixelData = TurboJpeg::ReadImage(nWidth, nHeight, nBPP, eChromoSubSampling, bOutOfMemory, pBuffer, nFileSize);
-				
-				/*
-				TCHAR buffer[20];
-				_stprintf_s(buffer, 20, _T("%d"), ::GetTickCount() - nTicks);
-				::MessageBox(NULL, CString(_T("Elapsed ticks: ")) + buffer, _T("Time"), MB_OK);
-				*/
+			void* pPixelData = TurboJpeg::ReadImage(nWidth, nHeight, nBPP, eChromoSubSampling, bOutOfMemory, pBuffer, nFileSize);
 
-				// Color and b/w JPEG is supported
-				if (pPixelData != NULL && (nBPP == 3 || nBPP == 1)) {
-					request->Image = new CJPEGImage(nWidth, nHeight, pPixelData, 
-						Helpers::FindEXIFBlock(pBuffer, nFileSize), nBPP, 
-						Helpers::CalculateJPEGFileHash(pBuffer, nFileSize), IF_JPEG, false, 0, 1, 0);
-					request->Image->SetJPEGComment(Helpers::GetJPEGComment(pBuffer, nFileSize));
-					request->Image->SetJPEGChromoSampling(eChromoSubSampling);
-				} else if (bOutOfMemory) {
-					request->OutOfMemory = true;
-				} else {
-					// failed, try GDI+
-					delete[] pPixelData;
-					ProcessReadGDIPlusRequest(request);
-				}
+			// Color (4-bpp / 3-bpp) and b/w (1-bpp) JPEG is supported
+			if (pPixelData != NULL && (nBPP == 4 || nBPP == 3 || nBPP == 1)) {
+				request->Image = new CJPEGImage(nWidth, nHeight, pPixelData, 
+					Helpers::FindEXIFBlock((void*)pBuffer, nFileSize), nBPP, 
+					Helpers::CalculateJPEGFileHash((void*)pBuffer, nFileSize), IF_JPEG, false, 0, 1, 0);
+				request->Image->SetJPEGComment(Helpers::GetJPEGComment((void*)pBuffer, nFileSize));
+				request->Image->SetJPEGChromoSampling(eChromoSubSampling);
+			} else if (bOutOfMemory) {
+				request->OutOfMemory = true;
+			} else {
+				// failed, try GDI+
+				delete[] pPixelData;
+				ProcessReadGDIPlusRequest(request);
 			}
 		}
 	} catch (...) {
@@ -540,9 +527,6 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 		request->Image = NULL;
 		request->ExceptionError = true;
 	}
-	::CloseHandle(hFile);
-	if (pBuffer) ::GlobalUnlock(hFileBuffer);
-	if (hFileBuffer) ::GlobalFree(hFileBuffer);
 }
 
 

@@ -97,7 +97,8 @@ public:
 	// Get the n-next file, does not change the internal state
 	LPCTSTR PeekNextPrev(int nIndex, bool bForward, bool bToggle);
 	// Number of files in file list (for current directory)
-	int Size() const { return (int)m_fileList.size(); }
+	// Number of files in file list (for current directory)
+	int Size() const;
 	// Index of current file in file list (zero based)
 	int CurrentIndex() const;
 
@@ -140,10 +141,13 @@ public:
 	bool CanOpenCurrentFileForReading() const;
 
 	// Returns the raw file list of the current folder
-	std::list<CFileDesc> & GetFileList() { return m_fileList; }
+	std::list<CFileDesc> & GetFileList();
 
 	// delete the chain of CFileLists forward and backward and only leave the current node alive
 	void DeleteHistory(bool onlyForward = false);
+
+	// Ensure background/lazy directory scan is completed
+	void EnsureDirectoryScanned();
 
 private:
 	static Helpers::ENavigationMode sm_eMode;
@@ -151,6 +155,7 @@ private:
 	bool m_bDeleteHistory;
 	bool m_bIsSlideShowList;
 	bool m_bWrapAroundFolder;
+	bool m_bDirectoryScanned;
 	int m_nLevel;
 	CString m_sInitialFile;
 	CString m_sDirectory;

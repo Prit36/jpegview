@@ -1726,8 +1726,23 @@ void* CBasicProcessing::SampleDown_HQ(CSize fullTargetSize, CPoint fullTargetOff
 // High quality downsampling (Helpers for SSE and MMX implementation)
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-// Rotates a line of 'simdPixelsPerRegister' pixels from source to targt
+// Rotates a line of 'simdPixelsPerRegister' pixels from source to target
 inline static const int16* RotateLine(const int16* pSource, int16* pTarget, int nIncTargetLine, int simdPixelsPerRegister) {
+	if (simdPixelsPerRegister == 16) {
+		for (int i = 0; i < 15; i++) {
+			*pTarget = *pSource++;
+			pTarget += nIncTargetLine;
+		}
+		*pTarget = *pSource++;
+		return pSource;
+	} else if (simdPixelsPerRegister == 8) {
+		for (int i = 0; i < 7; i++) {
+			*pTarget = *pSource++;
+			pTarget += nIncTargetLine;
+		}
+		*pTarget = *pSource++;
+		return pSource;
+	}
 	for (int i = 0; i < simdPixelsPerRegister - 1; i++)
 	{
 		*pTarget = *pSource++; pTarget += nIncTargetLine;
@@ -1739,6 +1754,25 @@ inline static const int16* RotateLine(const int16* pSource, int16* pTarget, int 
 
 inline static const int16* RotateLineToDIB_1(const int16* pSource, uint8* pTarget, int nIncTargetLine, int simdPixelsPerRegister) {
 	const int FP_05 = 42; // 0.5 (actually a bit more) in fixed point, improves rounding
+	if (simdPixelsPerRegister == 16) {
+		for (int i = 0; i < 15; i++) {
+			*((uint32*)pTarget) = ALPHA_OPAQUE | ((*pSource + FP_05) >> 6);
+			pSource++;
+			pTarget += nIncTargetLine;
+		}
+		*((uint32*)pTarget) = ALPHA_OPAQUE | ((*pSource + FP_05) >> 6);
+		pSource++;
+		return pSource;
+	} else if (simdPixelsPerRegister == 8) {
+		for (int i = 0; i < 7; i++) {
+			*((uint32*)pTarget) = ALPHA_OPAQUE | ((*pSource + FP_05) >> 6);
+			pSource++;
+			pTarget += nIncTargetLine;
+		}
+		*((uint32*)pTarget) = ALPHA_OPAQUE | ((*pSource + FP_05) >> 6);
+		pSource++;
+		return pSource;
+	}
 	for (int i = 0; i < simdPixelsPerRegister - 1; i++)
 	{
 		*((uint32*)pTarget) = ALPHA_OPAQUE | ((*pSource + FP_05) >> 6); pSource++;  pTarget += nIncTargetLine;
@@ -1750,6 +1784,25 @@ inline static const int16* RotateLineToDIB_1(const int16* pSource, uint8* pTarge
 
 inline static const int16* RotateLineToDIB(const int16* pSource, uint8* pTarget, int nIncTargetLine, int simdPixelsPerRegister) {
 	const int FP_05 = 42;
+	if (simdPixelsPerRegister == 16) {
+		for (int i = 0; i < 15; i++) {
+			*pTarget = (uint8)((*pSource + FP_05) >> 6);
+			pSource++;
+			pTarget += nIncTargetLine;
+		}
+		*pTarget = (uint8)((*pSource + FP_05) >> 6);
+		pSource++;
+		return pSource;
+	} else if (simdPixelsPerRegister == 8) {
+		for (int i = 0; i < 7; i++) {
+			*pTarget = (uint8)((*pSource + FP_05) >> 6);
+			pSource++;
+			pTarget += nIncTargetLine;
+		}
+		*pTarget = (uint8)((*pSource + FP_05) >> 6);
+		pSource++;
+		return pSource;
+	}
 	for (int i = 0; i < simdPixelsPerRegister - 1; i++)
 	{
 		*pTarget = (*pSource++ + FP_05) >> 6; pTarget += nIncTargetLine;

@@ -99,39 +99,62 @@ CLocalDensityCorr::CLocalDensityCorr(const CJPEGImage & image, bool bFullConstru
 		uint32 nX = 0;
 		const uint8* pSrcStart = pSourcePixels + nLineSize*(nY >> 16);
 		uint16* pSubSampImage = m_pPointSampledImage + j*m_nPSIWidth*3;
-		for (int i = 0; i < m_nPSIWidth; i++) {
-			const uint8* pSrc = (nChannels == 3) ? pSrcStart + (nX >> 16)*3 : pSrcStart + (nX >> 16)*4;
-			channelB[pSrc[0]]++;
-			channelG[pSrc[1]]++;
-			channelR[pSrc[2]]++;
-			channelGrey[(pSrc[0]*128 + pSrc[1]*640 + pSrc[2]*256) >> 10]++;
-			pSubSampImage[0] = pSrc[0];
-			pSubSampImage[m_nPSIWidth] = pSrc[1];
-			pSubSampImage[m_nPSIWidth*2] = pSrc[2];
-			pSubSampImage++;
-			nX += nIncX;
+		if (nChannels == 4) {
+			const uint32* pSrcStart32 = (const uint32*)pSrcStart;
+			for (int i = 0; i < m_nPSIWidth; i++) {
+				uint32 pixel = pSrcStart32[nX >> 16];
+				uint32 b = pixel & 0xFF;
+				uint32 g = (pixel >> 8) & 0xFF;
+				uint32 r = (pixel >> 16) & 0xFF;
+				channelB[b]++;
+				channelG[g]++;
+				channelR[r]++;
+				channelGrey[(b*128 + g*640 + r*256) >> 10]++;
+				pSubSampImage[0] = (uint16)b;
+				pSubSampImage[m_nPSIWidth] = (uint16)g;
+				pSubSampImage[m_nPSIWidth*2] = (uint16)r;
+				pSubSampImage++;
+				nX += nIncX;
+			}
+		} else {
+			for (int i = 0; i < m_nPSIWidth; i++) {
+				const uint8* pSrc = pSrcStart + (nX >> 16)*3;
+				channelB[pSrc[0]]++;
+				channelG[pSrc[1]]++;
+				channelR[pSrc[2]]++;
+				channelGrey[(pSrc[0]*128 + pSrc[1]*640 + pSrc[2]*256) >> 10]++;
+				pSubSampImage[0] = pSrc[0];
+				pSubSampImage[m_nPSIWidth] = pSrc[1];
+				pSubSampImage[m_nPSIWidth*2] = pSrc[2];
+				pSubSampImage++;
+				nX += nIncX;
+			}
 		}
 		nY += nIncY;
 	}
 
 	// Calculate a CRC over the histograms
-	uint32 crc_table[256];
-	Helpers::CalcCRCTable(crc_table);
+	static uint32 s_crc_table[256];
+	static bool s_crc_init = false;
+	if (!s_crc_init) {
+		Helpers::CalcCRCTable(s_crc_table);
+		s_crc_init = true;
+	}
 	uint32 crcValue = 0xffffffff;
 	uint8* pHistB = (uint8*)&channelB;
 	uint8* pHistG = (uint8*)&channelG;
 	uint8* pHistR = (uint8*)&channelR;
 	for (int n = 0; n < 256*4; n++) {
-		crcValue = crc_table[(crcValue ^ pHistB[n]) & 0xff] ^ (crcValue >> 8);
-		crcValue = crc_table[(crcValue ^ pHistG[n]) & 0xff] ^ (crcValue >> 8);
-		crcValue = crc_table[(crcValue ^ pHistR[n]) & 0xff] ^ (crcValue >> 8);
+		crcValue = s_crc_table[(crcValue ^ pHistB[n]) & 0xff] ^ (crcValue >> 8);
+		crcValue = s_crc_table[(crcValue ^ pHistG[n]) & 0xff] ^ (crcValue >> 8);
+		crcValue = s_crc_table[(crcValue ^ pHistR[n]) & 0xff] ^ (crcValue >> 8);
 	}
 	// The CRC of the histogram of an image rotated by 90, 180 or 270 deg is identical
 	// -> calculate CRC of one line at 1/4 of the image height
 	int nLine = m_nPSIHeight/4;
 	uint8* pLinePtr = (uint8*)(m_pPointSampledImage + nLine*m_nPSIWidth*3);
 	for (int n = 0; n < m_nPSIWidth*2; n++) {
-		crcValue = crc_table[(crcValue ^ *pLinePtr) & 0xff] ^ (crcValue >> 8);
+		crcValue = s_crc_table[(crcValue ^ *pLinePtr) & 0xff] ^ (crcValue >> 8);
 		pLinePtr++;
 	}
 	// Calculate the sum of all pixels

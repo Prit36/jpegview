@@ -53,6 +53,9 @@ CProcessingThreadPool& CProcessingThreadPool::This() {
 
 void CProcessingThreadPool::CreateThreadPoolThreads() {
 	m_nNumThreads = CSettingsProvider::This().NumberOfCoresToUse() - 1;
+	if (m_hEventFinished == NULL) {
+		m_hEventFinished = ::CreateEvent(0, TRUE, FALSE, NULL);
+	}
 	if (m_nNumThreads > 0) {
 		m_threads = new CProcessingThread*[m_nNumThreads];
 		for (int i = 0; i < m_nNumThreads; i++) {
@@ -70,6 +73,10 @@ void CProcessingThreadPool::StopAllThreads() {
 	}
 	m_nNumThreads = 0;
 	m_threads = NULL;
+	if (m_hEventFinished != NULL) {
+		::CloseHandle(m_hEventFinished);
+		m_hEventFinished = NULL;
+	}
 }
 
 bool CProcessingThreadPool::Process(CProcessingRequest* pRequest) {
@@ -82,7 +89,7 @@ bool CProcessingThreadPool::Process(CProcessingRequest* pRequest) {
 			CProcessingThread::DoProcess(pRequest, 0, nTargetCY);
 		} else {
 			// Important: All slices must have a height dividable by 'StripPadding', except the last one
-			int nNumThreadsUsed = m_nNumThreads + 1; // we also use the calling thread, thus +1
+			int nNumThreadsUsed = min(64, m_nNumThreads + 1); // we also use the calling thread, thus +1
 			int nSliceCY;
 			while ((nSliceCY = ~(pRequest->StripPadding - 1) & (nTargetCY / nNumThreadsUsed)) < pRequest->StripPadding) {
 				nNumThreadsUsed--;
@@ -90,21 +97,25 @@ bool CProcessingThreadPool::Process(CProcessingRequest* pRequest) {
 			int nLastCY = nTargetCY - (nNumThreadsUsed - 1)*nSliceCY;
 			volatile LONG nRequestThreadCounter = nNumThreadsUsed - 1;
 			int nCurrCY = 0;
-			HANDLE eventFinished = ::CreateEvent(0, TRUE, FALSE, NULL);
-			CWrappedRequest** pAllWrappedRequests = new CWrappedRequest*[nNumThreadsUsed-1];
-			for (int i = 0; i < nNumThreadsUsed-1; i++) {
-				pAllWrappedRequests[i] = new CWrappedRequest(pRequest, nCurrCY, nSliceCY, eventFinished);
+
+			if (m_hEventFinished == NULL) {
+				m_hEventFinished = ::CreateEvent(0, TRUE, FALSE, NULL);
+			} else {
+				::ResetEvent(m_hEventFinished);
+			}
+
+			CWrappedRequest* pAllWrappedRequests[64];
+			for (int i = 0; i < nNumThreadsUsed - 1; i++) {
+				pAllWrappedRequests[i] = new CWrappedRequest(pRequest, nCurrCY, nSliceCY, m_hEventFinished);
 				pAllWrappedRequests[i]->EventFinishedCounter = &nRequestThreadCounter;
 				m_threads[i]->StartProcess(pAllWrappedRequests[i]);
 				nCurrCY += nSliceCY;
 			}
 			CProcessingThread::DoProcess(pRequest, nCurrCY, nLastCY);
-			::WaitForSingleObject(eventFinished, INFINITE);
-			::CloseHandle(eventFinished);
-			for (int i = 0; i < nNumThreadsUsed-1; i++) {
+			::WaitForSingleObject(m_hEventFinished, INFINITE);
+			for (int i = 0; i < nNumThreadsUsed - 1; i++) {
 				pAllWrappedRequests[i]->Deleted = true; // thread pool threads will remove the requests from the queue
 			}
-			delete [] pAllWrappedRequests;
 		}
 	}
 	return pRequest->Success;
@@ -113,6 +124,7 @@ bool CProcessingThreadPool::Process(CProcessingRequest* pRequest) {
 CProcessingThreadPool::CProcessingThreadPool(void) {
 	m_threads = NULL;
 	m_nNumThreads = 0;
+	m_hEventFinished = NULL;
 }
 
 

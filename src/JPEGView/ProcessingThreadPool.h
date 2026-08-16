@@ -57,6 +57,7 @@ private:
 
 	CProcessingThread** m_threads;
 	int m_nNumThreads;
+	HANDLE m_hEventFinished;
 
 	CProcessingThreadPool(void);
 };

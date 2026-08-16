@@ -226,11 +226,24 @@ CFileList::CFileList(const CString & sInitialFile, CDirectoryWatcher & directory
 	m_directoryWatcher.SetCurrentDirectory(m_sDirectory);
 
 	if (!m_bIsSlideShowList) {
-		if (bImageFile || bIsDirectory) {
+		if (bImageFile) {
+			m_bDirectoryScanned = false;
+			WIN32_FILE_ATTRIBUTE_DATA fileAttr;
+			if (::GetFileAttributesExW(sInitialFile, GetFileExInfoStandard, &fileAttr)) {
+				__int64 fileSize = ((__int64)fileAttr.nFileSizeHigh << 32) | fileAttr.nFileSizeLow;
+				m_fileList.push_back(CFileDesc(sInitialFile, &fileAttr.ftLastWriteTime, &fileAttr.ftCreationTime, fileSize));
+			} else {
+				m_fileList.push_back(CFileDesc(sInitialFile, NULL, NULL, 0));
+			}
+			m_iter = m_fileList.begin();
+			m_iterStart = m_iter;
+		} else if (bIsDirectory) {
+			m_bDirectoryScanned = true;
 			FindFiles();
 			m_iter = FindFile(sInitialFile);
 			m_iterStart = bWrapAroundFolder ? m_iter : m_fileList.begin();
 		} else {
+			m_bDirectoryScanned = true;
 			// neither image file nor directory nor list of file names - try to read anyway but normally will fail
 			CFindFile fileFind;
 			if (fileFind.FindFile(sInitialFile)) {
@@ -239,6 +252,7 @@ CFileList::CFileList(const CString & sInitialFile, CDirectoryWatcher & directory
 			m_iter = m_iterStart = m_fileList.begin();
 		}
 	} else {
+		m_bDirectoryScanned = true;
 		sm_eMode = Helpers::NM_LoopDirectory;
 		if (forceSorting) m_fileList.sort();
 		m_iter = m_iterStart = m_fileList.begin();
@@ -369,8 +383,32 @@ void CFileList::ModificationTimeChanged() {
 	}
 }
 
+void CFileList::EnsureDirectoryScanned() {
+	if (!m_bDirectoryScanned && !m_sDirectory.IsEmpty()) {
+		m_bDirectoryScanned = true;
+		CString curFile = (m_iter != m_fileList.end()) ? m_iter->GetName() : m_sInitialFile;
+		FindFiles();
+		m_iter = FindFile(curFile);
+		if (m_iter == m_fileList.end()) {
+			m_iter = m_fileList.begin();
+		}
+		m_iterStart = m_bWrapAroundFolder ? m_iter : m_fileList.begin();
+	}
+}
+
+int CFileList::Size() const {
+	const_cast<CFileList*>(this)->EnsureDirectoryScanned();
+	return (int)m_fileList.size();
+}
+
+std::list<CFileDesc>& CFileList::GetFileList() {
+	EnsureDirectoryScanned();
+	return m_fileList;
+}
+
 CFileList* CFileList::Next() {
 	m_nMarkedIndexShow = -1;
+	EnsureDirectoryScanned();
 	if (m_fileList.size() > 0) {
 		std::list<CFileDesc>::iterator iterTemp = m_iter;
 		if (iterTemp == m_fileList.end())
@@ -411,6 +449,7 @@ CFileList* CFileList::Next() {
 
 CFileList* CFileList::Prev() {
 	m_nMarkedIndexShow = -1;
+	EnsureDirectoryScanned();
 	if (m_iter == m_iterStart) {
 		if (sm_eMode == Helpers::NM_LoopDirectory) {
 			if (!m_bWrapAroundFolder) {
@@ -439,16 +478,19 @@ CFileList* CFileList::Prev() {
 
 void CFileList::First() {
 	m_nMarkedIndexShow = -1;
+	EnsureDirectoryScanned();
 	m_iter = m_iterStart = m_fileList.begin();
 }
 
 void CFileList::Last() {
 	m_nMarkedIndexShow = -1;
+	EnsureDirectoryScanned();
 	MoveIterToLast();
 	m_iterStart = m_fileList.begin();
 }
 
 CFileList* CFileList::AwayFromCurrent() {
+	EnsureDirectoryScanned();
 	LPCTSTR sCurrentFile = Current();
 	LPCTSTR sNextFile = PeekNextPrev(1, true, false);
 	if (sCurrentFile == NULL || sNextFile == NULL || _tcscmp(sCurrentFile, sNextFile) == 0) {
@@ -491,6 +533,7 @@ LPCTSTR CFileList::CurrentDirectory() const {
 }
 
 int CFileList::CurrentIndex() const {
+	const_cast<CFileList*>(this)->EnsureDirectoryScanned();
 	int i = 0;
 	std::list<CFileDesc>::const_iterator iter;
 	for (iter = m_fileList.begin( ); iter != m_fileList.end( ); iter++ ) {
@@ -511,6 +554,7 @@ const FILETIME* CFileList::CurrentModificationTime() const {
 }
 
 LPCTSTR CFileList::PeekNextPrev(int nIndex, bool bForward, bool bToggle) {
+	EnsureDirectoryScanned();
 	if (bToggle) {
 		return (m_nMarkedIndexShow == 0) ? m_sMarkedFile : m_sMarkedFileCurrent;
 	} else {
@@ -834,11 +878,16 @@ void CFileList::FindFiles() {
 		if (hFind != INVALID_HANDLE_VALUE) {
 			do {
 				if ((findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-					LPCTSTR pDot = _tcsrchr(findData.cFileName, _T('.'));
+					const wchar_t* pDot = wcsrchr(findData.cFileName, L'.');
 					if (pDot != NULL && *(pDot + 1) != 0) {
-						CString ext(pDot + 1);
-						ext.MakeLower();
-						if (s_supportedExtensions.find(std::wstring((LPCTSTR)ext)) != s_supportedExtensions.end()) {
+						wchar_t extBuf[32];
+						int k = 0;
+						const wchar_t* p = pDot + 1;
+						while (*p != 0 && k < 31) {
+							extBuf[k++] = towlower(*p++);
+						}
+						extBuf[k] = 0;
+						if (s_supportedExtensions.find(extBuf) != s_supportedExtensions.end()) {
 							CString fullPath = m_sDirectory + _T('\\') + findData.cFileName;
 							__int64 fileSize = ((__int64)findData.nFileSizeHigh << 32) | findData.nFileSizeLow;
 							m_fileList.push_back(CFileDesc(fullPath, &findData.ftLastWriteTime, &findData.ftCreationTime, fileSize));
