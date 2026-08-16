@@ -49,6 +49,7 @@ deps/atlmfc/
 
 # Benchmark artifacts & worktrees
 benchmarks/assets/
+benchmarks/actual_test_data/
 benchmarks/results/
 benchmarks/.worktrees/
 benchmarks/.cache/
@@ -57,3 +58,5 @@ benchmarks/.cache/
 __pycache__/
 *.pyc
 *.pyo
+
+dist/
