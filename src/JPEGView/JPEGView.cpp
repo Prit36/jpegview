@@ -130,6 +130,38 @@ static int ParseCommandLineForTransitionTime(LPCTSTR sCommandLine) {
 	return max(100, min(5000, _ttoi(sTransitionTime + _tcslen(_T("/transitiontime")))));
 }
 
+static bool ParseCommandLineForBenchmark(LPCTSTR sCommandLine, CString& sOutBenchmarkPath) {
+	LPCTSTR sBench = Helpers::stristr(sCommandLine, _T("/benchmark"));
+	if (sBench == NULL) {
+		return false;
+	}
+	LPCTSTR sVal = sBench + _tcslen(_T("/benchmark"));
+	while (*sVal == _T(' ') || *sVal == _T(':') || *sVal == _T('=')) sVal++;
+	if (*sVal != 0 && *sVal != _T('/')) {
+		LPCTSTR posSpace = _tcschr(sVal, _T(' '));
+		sOutBenchmarkPath = (posSpace == NULL) ? CString(sVal) : CString(sVal, (int)(posSpace - sVal));
+		sOutBenchmarkPath.Trim(_T("\""));
+	} else {
+		sOutBenchmarkPath = _T("benchmark_telemetry.json");
+	}
+	return true;
+}
+
+static int ParseCommandLineForBenchmarkNav(LPCTSTR sCommandLine) {
+	LPCTSTR sNav = Helpers::stristr(sCommandLine, _T("/benchmark_nav"));
+	if (sNav == NULL) {
+		return 0;
+	}
+	LPCTSTR sVal = sNav + _tcslen(_T("/benchmark_nav"));
+	while (*sVal == _T(' ') || *sVal == _T(':') || *sVal == _T('=')) sVal++;
+	return _ttoi(sVal);
+}
+
+static bool ParseCommandLineForBenchmarkExit(LPCTSTR sCommandLine) {
+	return Helpers::stristr(sCommandLine, _T("/benchmark_exit")) != NULL;
+}
+
+
 #ifdef DEBUG
 static CRITICAL_SECTION s_lock;
 
@@ -179,6 +211,7 @@ static LONG WINAPI CrashHandler(EXCEPTION_POINTERS * pExceptionInfo)
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int /*nCmdShow*/)
 {
+	double tProcessStart = Helpers::GetExactTickCount();
 	HRESULT hRes = ::CoInitialize(NULL);
 
 #ifdef DEBUG
@@ -211,10 +244,15 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	int nTransitionTime = ParseCommandLineForTransitionTime(lpstrCmdLine);
 	int nDisplayMonitor = ParseCommandLineForDisplayMonitor(lpstrCmdLine);
 
-	// Searches for other instances and terminates them
+	CString sBenchmarkOutFile;
+	bool bBenchmarkMode = ParseCommandLineForBenchmark(lpstrCmdLine, sBenchmarkOutFile);
+	int nBenchmarkNav = ParseCommandLineForBenchmarkNav(lpstrCmdLine);
+	bool bBenchmarkExit = ParseCommandLineForBenchmarkExit(lpstrCmdLine);
+
+	// Searches for other instances and terminates them (bypassed in benchmark mode to prevent interference)
 	bool bFileLoadedByExistingInstance = false;
-	HANDLE hMutex = ::CreateMutex(NULL, FALSE, _T("JPVMtX2869"));
-	if (::GetLastError() == ERROR_ALREADY_EXISTS) {
+	HANDLE hMutex = bBenchmarkMode ? NULL : ::CreateMutex(NULL, FALSE, _T("JPVMtX2869"));
+	if (!bBenchmarkMode && ::GetLastError() == ERROR_ALREADY_EXISTS) {
 		::EnumWindows((WNDENUMPROC)EnumWindowsProc, 0);
 		if (_HWNDOtherInstance != NULL) {
 			// Other instance found, send the filename to be loaded to this instance
@@ -240,6 +278,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		CMainDlg dlgMain(bForceFullScreen);
 
 		dlgMain.SetStartupInfo(sStartupFile, nAutostartSlideShow, eSorting, eTransitionEffect, nTransitionTime, bAutoExit, nDisplayMonitor);
+		if (bBenchmarkMode) {
+			dlgMain.SetBenchmarkInfo(true, sBenchmarkOutFile, nBenchmarkNav, bBenchmarkExit, tProcessStart);
+		}
 
 		try {
 			nRet = (int)dlgMain.DoModal();
@@ -248,6 +289,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 			}
 			::ShowCursor(TRUE);
 		}
+
 		catch (...) {
 			::ShowCursor(TRUE);
 		}

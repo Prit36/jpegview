@@ -63,6 +63,7 @@ extern CAppModule _Module;
 
 // STL stuff
 #include <list>
+#include <vector>
 
 
 // own stuff

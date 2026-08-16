@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "name": "JPEGView Systematic Benchmark Suite",
+  "defaults": {
+    "profile": "standard",
+    "warmup_iterations": 2,
+    "measure_iterations": 5,
+    "timeout_sec": 60,
+    "targets": [
+      "original-fork",
+      "last-commit",
+      "current"
+    ]
+  },
+  "targets_config": {
+    "original-fork": {
+      "display_name": "Original Fork Baseline",
+      "git_ref": "upstream/master",
+      "fallback_ref": "efd55a1",
+      "description": "Upstream master fork baseline before modern optimizations"
+    },
+    "last-commit": {
+      "display_name": "Last Git Commit",
+      "git_ref": "HEAD~1",
+      "description": "Previous git commit in current branch history"
+    },
+    "current": {
+      "display_name": "Current Working Tree",
+      "git_ref": "WORKING_TREE",
+      "description": "Current working copy with uncommitted changes"
+    }
+  },
+  "e2e_suites": {
+    "startup_time_to_first_paint": {
+      "name": "Cold & Warm Startup to First Paint (TTFP)",
+      "description": "Measures total time from process start to full screen render of initial image",
+      "enabled": true,
+      "metrics": ["ttfp_ms", "init_ms", "load_ms", "last_op_ms", "working_set_mb", "peak_working_set_mb"]
+    },
+    "large_image_load": {
+      "name": "Large Image Loading Stress (100MB - 200MB)",
+      "description": "Evaluates decode and downsample latency on massive 16K-24K resolution assets",
+      "enabled": true,
+      "metrics": ["ttfp_ms", "load_ms", "resample_ms", "peak_working_set_mb", "steady_working_set_mb"]
+    },
+    "folder_navigation_throughput": {
+      "name": "High-Speed Folder Navigation & Frame Pacing",
+      "description": "Measures throughput (FPS) and per-frame latency variance stepping across 100-1000 files",
+      "enabled": true,
+      "metrics": ["fps", "avg_frame_ms", "p95_frame_ms", "p99_frame_ms", "frame_jitter_ms", "peak_working_set_mb"]
+    }
+  },
+  "micro_suites": {
+    "decoders": {
+      "name": "Image Codec Decoding Throughput",
+      "description": "Direct throughput (MB/s, MP/s) of libjpeg-turbo, libpng, libwebp, libjxl, libavif, QOI, BMP",
+      "enabled": true
+    },
+    "resampling_avx2_vs_sse": {
+      "name": "Resampling Filter Kernels (AVX2 vs SSE vs Scalar)",
+      "description": "HQ downsampling and upsampling across multiple scale factors (0.1x - 4.0x)",
+      "enabled": true
+    },
+    "sharpening_unsharp_mask": {
+      "name": "Unsharp Mask (USM) Filtering Speed",
+      "description": "AVX2 vs SSE sharpening throughput across varying radius and strength",
+      "enabled": true
+    },
+    "color_and_ldc_transforms": {
+      "name": "Tone Mapping & Color Operations",
+      "description": "Histogram, Auto Contrast, Local Density Correction (LDC), and 3-channel LUT speed",
+      "enabled": true
+    },
+    "directory_traversal_and_sort": {
+      "name": "Directory Scanning & Natural Alphanumeric Sorting",
+      "description": "Directory traversal and logical filename comparison across 10,000 files",
+      "enabled": true
+    }
+  },
+  "regression_thresholds": {
+    "significant_regression_pct": 5.0,
+    "warning_regression_pct": 2.5,
+    "significant_speedup_pct": 5.0
+  }
+}

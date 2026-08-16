@@ -135,6 +135,7 @@ public:
 	// Called by main()
 	void SetStartupInfo(LPCTSTR sStartupFile, int nAutostartSlideShow, Helpers::ESorting eSorting, Helpers::ETransitionEffect eEffect, 
 		int nTransitionTime, bool bAutoExit, int nDisplayMonitor);
+	void SetBenchmarkInfo(bool bBenchmark, LPCTSTR sBenchmarkOut, int nNavCount, bool bBenchmarkExit, double tStart);
 
 	// Called by the different controller classes
 	HWND GetHWND() { return m_hWnd; }
@@ -333,6 +334,18 @@ private:
 	bool m_bWindowBorderless;
 	bool m_bAlwaysOnTop;
 	bool m_bSelectZoom;  // keeps track of select-to-zoom mode when CTRL+SHIFT+LMouse
+
+	// Benchmark instrumentation
+	bool m_bBenchmarkMode;
+	CString m_sBenchmarkOutputFile;
+	int m_nBenchmarkNavCount;
+	int m_nBenchmarkNavCurrent;
+	bool m_bBenchmarkExit;
+	double m_tProcessStart;
+	double m_tInitDone;
+	double m_tFirstPaintDone;
+	std::vector<double> m_vFrameTimes;
+	void WriteBenchmarkTelemetry();
 
 	void ExploreFile();
 	bool OpenFileWithDialog(bool bFullScreen, bool bAfterStartup);

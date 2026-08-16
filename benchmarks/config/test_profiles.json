@@ -1,0 +1,38 @@
+{
+  "quick": {
+    "description": "Fast smoke benchmark (~15-30s per target) ideal for quick pre-commit / local dev verification",
+    "warmup_iterations": 1,
+    "measure_iterations": 3,
+    "large_image_dim": 8192,
+    "large_image_mb": 50,
+    "folder_file_count": 50,
+    "micro_iterations": 5
+  },
+  "standard": {
+    "description": "Standard comprehensive suite (~1-2m per target) for rigorous PR and regression benchmarking",
+    "warmup_iterations": 2,
+    "measure_iterations": 5,
+    "large_image_dim": 16384,
+    "large_image_mb": 120,
+    "folder_file_count": 200,
+    "micro_iterations": 10
+  },
+  "stress": {
+    "description": "Deep stress testing (~3-5m per target) with extreme 200MB+ images and 1,000 files in directories",
+    "warmup_iterations": 3,
+    "measure_iterations": 10,
+    "large_image_dim": 24576,
+    "large_image_mb": 200,
+    "folder_file_count": 1000,
+    "micro_iterations": 25
+  },
+  "ci": {
+    "description": "Deterministic, non-flaky test matrix optimized for automated CI environments",
+    "warmup_iterations": 2,
+    "measure_iterations": 5,
+    "large_image_dim": 12288,
+    "large_image_mb": 80,
+    "folder_file_count": 100,
+    "micro_iterations": 10
+  }
+}

@@ -46,3 +46,14 @@ ipch/
 
 # Downloaded ATL/MFC NuGet dependency
 deps/atlmfc/
+
+# Benchmark artifacts & worktrees
+benchmarks/assets/
+benchmarks/results/
+benchmarks/.worktrees/
+benchmarks/.cache/
+
+# Python bytecode & caches
+__pycache__/
+*.pyc
+*.pyo

@@ -55,6 +55,8 @@
 #include "DirectoryWatcher.h"
 #include "DesktopWallpaper.h"
 #include "PrintImage.h"
+#include <psapi.h>
+#include <vector>
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // Constants
@@ -271,6 +273,15 @@ CMainDlg::CMainDlg(bool bForceFullScreen) {
 	m_bAlwaysOnTop = false;  // default normal window.  this will be set to true when AlwaysOnTop is toggled if set to startup in INI
 	m_bSelectZoom = false;  // this value is set when LButtonDown happens, to be read by LButtonUp
 
+	m_bBenchmarkMode = false;
+	m_sBenchmarkOutputFile = _T("");
+	m_nBenchmarkNavCount = 0;
+	m_nBenchmarkNavCurrent = 0;
+	m_bBenchmarkExit = false;
+	m_tProcessStart = 0.0;
+	m_tInitDone = 0.0;
+	m_tFirstPaintDone = 0.0;
+
 	m_pPanelMgr = new CPanelMgr();
 	m_pZoomNavigatorCtl = NULL;
 	m_pEXIFDisplayCtl = NULL;
@@ -307,6 +318,63 @@ void CMainDlg::SetStartupInfo(LPCTSTR sStartupFile, int nAutostartSlideShow, Hel
 	if (nTransitionTime > 0) m_nTransitionTime = nTransitionTime;
 	if (nDisplayMonitor >= 0) CSettingsProvider::This().SetMonitorOverride(nDisplayMonitor);
 }
+
+void CMainDlg::SetBenchmarkInfo(bool bBenchmark, LPCTSTR sBenchmarkOut, int nNavCount, bool bBenchmarkExit, double tStart) {
+	m_bBenchmarkMode = bBenchmark;
+	m_sBenchmarkOutputFile = sBenchmarkOut;
+	m_nBenchmarkNavCount = nNavCount;
+	m_nBenchmarkNavCurrent = 0;
+	m_bBenchmarkExit = bBenchmarkExit;
+	m_tProcessStart = tStart;
+	m_tInitDone = 0.0;
+	m_tFirstPaintDone = 0.0;
+	m_vFrameTimes.clear();
+}
+
+void CMainDlg::WriteBenchmarkTelemetry() {
+	if (!m_bBenchmarkMode || m_sBenchmarkOutputFile.IsEmpty()) return;
+
+	PROCESS_MEMORY_COUNTERS_EX pmc = { 0 };
+	pmc.cb = sizeof(pmc);
+	::GetProcessMemoryInfo(::GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
+
+	double firstPaintMs = (m_tFirstPaintDone > m_tProcessStart) ? (m_tFirstPaintDone - m_tProcessStart) : 0.0;
+	double initMs = (m_tInitDone > m_tProcessStart) ? (m_tInitDone - m_tProcessStart) : 0.0;
+	double loadMs = (m_pCurrentImage != NULL) ? m_pCurrentImage->GetLoadTickCount() : 0.0;
+	double lastOpMs = (m_pCurrentImage != NULL) ? m_pCurrentImage->LastOpTickCount() : 0.0;
+	double usmMs = (m_pCurrentImage != NULL) ? m_pCurrentImage->GetUnsharpMaskTickCount() : 0.0;
+
+	double totalNavMs = 0.0;
+	for (size_t i = 0; i < m_vFrameTimes.size(); i++) {
+		totalNavMs += m_vFrameTimes[i];
+	}
+	double avgFrameMs = m_vFrameTimes.empty() ? 0.0 : (totalNavMs / m_vFrameTimes.size());
+	double fps = (avgFrameMs > 0.001) ? (1000.0 / avgFrameMs) : 0.0;
+
+	FILE* fp = NULL;
+	if (_tfopen_s(&fp, m_sBenchmarkOutputFile, _T("w")) == 0 && fp != NULL) {
+		_ftprintf(fp, _T("{\n"));
+		_ftprintf(fp, _T("  \"process_start_to_first_paint_ms\": %.3f,\n"), firstPaintMs);
+		_ftprintf(fp, _T("  \"init_ms\": %.3f,\n"), initMs);
+		_ftprintf(fp, _T("  \"first_image_load_ms\": %.3f,\n"), loadMs);
+		_ftprintf(fp, _T("  \"first_image_last_op_ms\": %.3f,\n"), lastOpMs);
+		_ftprintf(fp, _T("  \"first_image_unsharp_mask_ms\": %.3f,\n"), usmMs);
+		_ftprintf(fp, _T("  \"peak_working_set_mb\": %.2f,\n"), (double)pmc.PeakWorkingSetSize / (1024.0 * 1024.0));
+		_ftprintf(fp, _T("  \"working_set_mb\": %.2f,\n"), (double)pmc.WorkingSetSize / (1024.0 * 1024.0));
+		_ftprintf(fp, _T("  \"nav_frame_count\": %d,\n"), (int)m_vFrameTimes.size());
+		_ftprintf(fp, _T("  \"total_nav_time_ms\": %.3f,\n"), totalNavMs);
+		_ftprintf(fp, _T("  \"avg_frame_time_ms\": %.3f,\n"), avgFrameMs);
+		_ftprintf(fp, _T("  \"fps\": %.2f,\n"), fps);
+		_ftprintf(fp, _T("  \"frame_times_ms\": ["));
+		for (size_t i = 0; i < m_vFrameTimes.size(); i++) {
+			_ftprintf(fp, _T("%.3f%s"), m_vFrameTimes[i], (i + 1 < m_vFrameTimes.size()) ? _T(", ") : _T(""));
+		}
+		_ftprintf(fp, _T("]\n"));
+		_ftprintf(fp, _T("}\n"));
+		fclose(fp);
+	}
+}
+
 
 LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) {	
 	UpdateWindowTitle();
@@ -439,6 +507,10 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	this->Invalidate(FALSE);
 
 	this->DragAcceptFiles();
+
+	if (m_bBenchmarkMode) {
+		m_tInitDone = Helpers::GetExactTickCount();
+	}
 
 	return TRUE;
 }
@@ -591,6 +663,28 @@ LRESULT CMainDlg::OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 	m_pPanelMgr->OnPostPaint(dc);
 
 	SetCursorForMoveSection();
+
+	if (m_bBenchmarkMode) {
+		double tNow = Helpers::GetExactTickCount();
+		if (m_tFirstPaintDone == 0.0) {
+			m_tFirstPaintDone = tNow;
+		}
+		static double s_tLastPaint = tNow;
+		if (m_vFrameTimes.empty()) {
+			m_vFrameTimes.push_back(m_tFirstPaintDone - m_tProcessStart);
+		} else {
+			m_vFrameTimes.push_back(tNow - s_tLastPaint);
+		}
+		s_tLastPaint = tNow;
+
+		if (m_nBenchmarkNavCount > 0 && m_nBenchmarkNavCurrent < m_nBenchmarkNavCount) {
+			m_nBenchmarkNavCurrent++;
+			PostMessage(WM_COMMAND, IDM_NEXT, 0);
+		} else if (m_bBenchmarkExit || m_nBenchmarkNavCount > 0) {
+			WriteBenchmarkTelemetry();
+			PostMessage(WM_CLOSE, 0, 0);
+		}
+	}
 
 	return 0;
 }
