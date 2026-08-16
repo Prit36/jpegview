@@ -108,9 +108,8 @@ After installation, the configuration file is located at `%UserProfile%\scoop\pe
 
 ## System Requirements
 
-* 64-bit version: Windows 7/8/10/11 64-bit or later
-* 32-bit version: Windows 7 or later
-  * A special _32-bit Windows XP SP2_ build is available, which supports most formats (except for formats added after v1.0.37.1, ex. Animated PNG, JXL, HEIC).  Other features and options are the same as the normal builds.
+* 64-bit Windows 11, Windows 10, or Windows Server 2025 (x64 / AMD64)
+* Visual Studio 2026 / C++23 runtime
 
 ## What's New
 

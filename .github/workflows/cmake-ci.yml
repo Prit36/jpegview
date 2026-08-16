@@ -1,4 +1,4 @@
-name: CMake Modern CI (VS2026 / VS2022 / C++23)
+name: CMake Modern CI (CMake 4.x / VS2026 / C++23)
 
 on: [workflow_dispatch]
 

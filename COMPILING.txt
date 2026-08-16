@@ -1,12 +1,12 @@
-JPEGView Modern Compilation Guide
-*********************************
+JPEGView Modern Compilation Guide (2026 Standard)
+*************************************************
 
 Requirements:
-- Visual Studio 2026 (v145 toolset) or Visual Studio 2022 (v143/v144 toolset) with C++23 support
-- CMake 3.28+ / 4.x+ (and optionally Ninja for high-speed builds)
-- Windows 10 / 11 / Server 2025 SDK (10.0.22621+)
+- Visual Studio 2026 (v145 toolset) with ISO C++23 standard support
+- CMake 4.0+ with Visual Studio 2026 or Ninja generators
+- Windows 11 / Server 2025 SDK (10.0.26100.0+)
 - Windows Template Library (WTL) submodule (located in deps/WTL-sf)
-- Optional: vcpkg for package management (vcpkg.json manifest mode)
+- Optional: vcpkg manifest mode (vcpkg.json) for package management
 
 Building with CMake & Presets:
 -----------------------------
@@ -18,10 +18,6 @@ Building with CMake & Presets:
      cmake --preset vs2026-x64-release
      cmake --build --preset vs2026-x64-release
 
-   - For Visual Studio 2022 (x64 Release):
-     cmake --preset vs2022-x64-release
-     cmake --build --preset vs2022-x64-release
-
    - For Ninja (ultra-fast builds):
      cmake --preset x64-release
      cmake --build --preset x64-release
@@ -30,14 +26,12 @@ Building with CMake & Presets:
    cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
    cmake --build build --config Release
 
-Building with Visual Studio IDE:
---------------------------------
-1. Open src/JPEGView.sln in Visual Studio 2026 or Visual Studio 2022
+Building with Visual Studio 2026 IDE:
+------------------------------------
+1. Open src/JPEGView.sln in Visual Studio 2026
 2. Select 'Release' and 'x64' configuration
 3. Build Solution (Ctrl+Shift+B)
 
 Continuous Integration (GitHub Actions):
 ----------------------------------------
 - Modern GitHub Actions CI uses `windows-latest` (Windows Server 2025 / VS 2026) targeting C++23 with modern link-time optimizations and artifact bundling.
-
-

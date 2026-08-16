@@ -62,7 +62,7 @@ extern CAppModule _Module;
 #pragma warning(pop)
 
 // STL stuff
-#include  <list>
+#include <list>
 
 
 // own stuff
@@ -74,22 +74,11 @@ extern CAppModule _Module;
 #define VK_MINUS 0x6d
 
 // a type that has enough bits to hold a pointer and allowing arithmetic operations
-#ifdef _WIN64
 #define PTR_INTEGRAL_TYPE unsigned long long
-#else
-#define PTR_INTEGRAL_TYPE unsigned int
-#endif
 
 #ifndef _UNICODE
 #error _UNICODE symbol must be defined
 #endif
 
-#if defined _M_IX86
-  #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#elif defined _M_IA64
-  #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#elif defined _M_X64
-  #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#else
-  #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#endif
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
