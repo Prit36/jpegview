@@ -34,6 +34,11 @@ volatile int CImageLoadThread::m_curHandle = 0;
 
 // find image format of this image by reading some header bytes
 static EImageFormat GetImageFormat(LPCTSTR sFileName) {
+	EImageFormat fmt = Helpers::GetImageFormat(sFileName);
+	if (fmt != IF_Unknown) {
+		return fmt;
+	}
+
 	FILE *fptr;
 	if ((fptr = _tfopen(sFileName, _T("rb"))) == NULL) {
 		return IF_Unknown;

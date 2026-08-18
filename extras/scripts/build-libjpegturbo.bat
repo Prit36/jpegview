@@ -38,7 +38,7 @@ mkdir "%XBUILD_DIR%" 2>nul
 call "%~dp0vs-init.bat" %1
 
 pushd "%XBUILD_DIR%"
-cmake.exe -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DWITH_TURBOJPEG=ON "%XLIB_DIR%"
+cmake.exe -G"NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DWITH_TURBOJPEG=ON -DCMAKE_C_FLAGS_RELEASE="/Ox /Ob3 /Oi /Ot /fp:fast /arch:AVX2 /GL /Gw /Gy /GS-" -DCMAKE_CXX_FLAGS_RELEASE="/Ox /Ob3 /Oi /Ot /fp:fast /arch:AVX2 /GL /Gw /Gy /GS-" "%XLIB_DIR%"
 IF ERRORLEVEL 1 exit /b 1
 nmake.exe
 IF ERRORLEVEL 1 exit /b 1

@@ -22,14 +22,47 @@ if(MSVC)
         /permissive-
         /utf-8
         /EHsc
+        $<$<CONFIG:Release>:/Ox>
         $<$<CONFIG:Release>:/Oi>
         $<$<CONFIG:Release>:/Ot>
+        $<$<CONFIG:Release>:/Ob3>
+        $<$<CONFIG:Release>:/fp:fast>
+        $<$<CONFIG:Release>:/GA>
+        $<$<CONFIG:Release>:/GS->
         $<$<CONFIG:Release>:/Gy>
         $<$<CONFIG:Release>:/Gw>
+        $<$<CONFIG:Release>:/GL>
+        $<$<CONFIG:Release>:/Oy>
+        $<$<CONFIG:Release>:/GF>
+        $<$<CONFIG:Release>:/Qpar>
     )
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
         add_compile_options(/arch:AVX2)
     endif()
+    add_link_options(
+        $<$<CONFIG:Release>:/LTCG>
+        $<$<CONFIG:Release>:/OPT:REF>
+        $<$<CONFIG:Release>:/OPT:ICF>
+    )
+else()
+    add_compile_options(
+        -Wall
+        -Wextra
+        $<$<CONFIG:Release>:-O3>
+        $<$<CONFIG:Release>:-Ofast>
+        $<$<CONFIG:Release>:-flto>
+        $<$<CONFIG:Release>:-funroll-loops>
+        $<$<CONFIG:Release>:-fomit-frame-pointer>
+        $<$<CONFIG:Release>:-ffunction-sections>
+        $<$<CONFIG:Release>:-fdata-sections>
+    )
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
+        add_compile_options(-mavx2 -mfma)
+    endif()
+    add_link_options(
+        $<$<CONFIG:Release>:-flto>
+        $<$<CONFIG:Release>:-Wl,--gc-sections>
+    )
 endif()
 
 # Include ATL & WTL headers
@@ -42,13 +75,19 @@ endif()
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../../src/JPEGView
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/JPEGView/libjpeg-turbo/include
 )
 
 add_executable(JPEGViewBenchmark
     BenchmarkMain.cpp
 )
 
+target_link_directories(JPEGViewBenchmark PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/JPEGView/libjpeg-turbo/lib64
+)
+
 target_link_libraries(JPEGViewBenchmark PRIVATE
+    turbojpeg-static
     shlwapi
     Dbghelp
     ole32

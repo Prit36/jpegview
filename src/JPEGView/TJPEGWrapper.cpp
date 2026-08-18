@@ -38,6 +38,8 @@ void * TurboJpeg::ReadImage(int &width,
 		} else if (width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION && chromoSubsampling != TJSAMP_UNKNOWN) {
 			// Enable fast chrominance upsampling for maximum decode throughput
 			tj3Set(hDecoder, TJPARAM_FASTUPSAMPLE, 1);
+			tj3Set(hDecoder, TJPARAM_FASTDCT, 1);
+			tj3SetScalingFactor(hDecoder, TJUNSCALED);
 
 			// For grayscale JPEGs, decode to 1 channel
 			if (colorspace == TJCS_GRAY || chromoSubsampling == TJSAMP_GRAY) {
@@ -54,12 +56,12 @@ void * TurboJpeg::ReadImage(int &width,
 					outOfMemory = true;
 				}
 			} else {
-				// Decompress to 3-channel BGR (72 MB instead of 96 MB for 24MP)
-				nchannels = 3;
-				size_t pitch = (size_t)TJPAD(width * 3);
+				// Decompress to 4-channel BGRX (SIMD vector store accelerated across all AVX2/SSE pipelines)
+				nchannels = 4;
+				size_t pitch = (size_t)TJPAD(width * 4);
 				pPixelData = new(std::nothrow) unsigned char[pitch * height];
 				if (pPixelData != NULL) {
-					nResult = tj3Decompress8(hDecoder, (unsigned char*)buffer, sizebytes, pPixelData, (int)pitch, TJPF_BGR);
+					nResult = tj3Decompress8(hDecoder, (unsigned char*)buffer, sizebytes, pPixelData, (int)pitch, TJPF_BGRX);
 					if (nResult != 0) {
 						delete[] pPixelData;
 						pPixelData = NULL;

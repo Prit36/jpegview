@@ -347,7 +347,6 @@ void* CBasicProcessing::Apply3ChannelLUT32bpp(int nWidth, int nHeight, const voi
 	uint32* pTarget = new(std::nothrow) uint32[(size_t)nWidth * nHeight];
 	if (pTarget == NULL) return NULL;
 
-	#pragma omp parallel for schedule(static)
 	for (int j = 0; j < nHeight; j++) {
 		const uint32* pSrc = (const uint32*)pDIBPixels + (size_t)j * nWidth;
 		uint32* pTgt = pTarget + (size_t)j * nWidth;
@@ -372,7 +371,6 @@ void* CBasicProcessing::ApplySaturationAnd3ChannelLUT32bpp(int nWidth, int nHeig
 	uint32* pTarget = new(std::nothrow) uint32[(size_t)nWidth * nHeight];
 	if (pTarget == NULL) return NULL;
 
-	#pragma omp parallel for schedule(static)
 	for (int j = 0; j < nHeight; j++) {
 		const uint32* pSrc = (const uint32*)pDIBPixels + (size_t)j * nWidth;
 		uint32* pTgt = pTarget + (size_t)j * nWidth;
@@ -1900,7 +1898,6 @@ static CXMMImage* Rotate(const CXMMImage* pSourceImg, int simdPixelsPerRegister)
 	int nWidth = pSourceImg->GetWidth();
 	int nPaddedWidth = pSourceImg->GetPaddedWidth();
 
-	#pragma omp parallel for schedule(static)
 	for (int nY = 0; nY < nHeight; nY += cnBlockSize) {
 		for (int nX = 0; nX < nWidth; nX += cnBlockSize) {
 			RotateBlock(pSource, pTarget, nWidth, nHeight,
@@ -1928,7 +1925,6 @@ static void* RotateToDIB(const CXMMImage* pSourceImg, int simdPixelsPerRegister,
 	int nWidth = pSourceImg->GetWidth();
 	int nPaddedWidth = pSourceImg->GetPaddedWidth();
 
-	#pragma omp parallel for schedule(static)
 	for (int nY = 0; nY < nHeight; nY += cnBlockSize) {
 		for (int nX = 0; nX < nWidth; nX += cnBlockSize) {
 			RotateBlockToDIB(pSource, pTarget, nWidth, nHeight,
@@ -1986,7 +1982,6 @@ static CXMMImage* ApplyFilter_SSE(int nSourceHeight, int nTargetHeight, int nWid
 	const int nRowLenDestBytes = nNumberOfBlocksX * 3 * (int)sizeof(__m128i);
 	const __m128i xmm0 = _mm_set1_epi16(16383 - 42); // 1.0 in fixed point notation, minus rounding correction
 
-	#pragma omp parallel for schedule(static)
 	for (int y = 0; y < nTargetHeight; y++) {
 		int nCurY = nStartY_FP + y * nIncrementY_FP;
 		uint32 nCurYInt = (uint32)nCurY >> 16; // integer part of Y

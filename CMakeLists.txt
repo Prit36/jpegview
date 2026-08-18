@@ -44,6 +44,9 @@ if(MSVC)
         $<$<CONFIG:Release>:/Gy>
         $<$<CONFIG:Release>:/Gw>
         $<$<CONFIG:Release>:/GL>
+        $<$<CONFIG:Release>:/Oy>
+        $<$<CONFIG:Release>:/GF>
+        $<$<CONFIG:Release>:/Qpar>
     )
     # Enable AVX2 on x64 architectures for enhanced vectorization
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
@@ -54,6 +57,27 @@ if(MSVC)
         $<$<CONFIG:Release>:/LTCG>
         $<$<CONFIG:Release>:/OPT:REF>
         $<$<CONFIG:Release>:/OPT:ICF>
+    )
+else()
+    # GCC / Clang / MinGW maximum performance flags (-O3, -Ofast, -flto, loop unrolling)
+    add_compile_options(
+        -Wall
+        -Wextra
+        $<$<CONFIG:Release>:-O3>
+        $<$<CONFIG:Release>:-Ofast>
+        $<$<CONFIG:Release>:-flto>
+        $<$<CONFIG:Release>:-funroll-loops>
+        $<$<CONFIG:Release>:-fomit-frame-pointer>
+        $<$<CONFIG:Release>:-ffunction-sections>
+        $<$<CONFIG:Release>:-fdata-sections>
+        $<$<CONFIG:Release>:-fno-stack-protector>
+    )
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
+        add_compile_options(-mavx2 -mfma)
+    endif()
+    add_link_options(
+        $<$<CONFIG:Release>:-flto>
+        $<$<CONFIG:Release>:-Wl,--gc-sections>
     )
 endif()
 

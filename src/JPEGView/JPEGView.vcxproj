@@ -141,6 +141,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <CompileAs>CompileAsCpp</CompileAs>
       <LanguageStandard>stdcpp23</LanguageStandard>
+      <AdditionalOptions>/Ob3 /Gw /GA /Qpar /GF %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>

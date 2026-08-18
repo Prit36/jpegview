@@ -270,17 +270,17 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	int nRet = 0;
 	//Run application
 	if (!bFileLoadedByExistingInstance) {
-		// Initialize GDI+
-		Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-		ULONG_PTR gdiplusToken;
-		Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-
 		CMainDlg dlgMain(bForceFullScreen);
 
 		dlgMain.SetStartupInfo(sStartupFile, nAutostartSlideShow, eSorting, eTransitionEffect, nTransitionTime, bAutoExit, nDisplayMonitor);
 		if (bBenchmarkMode) {
 			dlgMain.SetBenchmarkInfo(true, sBenchmarkOutFile, nBenchmarkNav, bBenchmarkExit, tProcessStart);
 		}
+
+		// Initialize GDI+ in parallel with background image prefetch
+		Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+		ULONG_PTR gdiplusToken;
+		Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
 		try {
 			nRet = (int)dlgMain.DoModal();

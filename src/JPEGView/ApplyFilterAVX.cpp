@@ -27,8 +27,6 @@ CXMMImage* ApplyFilter_AVX(int nSourceHeight, int nTargetHeight, int nWidth,
 
 	const int nRowLenDestBytes = nNumberOfBlocksX * 3 * (int)sizeof(__m256i);
 	const __m256i ymm0 = _mm256_set1_epi16(16383 - 42); // 1.0 in fixed point notation, minus rounding correction
-
-	#pragma omp parallel for schedule(static)
 	for (int y = 0; y < nTargetHeight; y++) {
 		int nCurY = nStartY_FP + y * nIncrementY_FP;
 		uint32 nCurYInt = (uint32)nCurY >> 16; // integer part of Y

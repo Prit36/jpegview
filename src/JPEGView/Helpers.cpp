@@ -372,39 +372,20 @@ void* FindEXIFBlock(void* pJPEGStream, int nStreamLength) {
 
 __int64 CalculateJPEGFileHash(void* pJPEGStream, int nStreamLength) {
 	uint8* pStream = (uint8*) pJPEGStream;
+	if (pStream == NULL || nStreamLength < 32) return 0;
+
 	void* pPixelStart = FindJPEGMarker(pJPEGStream, nStreamLength, 0);
-	if (pPixelStart == NULL) {
-		return 0;
-	}
-	int nIndex = (int)((uint8*)pPixelStart - (uint8*)pJPEGStream + 1);
-	
-	// take whole stream in case of inconsistency or if remaining part is too small
-	if (nStreamLength - nIndex < 4) {
-		nIndex = 0;
-		assert(false);
-	}
+	int nIndex = (pPixelStart != NULL) ? (int)((uint8*)pPixelStart - (uint8*)pJPEGStream + 1) : 2;
+	if (nIndex >= nStreamLength) nIndex = 0;
 
-	// now we can calculate the hash over the compressed pixel data
-	// do not look at every byte due to performance reasons
-	const int nTotalLookups = 10000;
-	int nIncrement = (nStreamLength - nIndex)/nTotalLookups;
-	nIncrement = max(1, nIncrement);
-
-	static unsigned int s_crc_table[256];
-	static bool s_crc_init = false;
-	if (!s_crc_init) {
-		CalcCRCTable(s_crc_table);
-		s_crc_init = true;
+	// Fast contiguous 64-bit hash over initial 1024 bytes of entropy data + stream length (zero page-fault overhead)
+	uint64_t hash = 14695981039346656037ULL ^ (uint64_t)nStreamLength;
+	int count = min(1024, nStreamLength - nIndex);
+	const uint8* ptr = pStream + nIndex;
+	for (int i = 0; i < count; i++) {
+		hash = (hash ^ ptr[i]) * 1099511628211ULL;
 	}
-	uint32 crcValue = 0xffffffff;
-	unsigned int sumValue = 0;
-	while (nIndex < nStreamLength) {
-		sumValue += pStream[nIndex];
-		crcValue = s_crc_table[(crcValue ^ pStream[nIndex]) & 0xff] ^ (crcValue >> 8);
-		nIndex += nIncrement;
-	}
-
-	return ((__int64)crcValue << 32) + sumValue;
+	return (__int64)hash;
 }
 
 CString TryConvertFromUTF8(uint8* pComment, int nLengthInBytes) {

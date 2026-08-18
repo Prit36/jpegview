@@ -24,7 +24,6 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirs
 		const __m128i mask_g = _mm_setr_epi8(1, -1, 5, -1, 9, -1, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 		const __m128i mask_r = _mm_setr_epi8(2, -1, 6, -1, 10, -1, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 
-		#pragma omp parallel for schedule(static)
 		for (int j = 0; j < nSectionHeight; j++) {
 			const uint8* pSrc = (const uint8*)pDIB + ((size_t)nFirstY + j) * (size_t)nSrcLineWidthPadded + (size_t)nFirstX * nChannels;
 			uint16* pDst = (unsigned short*)m_pMemory + (size_t)j * 3 * (size_t)m_nPaddedWidth;
@@ -76,7 +75,7 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirs
 
 CXMMImage::~CXMMImage(void) {
 	if (m_pMemory != NULL) {
-		::VirtualFree(m_pMemory, 0, MEM_RELEASE);
+		_aligned_free(m_pMemory);
 		m_pMemory = NULL;
 	}
 }
@@ -145,10 +144,6 @@ void CXMMImage::Init(int nWidth, int nHeight, bool bPadHeight, int padding) {
 	m_nWidth = nWidth;
 	m_nHeight = nHeight;
 	int nMemSize = GetMemSize();
-	// Allocate memory aligned on page boundaries
-	m_pMemory = ::VirtualAlloc(
-						NULL,	  // let the call determine the start address
-						nMemSize, // the size
-						MEM_RESERVE | MEM_COMMIT,	// I want that memory, now
-						PAGE_READWRITE);			// need both read and write
+	// Allocate 64-byte aligned memory using high-performance CRT heap
+	m_pMemory = _aligned_malloc(nMemSize, 64);
 }

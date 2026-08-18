@@ -317,6 +317,18 @@ void CMainDlg::SetStartupInfo(LPCTSTR sStartupFile, int nAutostartSlideShow, Hel
 	if ((int)eEffect >= 0) m_eTransitionEffect = eEffect;
 	if (nTransitionTime > 0) m_nTransitionTime = nTransitionTime;
 	if (nDisplayMonitor >= 0) CSettingsProvider::This().SetMonitorOverride(nDisplayMonitor);
+
+	// Early pre-start thread pool and background prefetch immediately to overlap with GDI+ and dialog startup
+	if (!m_sStartupFile.IsEmpty()) {
+		CProcessingThreadPool::This().CreateThreadPoolThreads();
+		if (m_pJPEGProvider == NULL) {
+			m_pJPEGProvider = new CJPEGProvider(NULL, NUM_THREADS, READ_AHEAD_BUFFERS);
+			CSettingsProvider& sp = CSettingsProvider::This();
+			m_monitorRect = CMultiMonitorSupport::GetMonitorRect(sp.DisplayMonitor());
+			m_clientRect = m_bFullScreenMode ? m_monitorRect : CMultiMonitorSupport::GetDefaultClientRectInWindowMode(sp.AutoFullScreen());
+			m_pJPEGProvider->PrefetchImage(m_sStartupFile, 0, CreateProcessParams(false));
+		}
+	}
 }
 
 void CMainDlg::SetBenchmarkInfo(bool bBenchmark, LPCTSTR sBenchmarkOut, int nNavCount, bool bBenchmarkExit, double tStart) {
@@ -409,10 +421,12 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	// create thread pool for processing requests on multiple CPU cores
 	CProcessingThreadPool::This().CreateThreadPoolThreads();
 
-	// create JPEG provider and prefetch first image immediately in the background
-	m_pJPEGProvider = new CJPEGProvider(m_hWnd, NUM_THREADS, READ_AHEAD_BUFFERS);
-	if (!m_sStartupFile.IsEmpty()) {
-		m_pJPEGProvider->PrefetchImage(m_sStartupFile, 0, CreateProcessParams(!m_bFullScreenMode));
+	// create JPEG provider if not already pre-started
+	if (m_pJPEGProvider == NULL) {
+		m_pJPEGProvider = new CJPEGProvider(m_hWnd, NUM_THREADS, READ_AHEAD_BUFFERS);
+		if (!m_sStartupFile.IsEmpty()) {
+			m_pJPEGProvider->PrefetchImage(m_sStartupFile, 0, CreateProcessParams(false));
+		}
 	}
 
 	// Create image processing panel at bottom of screen
@@ -464,7 +478,7 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 
 	// request image now that UI is fully initialized
 	m_pCurrentImage = m_pJPEGProvider->RequestImage(m_pFileList, CJPEGProvider::FORWARD,
-		m_pFileList->Current(), 0, CreateProcessParams(!m_bFullScreenMode), m_bOutOfMemoryLastImage, m_bExceptionErrorLastImage);
+		m_pFileList->Current(), 0, CreateProcessParams(false), m_bOutOfMemoryLastImage, m_bExceptionErrorLastImage);
 
 	if (m_pCurrentImage != NULL && m_pCurrentImage->IsAnimation()) {
 		StartAnimation();
