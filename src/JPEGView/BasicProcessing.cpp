@@ -1816,14 +1816,38 @@ inline static const int16* RotateLineToDIB(const int16* pSource, uint8* pTarget,
 	return pSource;
 }
 
+inline static void Transpose8x8_16bit(__m128i& r0, __m128i& r1, __m128i& r2, __m128i& r3,
+                                      __m128i& r4, __m128i& r5, __m128i& r6, __m128i& r7) {
+	__m128i t0 = _mm_unpacklo_epi16(r0, r1);
+	__m128i t1 = _mm_unpackhi_epi16(r0, r1);
+	__m128i t2 = _mm_unpacklo_epi16(r2, r3);
+	__m128i t3 = _mm_unpackhi_epi16(r2, r3);
+	__m128i t4 = _mm_unpacklo_epi16(r4, r5);
+	__m128i t5 = _mm_unpackhi_epi16(r4, r5);
+	__m128i t6 = _mm_unpacklo_epi16(r6, r7);
+	__m128i t7 = _mm_unpackhi_epi16(r6, r7);
+
+	__m128i u0 = _mm_unpacklo_epi32(t0, t2);
+	__m128i u1 = _mm_unpackhi_epi32(t0, t2);
+	__m128i u2 = _mm_unpacklo_epi32(t1, t3);
+	__m128i u3 = _mm_unpackhi_epi32(t1, t3);
+	__m128i u4 = _mm_unpacklo_epi32(t4, t6);
+	__m128i u5 = _mm_unpackhi_epi32(t4, t6);
+	__m128i u6 = _mm_unpacklo_epi32(t5, t7);
+	__m128i u7 = _mm_unpackhi_epi32(t5, t7);
+
+	r0 = _mm_unpacklo_epi64(u0, u4);
+	r1 = _mm_unpackhi_epi64(u0, u4);
+	r2 = _mm_unpacklo_epi64(u1, u5);
+	r3 = _mm_unpackhi_epi64(u1, u5);
+	r4 = _mm_unpacklo_epi64(u2, u6);
+	r5 = _mm_unpackhi_epi64(u2, u6);
+	r6 = _mm_unpacklo_epi64(u3, u7);
+	r7 = _mm_unpackhi_epi64(u3, u7);
+}
+
 // Rotate a block in a CXMMImage. Blockwise rotation is needed because with normal
 // rotation, trashing occurs, making rotation a very slow operation.
-// The input format is what the ResizeYCore() method outputs:
-// RRRRRRRRGGGGGGGGBBBBBBBB... (blocks of 'simdPixelsPerRegister' pixels of a channel).
-// After rotation, the format is line interleaved again:
-// RRRRRRRRRRR...
-// GGGGGGGGGGG...
-// BBBBBBBBBBB...
 static void RotateBlock(const int16* pSrc, int16* pTgt, int nWidth, int nHeight,
 						int nXStart, int nYStart, int nBlockWidth, int nBlockHeight,
 						int simdPixelsPerRegister) {
@@ -1834,8 +1858,77 @@ static void RotateBlock(const int16* pSrc, int16* pTgt, int nWidth, int nHeight,
 	int nIncSource = nPaddedWidth * 3 - nBlockWidth * 3;
 	const int16* pSource = pSrc + nPaddedWidth * 3 * nYStart + nXStart * 3;
 	int16* pTarget = pTgt + nPaddedHeight * 3 * nXStart + nYStart;
-	int16* pStartYPtr = pTarget;
 	int nLoopX = Helpers::DoPadding(nBlockWidth, simdPixelsPerRegister) / simdPixelsPerRegister;
+
+	if (simdPixelsPerRegister == 16) {
+		int srcRowStride = nPaddedWidth * 3;
+		for (int j = 0; j < nLoopX; j++) {
+			int16* pTgtBase = pTarget + j * 16 * nIncTargetLine;
+			const int16* pSrcBase = pSource + j * 48; // 16 pixels * 3 channels = 48 words
+
+			int i = 0;
+			for (; i + 8 <= nBlockHeight; i += 8) {
+				for (int ch = 0; ch < 3; ch++) {
+					int16* pTgtCh = pTgtBase + ch * nIncTargetChannel + i;
+					const int16* pSrcCh = pSrcBase + ch * 16 + i * srcRowStride;
+
+					// First 8 pixels
+					__m128i r0 = _mm_loadu_si128((const __m128i*)(pSrcCh));
+					__m128i r1 = _mm_loadu_si128((const __m128i*)(pSrcCh + srcRowStride));
+					__m128i r2 = _mm_loadu_si128((const __m128i*)(pSrcCh + 2 * srcRowStride));
+					__m128i r3 = _mm_loadu_si128((const __m128i*)(pSrcCh + 3 * srcRowStride));
+					__m128i r4 = _mm_loadu_si128((const __m128i*)(pSrcCh + 4 * srcRowStride));
+					__m128i r5 = _mm_loadu_si128((const __m128i*)(pSrcCh + 5 * srcRowStride));
+					__m128i r6 = _mm_loadu_si128((const __m128i*)(pSrcCh + 6 * srcRowStride));
+					__m128i r7 = _mm_loadu_si128((const __m128i*)(pSrcCh + 7 * srcRowStride));
+
+					Transpose8x8_16bit(r0, r1, r2, r3, r4, r5, r6, r7);
+
+					_mm_storeu_si128((__m128i*)(pTgtCh), r0);
+					_mm_storeu_si128((__m128i*)(pTgtCh + nIncTargetLine), r1);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 2 * nIncTargetLine), r2);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 3 * nIncTargetLine), r3);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 4 * nIncTargetLine), r4);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 5 * nIncTargetLine), r5);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 6 * nIncTargetLine), r6);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 7 * nIncTargetLine), r7);
+
+					// Next 8 pixels (pixels 8..15)
+					r0 = _mm_loadu_si128((const __m128i*)(pSrcCh + 8));
+					r1 = _mm_loadu_si128((const __m128i*)(pSrcCh + 8 + srcRowStride));
+					r2 = _mm_loadu_si128((const __m128i*)(pSrcCh + 8 + 2 * srcRowStride));
+					r3 = _mm_loadu_si128((const __m128i*)(pSrcCh + 8 + 3 * srcRowStride));
+					r4 = _mm_loadu_si128((const __m128i*)(pSrcCh + 8 + 4 * srcRowStride));
+					r5 = _mm_loadu_si128((const __m128i*)(pSrcCh + 8 + 5 * srcRowStride));
+					r6 = _mm_loadu_si128((const __m128i*)(pSrcCh + 8 + 6 * srcRowStride));
+					r7 = _mm_loadu_si128((const __m128i*)(pSrcCh + 8 + 7 * srcRowStride));
+
+					Transpose8x8_16bit(r0, r1, r2, r3, r4, r5, r6, r7);
+
+					_mm_storeu_si128((__m128i*)(pTgtCh + 8 * nIncTargetLine), r0);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 9 * nIncTargetLine), r1);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 10 * nIncTargetLine), r2);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 11 * nIncTargetLine), r3);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 12 * nIncTargetLine), r4);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 13 * nIncTargetLine), r5);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 14 * nIncTargetLine), r6);
+					_mm_storeu_si128((__m128i*)(pTgtCh + 15 * nIncTargetLine), r7);
+				}
+			}
+			for (; i < nBlockHeight; i++) {
+				for (int ch = 0; ch < 3; ch++) {
+					int16* pTgtCh = pTgtBase + ch * nIncTargetChannel + i;
+					const int16* pSrcCh = pSrcBase + ch * 16 + i * srcRowStride;
+					for (int p = 0; p < 16; p++) {
+						pTgtCh[p * nIncTargetLine] = pSrcCh[p];
+					}
+				}
+			}
+		}
+		return;
+	}
+
+	int16* pStartYPtr = pTarget;
 	int nTargetIncrement = ((simdPixelsPerRegister - 1) * nIncTargetLine) + nIncTargetChannel;
 
 	for (int i = 0; i < nBlockHeight; i++) {
@@ -2467,16 +2560,11 @@ void* SampleDown_HQ_AVX_Core(CSize fullTargetSize, CPoint fullTargetOffset, CSiz
 	int nStartX = nIncOffsetX + nIncrementX*fullTargetOffset.x - 65536 * nFirstX;
 	int nStartY = nIncOffsetY + nIncrementY*fullTargetOffset.y - 65536 * nFirstY;
 
-	// Resize Y
+	// Resize Y directly from DIB (zero allocation / zero unpack pass)
 	double t1 = Helpers::GetExactTickCount();
-	CXMMImage* pImage1 = new CXMMImage(sourceSize.cx, sourceSize.cy, nFirstX, nLastX, nFirstY, nLastY, pPixels, nChannels, 16);
-	if (pImage1->AlignedPtr() == NULL) {
-		delete pImage1;
-		return NULL;
-	}
-	double t2 = Helpers::GetExactTickCount();
-	CXMMImage* pImage2 = ApplyFilter_AVX(pImage1->GetHeight(), clippedTargetSize.cy, pImage1->GetWidth(), nStartY, 0, nIncrementY, kernelsY, nFilterOffsetY, pImage1);
-	delete pImage1;
+	double t2 = t1;
+	CXMMImage* pImage2 = ApplyFilter_DirectFromDIB_AVX(sourceSize.cy, clippedTargetSize.cy, nLastX - nFirstX + 1,
+		nIncOffsetY + nIncrementY * fullTargetOffset.y, nFirstX, nIncrementY, kernelsY, nFilterOffsetY, pPixels, nChannels, sourceSize.cx);
 	if (pImage2 == NULL) return NULL;
 	double t3 = Helpers::GetExactTickCount();
 	// Rotate
@@ -2494,8 +2582,6 @@ void* SampleDown_HQ_AVX_Core(CSize fullTargetSize, CPoint fullTargetOffset, CSiz
 	double t6 = Helpers::GetExactTickCount();
 
 	delete pImage4;
-
-	_stprintf_s(s_TimingInfo, 256, _T("Create: %.2f, Filter1: %.2f, Rotate: %.2f, Filter2: %.2f, Rotate: %.2f"), t2 - t1, t3 - t2, t4 - t3, t5 - t4, t6 - t5);
 
 	return pTargetDIB;
 }

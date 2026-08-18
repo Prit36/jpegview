@@ -88,13 +88,16 @@ bool CProcessingThreadPool::Process(CProcessingRequest* pRequest) {
 		if (nTargetCX * nTargetCY < 100000 || nTargetCY <= 12) {
 			CProcessingThread::DoProcess(pRequest, 0, nTargetCY);
 		} else {
-			// Important: All slices must have a height dividable by 'StripPadding', except the last one
-			int nNumThreadsUsed = min(64, m_nNumThreads + 1); // we also use the calling thread, thus +1
-			int nSliceCY;
-			while ((nSliceCY = ~(pRequest->StripPadding - 1) & (nTargetCY / nNumThreadsUsed)) < pRequest->StripPadding) {
+			// Distribute slices of 'StripPadding' lines evenly across all worker threads + calling thread
+			int nNumThreadsUsed = min(64, m_nNumThreads + 1);
+			int nPadding = max(1, (int)pRequest->StripPadding);
+			int nTotalBlocks = nTargetCY / nPadding;
+			while (nNumThreadsUsed > 1 && (nTotalBlocks / nNumThreadsUsed) == 0) {
 				nNumThreadsUsed--;
 			}
-			int nLastCY = nTargetCY - (nNumThreadsUsed - 1)*nSliceCY;
+			int nBlocksPerThread = nTotalBlocks / nNumThreadsUsed;
+			int nExtraBlocks = nTotalBlocks % nNumThreadsUsed;
+
 			volatile LONG nRequestThreadCounter = nNumThreadsUsed - 1;
 			int nCurrCY = 0;
 
@@ -106,11 +109,14 @@ bool CProcessingThreadPool::Process(CProcessingRequest* pRequest) {
 
 			CWrappedRequest* pAllWrappedRequests[64];
 			for (int i = 0; i < nNumThreadsUsed - 1; i++) {
-				pAllWrappedRequests[i] = new CWrappedRequest(pRequest, nCurrCY, nSliceCY, m_hEventFinished);
+				int curBlocks = (i < nExtraBlocks) ? (nBlocksPerThread + 1) : nBlocksPerThread;
+				int curSliceCY = curBlocks * nPadding;
+				pAllWrappedRequests[i] = new CWrappedRequest(pRequest, nCurrCY, curSliceCY, m_hEventFinished);
 				pAllWrappedRequests[i]->EventFinishedCounter = &nRequestThreadCounter;
 				m_threads[i]->StartProcess(pAllWrappedRequests[i]);
-				nCurrCY += nSliceCY;
+				nCurrCY += curSliceCY;
 			}
+			int nLastCY = nTargetCY - nCurrCY;
 			CProcessingThread::DoProcess(pRequest, nCurrCY, nLastCY);
 			::WaitForSingleObject(m_hEventFinished, INFINITE);
 			for (int i = 0; i < nNumThreadsUsed - 1; i++) {

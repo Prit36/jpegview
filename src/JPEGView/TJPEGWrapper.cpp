@@ -2,7 +2,12 @@
 #include "stdafx.h"
 #include "TJPEGWrapper.h"
 #include "libjpeg-turbo\include\turbojpeg.h"
+#include "libjpeg-turbo\include\jpeglib.h"
+#include "libjpeg-turbo\include\jerror.h"
 #include "MaxImageDef.h"
+#include "Helpers.h"
+#include <vector>
+#include <thread>
 
 void * TurboJpeg::ReadImage(int &width,
 					   int &height,
@@ -25,8 +30,10 @@ void * TurboJpeg::ReadImage(int &width,
 		}
 	}
 
+	double t0 = Helpers::GetExactTickCount();
 	unsigned char* pPixelData = NULL;
 	int nResult = tj3DecompressHeader(hDecoder, (unsigned char*)buffer, sizebytes);
+	double t_hdr = Helpers::GetExactTickCount();
 	if (nResult == 0) {
 		width = tj3Get(hDecoder, TJPARAM_JPEGWIDTH);
 		height = tj3Get(hDecoder, TJPARAM_JPEGHEIGHT);
@@ -56,16 +63,37 @@ void * TurboJpeg::ReadImage(int &width,
 					outOfMemory = true;
 				}
 			} else {
-				// Decompress to 4-channel BGRX (SIMD vector store accelerated across all AVX2/SSE pipelines)
-				nchannels = 4;
-				size_t pitch = (size_t)TJPAD(width * 4);
+				// Direct high-throughput libjpeg-turbo scanline decode (BGR 24-bit)
+				nchannels = 3;
+				size_t pitch = (size_t)TJPAD(width * 3);
 				pPixelData = new(std::nothrow) unsigned char[pitch * height];
+
 				if (pPixelData != NULL) {
-					nResult = tj3Decompress8(hDecoder, (unsigned char*)buffer, sizebytes, pPixelData, (int)pitch, TJPF_BGRX);
-					if (nResult != 0) {
-						delete[] pPixelData;
-						pPixelData = NULL;
+					struct jpeg_decompress_struct cinfo;
+					struct jpeg_error_mgr jerr;
+					cinfo.err = jpeg_std_error(&jerr);
+					jpeg_create_decompress(&cinfo);
+					jpeg_mem_src(&cinfo, (const unsigned char*)buffer, sizebytes);
+					jpeg_read_header(&cinfo, TRUE);
+					cinfo.out_color_space = JCS_EXT_BGR;
+					cinfo.dct_method = JDCT_IFAST;
+					cinfo.do_fancy_upsampling = FALSE;
+					cinfo.dither_mode = JDITHER_NONE;
+					jpeg_start_decompress(&cinfo);
+
+					const int CHUNK_LINES = 128;
+					JSAMPROW row_pointers[CHUNK_LINES];
+					double t_scan_start = Helpers::GetExactTickCount();
+					while (cinfo.output_scanline < cinfo.output_height) {
+						int startScanline = cinfo.output_scanline;
+						int linesToRead = min(CHUNK_LINES, (int)(cinfo.output_height - cinfo.output_scanline));
+						for (int r = 0; r < linesToRead; r++) {
+							row_pointers[r] = (JSAMPROW)(pPixelData + (size_t)(startScanline + r) * pitch);
+						}
+						jpeg_read_scanlines(&cinfo, row_pointers, linesToRead);
 					}
+					jpeg_finish_decompress(&cinfo);
+					jpeg_destroy_decompress(&cinfo);
 				} else {
 					outOfMemory = true;
 				}

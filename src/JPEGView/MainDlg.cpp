@@ -371,6 +371,7 @@ void CMainDlg::WriteBenchmarkTelemetry() {
 		_ftprintf(fp, _T("  \"first_image_load_ms\": %.3f,\n"), loadMs);
 		_ftprintf(fp, _T("  \"first_image_last_op_ms\": %.3f,\n"), lastOpMs);
 		_ftprintf(fp, _T("  \"first_image_unsharp_mask_ms\": %.3f,\n"), usmMs);
+		_ftprintf(fp, _T("  \"timing_info\": \"%s\",\n"), CBasicProcessing::TimingInfo());
 		_ftprintf(fp, _T("  \"peak_working_set_mb\": %.2f,\n"), (double)pmc.PeakWorkingSetSize / (1024.0 * 1024.0));
 		_ftprintf(fp, _T("  \"working_set_mb\": %.2f,\n"), (double)pmc.WorkingSetSize / (1024.0 * 1024.0));
 		_ftprintf(fp, _T("  \"nav_frame_count\": %d,\n"), (int)m_vFrameTimes.size());

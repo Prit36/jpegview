@@ -12,6 +12,8 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, bool bPadHeight, int padding) {
 	Init(nWidth, nHeight, bPadHeight, padding);
 }
 
+#include <immintrin.h>
+
 CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirstY, int nLastY, 
 	const void* pDIB, int nChannels, int padding) {
 	int nSectionWidth = nLastX - nFirstX + 1;
@@ -20,36 +22,42 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirs
 
 	if (m_pMemory != NULL) {
 		int nSrcLineWidthPadded = Helpers::DoPadding(nWidth * nChannels, 4);
-		const __m128i mask_b = _mm_setr_epi8(0, -1, 4, -1, 8, -1, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-		const __m128i mask_g = _mm_setr_epi8(1, -1, 5, -1, 9, -1, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-		const __m128i mask_r = _mm_setr_epi8(2, -1, 6, -1, 10, -1, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 
-		for (int j = 0; j < nSectionHeight; j++) {
-			const uint8* pSrc = (const uint8*)pDIB + ((size_t)nFirstY + j) * (size_t)nSrcLineWidthPadded + (size_t)nFirstX * nChannels;
-			uint16* pDst = (unsigned short*)m_pMemory + (size_t)j * 3 * (size_t)m_nPaddedWidth;
+		if (nChannels == 4) {
+			const __m256i mask_b = _mm256_setr_epi8(0, -1, 4, -1, 8, -1, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+			                                         0, -1, 4, -1, 8, -1, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+			const __m256i mask_g = _mm256_setr_epi8(1, -1, 5, -1, 9, -1, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+			                                         1, -1, 5, -1, 9, -1, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+			const __m256i mask_r = _mm256_setr_epi8(2, -1, 6, -1, 10, -1, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+			                                         2, -1, 6, -1, 10, -1, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1);
 
-			if (nChannels == 4) {
+			for (int j = 0; j < nSectionHeight; j++) {
+				const uint8* pSrc = (const uint8*)pDIB + ((size_t)nFirstY + j) * (size_t)nSrcLineWidthPadded + (size_t)nFirstX * 4;
+				uint16* pDst = (unsigned short*)m_pMemory + (size_t)j * 3 * (size_t)m_nPaddedWidth;
 				const uint32* pSrc32 = (const uint32*)pSrc;
 				uint16* pDstB = pDst;
 				uint16* pDstG = pDst + m_nPaddedWidth;
 				uint16* pDstR = pDst + 2 * m_nPaddedWidth;
 
 				int i = 0;
-				for (; i + 8 <= nSectionWidth; i += 8) {
-					__m128i px0 = _mm_loadu_si128((const __m128i*)(pSrc32 + i));
-					__m128i px1 = _mm_loadu_si128((const __m128i*)(pSrc32 + i + 4));
+				for (; i + 16 <= nSectionWidth; i += 16) {
+					__m256i px0 = _mm256_loadu_si256((const __m256i*)(pSrc32 + i));
+					__m256i px1 = _mm256_loadu_si256((const __m256i*)(pSrc32 + i + 8));
 
-					__m128i b0 = _mm_slli_epi16(_mm_shuffle_epi8(px0, mask_b), 6);
-					__m128i b1 = _mm_slli_epi16(_mm_shuffle_epi8(px1, mask_b), 6);
-					_mm_storeu_si128((__m128i*)(pDstB + i), _mm_unpacklo_epi64(b0, b1));
+					__m256i sb0 = _mm256_permute4x64_epi64(_mm256_shuffle_epi8(px0, mask_b), _MM_SHUFFLE(3, 1, 2, 0));
+					__m256i sb1 = _mm256_permute4x64_epi64(_mm256_shuffle_epi8(px1, mask_b), _MM_SHUFFLE(3, 1, 2, 0));
+					__m256i b16 = _mm256_slli_epi16(_mm256_permute2x128_si256(sb0, sb1, 0x20), 6);
+					_mm256_storeu_si256((__m256i*)(pDstB + i), b16);
 
-					__m128i g0 = _mm_slli_epi16(_mm_shuffle_epi8(px0, mask_g), 6);
-					__m128i g1 = _mm_slli_epi16(_mm_shuffle_epi8(px1, mask_g), 6);
-					_mm_storeu_si128((__m128i*)(pDstG + i), _mm_unpacklo_epi64(g0, g1));
+					__m256i sg0 = _mm256_permute4x64_epi64(_mm256_shuffle_epi8(px0, mask_g), _MM_SHUFFLE(3, 1, 2, 0));
+					__m256i sg1 = _mm256_permute4x64_epi64(_mm256_shuffle_epi8(px1, mask_g), _MM_SHUFFLE(3, 1, 2, 0));
+					__m256i g16 = _mm256_slli_epi16(_mm256_permute2x128_si256(sg0, sg1, 0x20), 6);
+					_mm256_storeu_si256((__m256i*)(pDstG + i), g16);
 
-					__m128i r0 = _mm_slli_epi16(_mm_shuffle_epi8(px0, mask_r), 6);
-					__m128i r1 = _mm_slli_epi16(_mm_shuffle_epi8(px1, mask_r), 6);
-					_mm_storeu_si128((__m128i*)(pDstR + i), _mm_unpacklo_epi64(r0, r1));
+					__m256i sr0 = _mm256_permute4x64_epi64(_mm256_shuffle_epi8(px0, mask_r), _MM_SHUFFLE(3, 1, 2, 0));
+					__m256i sr1 = _mm256_permute4x64_epi64(_mm256_shuffle_epi8(px1, mask_r), _MM_SHUFFLE(3, 1, 2, 0));
+					__m256i r16 = _mm256_slli_epi16(_mm256_permute2x128_si256(sr0, sr1, 0x20), 6);
+					_mm256_storeu_si256((__m256i*)(pDstR + i), r16);
 				}
 				for (; i < nSectionWidth; i++) {
 					uint32 sourcePixel = pSrc32[i];
@@ -57,11 +65,31 @@ CXMMImage::CXMMImage(int nWidth, int nHeight, int nFirstX, int nLastX, int nFirs
 					pDstG[i] = (uint16)(((sourcePixel >> 8) & 0xFF) << 6);
 					pDstR[i] = (uint16)(((sourcePixel >> 16) & 0xFF) << 6);
 				}
-			} else {
+			}
+		} else {
+			for (int j = 0; j < nSectionHeight; j++) {
+				const uint8* pSrc = (const uint8*)pDIB + ((size_t)nFirstY + j) * (size_t)nSrcLineWidthPadded + (size_t)nFirstX * nChannels;
+				uint16* pDst = (unsigned short*)m_pMemory + (size_t)j * 3 * (size_t)m_nPaddedWidth;
 				uint16* pDstB = pDst;
 				uint16* pDstG = pDst + m_nPaddedWidth;
 				uint16* pDstR = pDst + 2 * m_nPaddedWidth;
+
 				int i = 0;
+				for (; i + 4 <= nSectionWidth; i += 4) {
+					int s0 = i * 3;
+					pDstB[i] = ((uint16)pSrc[s0]) << 6;
+					pDstG[i] = ((uint16)pSrc[s0 + 1]) << 6;
+					pDstR[i] = ((uint16)pSrc[s0 + 2]) << 6;
+					pDstB[i + 1] = ((uint16)pSrc[s0 + 3]) << 6;
+					pDstG[i + 1] = ((uint16)pSrc[s0 + 4]) << 6;
+					pDstR[i + 1] = ((uint16)pSrc[s0 + 5]) << 6;
+					pDstB[i + 2] = ((uint16)pSrc[s0 + 6]) << 6;
+					pDstG[i + 2] = ((uint16)pSrc[s0 + 7]) << 6;
+					pDstR[i + 2] = ((uint16)pSrc[s0 + 8]) << 6;
+					pDstB[i + 3] = ((uint16)pSrc[s0 + 9]) << 6;
+					pDstG[i + 3] = ((uint16)pSrc[s0 + 10]) << 6;
+					pDstR[i + 3] = ((uint16)pSrc[s0 + 11]) << 6;
+				}
 				for (; i < nSectionWidth; i++) {
 					int s = i * 3;
 					pDstB[i] = ((uint16)pSrc[s]) << 6;

@@ -8,6 +8,7 @@
 #include "SettingsProvider.h"
 #include <shlobj.h>
 #include <math.h>
+#include <thread>
 
 namespace Helpers {
 
@@ -223,21 +224,12 @@ static bool CPUSupportsHWMultiprocessing(void) {
 }
 
 int NumCoresPerPhysicalProc(void) {
-	if (!CPUSupportsHWMultiprocessing()) {
-		return 1;
-	}
+	unsigned int n = std::thread::hardware_concurrency();
+	if (n > 0) return (int)n;
 
-	int output[4];
-
-	// check if cpuid supports leaf 4
-	__cpuid(output, 0);
-	if (output[0] < 4)
-		return 1; // not support, single core
-
-	// start with index = 0; Leaf 4 reports
-	__cpuidex(output, 4, 0);
-
-	return (int)((output[0] & 0xFC000000) >> 26) + 1;
+	SYSTEM_INFO sysInfo;
+	GetSystemInfo(&sysInfo);
+	return max(1, (int)sysInfo.dwNumberOfProcessors);
 }
 
 bool PatternMatch(LPCTSTR & sMatchingPattern, LPCTSTR sString, LPCTSTR sPattern) {

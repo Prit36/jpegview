@@ -25,6 +25,20 @@
 
 using namespace Gdiplus;
 
+static unsigned char* alloc(int sizeInBytes) {
+	return new(std::nothrow) unsigned char[sizeInBytes];
+}
+
+static void dealloc(unsigned char* buffer) {
+	delete[] buffer;
+}
+
+typedef unsigned char* Allocator(int sizeInBytes);
+typedef void Deallocator(unsigned char* buffer);
+
+__declspec(dllimport) unsigned char* __stdcall LoadImageWithWIC(LPCWSTR fileName, Allocator* allocator, Deallocator* deallocator,
+	unsigned int* width, unsigned int* height);
+
 // static initializers
 volatile int CImageLoadThread::m_curHandle = 0;
 
@@ -510,13 +524,20 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 			TJSAMP eChromoSubSampling = TJSAMP_420;
 			bool bOutOfMemory = false;
 
+			double t_start_read = Helpers::GetExactTickCount();
 			void* pPixelData = TurboJpeg::ReadImage(nWidth, nHeight, nBPP, eChromoSubSampling, bOutOfMemory, pBuffer, nFileSize);
+			double t_end_read = Helpers::GetExactTickCount();
 
 			// Color (4-bpp / 3-bpp) and b/w (1-bpp) JPEG is supported
 			if (pPixelData != NULL && (nBPP == 4 || nBPP == 3 || nBPP == 1)) {
+				double t_before_meta = Helpers::GetExactTickCount();
+				void* pEXIF = Helpers::FindEXIFBlock((void*)pBuffer, nFileSize);
+				__int64 hash = Helpers::CalculateJPEGFileHash((void*)pBuffer, nFileSize);
+				double t_after_meta = Helpers::GetExactTickCount();
+
+				double t_before_img = Helpers::GetExactTickCount();
 				request->Image = new CJPEGImage(nWidth, nHeight, pPixelData, 
-					Helpers::FindEXIFBlock((void*)pBuffer, nFileSize), nBPP, 
-					Helpers::CalculateJPEGFileHash((void*)pBuffer, nFileSize), IF_JPEG, false, 0, 1, 0);
+					pEXIF, nBPP, hash, IF_JPEG, false, 0, 1, 0);
 				request->Image->SetJPEGComment(Helpers::GetJPEGComment((void*)pBuffer, nFileSize));
 				request->Image->SetJPEGChromoSampling(eChromoSubSampling);
 			} else if (bOutOfMemory) {
@@ -1025,20 +1046,6 @@ void CImageLoadThread::ProcessReadGDIPlusRequest(CRequest * request) {
 		DeleteCachedGDIBitmap();
 	}
 }
-
-static unsigned char* alloc(int sizeInBytes) {
-	return new(std::nothrow) unsigned char[sizeInBytes];
-}
-
-static void dealloc(unsigned char* buffer) {
-	delete[] buffer;
-}
-
-typedef unsigned char* Allocator(int sizeInBytes);
-typedef void Deallocator(unsigned char* buffer);
-
-__declspec(dllimport) unsigned char* __stdcall LoadImageWithWIC(LPCWSTR fileName, Allocator* allocator, Deallocator* deallocator,
-	unsigned int* width, unsigned int* height);
 
 void CImageLoadThread::ProcessReadWICRequest(CRequest* request) {
 	const wchar_t* sFileName;
