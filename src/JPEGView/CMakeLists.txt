@@ -52,6 +52,7 @@ set(JPEGVIEW_SOURCES
     PanelController.cpp
     PanelMgr.cpp
     ParameterDB.cpp
+    ParallelJPEG.cpp
     PNGWrapper.cpp
     PrintDlg.cpp
     PrintImage.cpp
@@ -92,6 +93,7 @@ add_executable(JPEGView WIN32 ${JPEGVIEW_SOURCES})
 target_include_directories(JPEGView PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/libjpeg-turbo/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../extras/third_party/libjpeg-turbo/src
     ${CMAKE_CURRENT_SOURCE_DIR}/libpng-apng/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libjxl/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libheif/include

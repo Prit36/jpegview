@@ -185,6 +185,12 @@ public:
 	// Declare the cached DIB as invalid - forcing it to be regenerated on next GetDIB() call
 	void SetDIBInvalid() { m_ClippingSize = CSize(0, 0); }
 
+	// Adopt a pre-resampled 32bpp DIB (top-down, pitch = width*4) produced
+	// during the load's parallel decode, so the next GetDIB() with matching
+	// parameters becomes a cache hit instead of re-resampling.
+	void AdoptPreResampledDIB(void* pDIB, CSize fullTargetSize, CSize clippingSize, CPoint targetOffset, double dRotation,
+		const CImageProcessingParams& imageProcParams, EProcessingFlags eProcFlags);
+
 	// Verify that the image is currently rotated by the specified parameters and rotate the original pixels of the image if not.
 	bool VerifyRotation(const CRotationParams& rotationParams);
 
@@ -334,6 +340,16 @@ public:
 	void SetLoadTickCount(double tc) { m_dLoadTickCount = tc; }
 	double GetLoadTickCount() { return m_dLoadTickCount; }
 
+	// Debug: Load phase breakdown in ms
+	void SetLoadPhaseTimes(double dDecode, double dMeta, double dCtor, double dPost) {
+		m_dDecodeTime = dDecode; m_dMetadataTime = dMeta; m_dCtorTime = dCtor; m_dPostProcessTime = dPost;
+	}
+	double GetDecodeTime() const { return m_dDecodeTime; }
+	double GetMetadataTime() const { return m_dMetadataTime; }
+	double GetCtorTime() const { return m_dCtorTime; }
+	double GetPostProcessTime() const { return m_dPostProcessTime; }
+	void SetPostProcessTime(double dPost) { m_dPostProcessTime = dPost; }
+
 	// Debug: Unsharp mask time of image in ms
 	double GetUnsharpMaskTickCount() { return m_dUnsharpMaskTickCount; }
 
@@ -429,6 +445,11 @@ private:
 	double m_dLastOpTickCount;
 	double m_dLoadTickCount;
 	double m_dUnsharpMaskTickCount;
+	// Phase breakdown of the load (in ms) for diagnostics/benchmark telemetry
+	double m_dDecodeTime;
+	double m_dMetadataTime;
+	double m_dCtorTime;
+	double m_dPostProcessTime;
 
 	// stuff needed to perform LUT and LDC processing
 	uint8* m_pLUTAllChannels; // for global contrast and brightness correction

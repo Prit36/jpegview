@@ -341,6 +341,7 @@ void CMainDlg::SetBenchmarkInfo(bool bBenchmark, LPCTSTR sBenchmarkOut, int nNav
 	m_tInitDone = 0.0;
 	m_tFirstPaintDone = 0.0;
 	m_vFrameTimes.clear();
+	m_phaseTimings.Reset();
 }
 
 void CMainDlg::WriteBenchmarkTelemetry() {
@@ -378,6 +379,30 @@ void CMainDlg::WriteBenchmarkTelemetry() {
 		_ftprintf(fp, _T("  \"total_nav_time_ms\": %.3f,\n"), totalNavMs);
 		_ftprintf(fp, _T("  \"avg_frame_time_ms\": %.3f,\n"), avgFrameMs);
 		_ftprintf(fp, _T("  \"fps\": %.2f,\n"), fps);
+		_ftprintf(fp, _T("  \"phase_times_ms\": {\n"));
+		double tRel = (m_tProcessStart > 0.0) ? m_tProcessStart : m_phaseTimings.tInitDialogStart;
+		_ftprintf(fp, _T("    \"winmain_to_dlg_ctor\": %.3f,\n"), (m_phaseTimings.tBeforeDoModal > 0.0) ? m_phaseTimings.tBeforeDoModal - tRel : 0.0);
+		_ftprintf(fp, _T("    \"init_file_list\": %.3f,\n"), (m_phaseTimings.tFileListCreated > 0.0) ? m_phaseTimings.tFileListCreated - m_phaseTimings.tInitDialogStart : 0.0);
+		_ftprintf(fp, _T("    \"init_thread_pool\": %.3f,\n"), (m_phaseTimings.tThreadPoolCreated > 0.0) ? m_phaseTimings.tThreadPoolCreated - m_phaseTimings.tFileListCreated : 0.0);
+		_ftprintf(fp, _T("    \"init_jpeg_provider\": %.3f,\n"), (m_phaseTimings.tJPEGProviderCreated > 0.0) ? m_phaseTimings.tJPEGProviderCreated - m_phaseTimings.tThreadPoolCreated : 0.0);
+		_ftprintf(fp, _T("    \"init_panels\": %.3f,\n"), (m_phaseTimings.tPanelsCreated > 0.0) ? m_phaseTimings.tPanelsCreated - m_phaseTimings.tJPEGProviderCreated : 0.0);
+		_ftprintf(fp, _T("    \"wait_for_image_load\": %.3f,\n"), (m_phaseTimings.tRequestImageDone > 0.0) ? m_phaseTimings.tRequestImageDone - m_phaseTimings.tRequestImageStart : 0.0);
+		_ftprintf(fp, _T("    \"after_new_image\": %.3f,\n"), (m_phaseTimings.tAfterNewImageDone > 0.0) ? m_phaseTimings.tAfterNewImageDone - m_phaseTimings.tRequestImageDone : 0.0);
+		_ftprintf(fp, _T("    \"wnd_style\": %.3f,\n"), m_phaseTimings.tWndStyleMs);
+		_ftprintf(fp, _T("    \"adjust_wnd_to_image\": %.3f,\n"), m_phaseTimings.tAdjustWindowMs);
+		_ftprintf(fp, _T("    \"show_window\": %.3f,\n"), m_phaseTimings.tShowWindowMs);
+		_ftprintf(fp, _T("    \"window_show_total\": %.3f,\n"), (m_phaseTimings.tAfterNewImageDone > 0.0) ? m_phaseTimings.tWndStyleMs + m_phaseTimings.tAdjustWindowMs + m_phaseTimings.tShowWindowMs : 0.0);
+		_ftprintf(fp, _T("    \"first_paint_total\": %.3f,\n"), (m_phaseTimings.tFirstPaintDone > 0.0) ? m_phaseTimings.tFirstPaintDone - m_phaseTimings.tFirstPaintStart : 0.0);
+		_ftprintf(fp, _T("    \"init_to_paint_gap\": %.3f\n"), (m_phaseTimings.tFirstPaintStart > 0.0) ? m_phaseTimings.tFirstPaintStart - m_phaseTimings.tInitDialogStart : 0.0);
+		_ftprintf(fp, _T("  },\n"));
+		if (m_pCurrentImage != NULL) {
+			_ftprintf(fp, _T("  \"load_phase_times_ms\": {\n"));
+			_ftprintf(fp, _T("    \"decode\": %.3f,\n"), m_pCurrentImage->GetDecodeTime());
+			_ftprintf(fp, _T("    \"metadata\": %.3f,\n"), m_pCurrentImage->GetMetadataTime());
+			_ftprintf(fp, _T("    \"ctor_ldc\": %.3f,\n"), m_pCurrentImage->GetCtorTime());
+			_ftprintf(fp, _T("    \"post_process_resample\": %.3f\n"), m_pCurrentImage->GetPostProcessTime());
+			_ftprintf(fp, _T("  },\n"));
+		}
 		_ftprintf(fp, _T("  \"frame_times_ms\": ["));
 		for (size_t i = 0; i < m_vFrameTimes.size(); i++) {
 			_ftprintf(fp, _T("%.3f%s"), m_vFrameTimes[i], (i + 1 < m_vFrameTimes.size()) ? _T(", ") : _T(""));
@@ -390,6 +415,8 @@ void CMainDlg::WriteBenchmarkTelemetry() {
 
 
 LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) {	
+	m_phaseTimings.Reset();
+	m_phaseTimings.tInitDialogStart = Helpers::GetExactTickCount();
 	UpdateWindowTitle();
 
 	// Enable modern Windows 11 Immersive Dark Mode
@@ -418,9 +445,11 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 		(m_eForcedSorting == Helpers::FS_Undefined) ? sp.Sorting() : m_eForcedSorting, sp.IsSortedAscending(), sp.WrapAroundFolder(),
 		0, m_eForcedSorting != Helpers::FS_Undefined);
 	m_pFileList->SetNavigationMode(sp.Navigation());
+	m_phaseTimings.tFileListCreated = Helpers::GetExactTickCount();
 
 	// create thread pool for processing requests on multiple CPU cores
 	CProcessingThreadPool::This().CreateThreadPoolThreads();
+	m_phaseTimings.tThreadPoolCreated = Helpers::GetExactTickCount();
 
 	// create JPEG provider if not already pre-started
 	if (m_pJPEGProvider == NULL) {
@@ -429,6 +458,7 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 			m_pJPEGProvider->PrefetchImage(m_sStartupFile, 0, CreateProcessParams(false));
 		}
 	}
+	m_phaseTimings.tJPEGProviderCreated = Helpers::GetExactTickCount();
 
 	// Create image processing panel at bottom of screen
 	m_pImageProcPanelCtl = new CImageProcPanelCtl(this, m_pImageProcParams, &m_bLDC, &m_bAutoContrast);
@@ -464,6 +494,7 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 
 	// Create zoom navigator
 	m_pZoomNavigatorCtl = new CZoomNavigatorCtl(this, m_pImageProcPanelCtl->GetPanel(), m_pNavPanelCtl->GetPanel());
+	m_phaseTimings.tPanelsCreated = Helpers::GetExactTickCount();
 
 	// set icons (for toolbar)
 	HICON hIcon = (HICON)::LoadImage(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_MAINFRAME), 
@@ -478,8 +509,10 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	::ShowCursor(m_bMouseOn);
 
 	// request image now that UI is fully initialized
+	m_phaseTimings.tRequestImageStart = Helpers::GetExactTickCount();
 	m_pCurrentImage = m_pJPEGProvider->RequestImage(m_pFileList, CJPEGProvider::FORWARD,
 		m_pFileList->Current(), 0, CreateProcessParams(false), m_bOutOfMemoryLastImage, m_bExceptionErrorLastImage);
+	m_phaseTimings.tRequestImageDone = Helpers::GetExactTickCount();
 
 	if (m_pCurrentImage != NULL && m_pCurrentImage->IsAnimation()) {
 		StartAnimation();
@@ -487,24 +520,39 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	m_nLastLoadError = GetLoadErrorAfterOpenFile();
 	CheckIfApplyAutoFitWndToImage(true);
 	AfterNewImageLoaded(true, true, false); // synchronize to per image parameters
+	m_phaseTimings.tAfterNewImageDone = Helpers::GetExactTickCount();
 
 	if (!m_bFullScreenMode) {
 		// Window mode, set correct window size
+		double tWndStyleStart = Helpers::GetExactTickCount();
 		SetCurrentWindowStyle();
+		double tWndStyleDone = Helpers::GetExactTickCount();
 		if (!IsAdjustWindowToImage()) {
 			CRect windowRect = CMultiMonitorSupport::GetDefaultWindowRect();
 			this->SetWindowPos(HWND_TOP, windowRect.left, windowRect.top, windowRect.Width(), windowRect.Height(), SWP_NOZORDER | SWP_NOCOPYBITS);
 		} else {
 			AdjustWindowToImage(true);
 		}
+		double tAdjustDone = Helpers::GetExactTickCount();
 		if (sp.DefaultMaximized()) {
 			this->ShowWindow(SW_MAXIMIZE);
 		}
+		double tShowDone = Helpers::GetExactTickCount();
+		m_phaseTimings.tWndStyleMs = tWndStyleDone - tWndStyleStart;
+		m_phaseTimings.tAdjustWindowMs = tAdjustDone - tWndStyleDone;
+		m_phaseTimings.tShowWindowMs = tShowDone - tAdjustDone;
 	} else {
+		double tFSPrefetch = Helpers::GetExactTickCount();
 		PrefetchDIB(m_monitorRect);
+		double tFSVisible = Helpers::GetExactTickCount();
 		SetWindowLong(GWL_STYLE, WS_VISIBLE);
 		SetWindowPos(HWND_TOP, &m_monitorRect, SWP_NOZORDER);
+		double tFSMove = Helpers::GetExactTickCount();
 		SetWindowPos(NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOCOPYBITS | SWP_FRAMECHANGED);
+		double tFSEnd = Helpers::GetExactTickCount();
+		m_phaseTimings.tWndStyleMs = tFSVisible - tFSPrefetch;    // [fs] prefetch dib
+		m_phaseTimings.tAdjustWindowMs = tFSMove - tFSVisible;    // [fs] show+move window
+		m_phaseTimings.tShowWindowMs = tFSEnd - tFSMove;          // [fs] frame changed
 	}
 
 	if (CSettingsProvider::This().WindowAlwaysOnTopOnStartup()) {
@@ -553,6 +601,10 @@ LRESULT CMainDlg::OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 
 	CPaintDC dc(m_hWnd);
 	m_dRealizedZoom = 1.0;
+
+	if (m_bBenchmarkMode && m_phaseTimings.tFirstPaintStart == 0.0) {
+		m_phaseTimings.tFirstPaintStart = Helpers::GetExactTickCount();
+	}
 
 	this->GetClientRect(&m_clientRect);
 	CRect imageProcessingArea = m_pImageProcPanelCtl->PanelRect();
@@ -683,6 +735,7 @@ LRESULT CMainDlg::OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		double tNow = Helpers::GetExactTickCount();
 		if (m_tFirstPaintDone == 0.0) {
 			m_tFirstPaintDone = tNow;
+			m_phaseTimings.tFirstPaintDone = tNow;
 		}
 		static double s_tLastPaint = tNow;
 		if (m_vFrameTimes.empty()) {
@@ -2929,10 +2982,14 @@ CProcessParams CMainDlg::CreateProcessParams(bool bNoProcessingAfterLoad) {
 		nClientHeight = rect.Height();
 	}
 	Helpers::EAutoZoomMode eAutoZoomMode = GetAutoZoomMode();
-	if (IsAdjustWindowToImage() && !bNoProcessingAfterLoad) {
-		CSize maxClientSize = Helpers::GetMaxClientSize(m_hWnd);
-		nClientWidth = maxClientSize.cx;
-		nClientHeight = maxClientSize.cy;
+	// If auto-fullscreen is enabled, a large startup image will be displayed on
+	// the whole monitor, so target the monitor size right away. This makes the
+	// initial resample the final one (PrefetchDIB finds a cache hit instead of
+	// resampling a second time).
+	if (CSettingsProvider::This().AutoFullScreen()) {
+		CRect monitorRect = CMultiMonitorSupport::GetMonitorRect(m_hWnd);
+		nClientWidth = monitorRect.Width();
+		nClientHeight = monitorRect.Height();
 		eAutoZoomMode = Helpers::ZM_FitToScreenNoZoom;
 	}
 	if (m_bKeepParams) {
@@ -3181,7 +3238,13 @@ void CMainDlg::AdjustWindowToImage(bool bAfterStartup) {
 		}
 		m_bResizeForNewImage = true;
 		this->Invalidate(FALSE);
-		this->SetWindowPos(HWND_TOP, windowRect.left, windowRect.top, windowRect.Width(), windowRect.Height(), SWP_NOZORDER | SWP_NOCOPYBITS);
+		// Avoid the (costly) SetWindowPos round-trip when the computed rect
+		// equals the current one (e.g. fullscreen fit-to-screen startup).
+		CRect curRect;
+		this->GetWindowRect(&curRect);
+		if (curRect != windowRect) {
+			this->SetWindowPos(HWND_TOP, windowRect.left, windowRect.top, windowRect.Width(), windowRect.Height(), SWP_NOZORDER | SWP_NOCOPYBITS);
+		}
 		this->GetClientRect(&m_clientRect);
 		m_bResizeForNewImage = false;
 	}

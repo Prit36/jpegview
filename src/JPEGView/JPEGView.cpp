@@ -281,6 +281,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 		ULONG_PTR gdiplusToken;
 		Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+		if (bBenchmarkMode) {
+			dlgMain.SetPreDoModalTime(Helpers::GetExactTickCount());
+		}
 
 		try {
 			nRet = (int)dlgMain.DoModal();

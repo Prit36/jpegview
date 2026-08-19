@@ -139,6 +139,27 @@ public:
 	void SetStartupInfo(LPCTSTR sStartupFile, int nAutostartSlideShow, Helpers::ESorting eSorting, Helpers::ETransitionEffect eEffect, 
 		int nTransitionTime, bool bAutoExit, int nDisplayMonitor);
 	void SetBenchmarkInfo(bool bBenchmark, LPCTSTR sBenchmarkOut, int nNavCount, bool bBenchmarkExit, double tStart);
+	void SetPreDoModalTime(double tPreDoModal) { m_phaseTimings.tBeforeDoModal = tPreDoModal; }
+
+	// Fine-grained phase timing instrumentation (enabled in benchmark mode)
+	struct PhaseTimings {
+		double tBeforeDoModal;      // process start -> just before DoModal
+		double tInitDialogStart;
+		double tFileListCreated;
+		double tThreadPoolCreated;
+		double tJPEGProviderCreated;
+		double tPanelsCreated;
+		double tRequestImageStart;
+		double tRequestImageDone;
+		double tAfterNewImageDone;
+		double tWndStyleMs;         // durations (ms)
+		double tAdjustWindowMs;
+		double tShowWindowMs;
+		double tFirstPaintStart;
+		double tFirstPaintDone;
+		void Reset() { memset(this, 0, sizeof(*this)); }
+	};
+	PhaseTimings m_phaseTimings; 
 
 	// Called by the different controller classes
 	HWND GetHWND() { return m_hWnd; }

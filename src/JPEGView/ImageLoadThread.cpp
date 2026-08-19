@@ -411,13 +411,16 @@ void CImageLoadThread::ProcessRequest(CRequestBase& request) {
 			ProcessReadGDIPlusRequest(&rq);
 			break;
 	}
-	// then process the image if read was successful
+		// then process the image if read was successful
 	if (rq.Image != NULL) {
-		rq.Image->SetLoadTickCount(Helpers::GetExactTickCount() - dStartTime); 
+		rq.Image->SetLoadTickCount(Helpers::GetExactTickCount() - dStartTime);
+		double tPostStart = Helpers::GetExactTickCount();
 		if (!ProcessImageAfterLoad(&rq)) {
 			delete rq.Image;
 			rq.Image = NULL;
 			rq.OutOfMemory = true;
+		} else {
+			rq.Image->SetPostProcessTime(Helpers::GetExactTickCount() - tPostStart);
 		}
 	}
 }
@@ -525,8 +528,26 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 			bool bOutOfMemory = false;
 
 			double t_start_read = Helpers::GetExactTickCount();
-			void* pPixelData = TurboJpeg::ReadImage(nWidth, nHeight, nBPP, eChromoSubSampling, bOutOfMemory, pBuffer, nFileSize);
+			// Late-start resample: the parallel decode runs the display resample
+			// as soon as its final band completes, so the resample overlaps the
+			// decode's join/return overhead instead of running after ReadImage.
+			TJResampleTarget resample;
+			memset(&resample, 0, sizeof(resample));
+			double dRotation = fabs(request->ProcessParams.RotationParams.Rotation) + fabs(request->ProcessParams.UserRotation);
+			bool bCanStream = fabs(dRotation) < 1e-6 &&
+				request->ProcessParams.TargetWidth > 0 && request->ProcessParams.TargetHeight > 0;
+			if (bCanStream) {
+				resample.clientWidth = request->ProcessParams.TargetWidth;
+				resample.clientHeight = request->ProcessParams.TargetHeight;
+				resample.zoomMode = request->ProcessParams.AutoZoomMode;
+				resample.zoom = request->ProcessParams.Zoom;
+				resample.sharpen = request->ProcessParams.ImageProcParams.Sharpen;
+				resample.filter = CSettingsProvider::This().DownsamplingFilter();
+			}
+			void* pPixelData = TurboJpeg::ReadImage(nWidth, nHeight, nBPP, eChromoSubSampling, bOutOfMemory, pBuffer, nFileSize,
+				bCanStream ? &resample : NULL);
 			double t_end_read = Helpers::GetExactTickCount();
+			double dDecodeTime = t_end_read - t_start_read;
 
 			// Color (4-bpp / 3-bpp) and b/w (1-bpp) JPEG is supported
 			if (pPixelData != NULL && (nBPP == 4 || nBPP == 3 || nBPP == 1)) {
@@ -538,13 +559,26 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 				double t_before_img = Helpers::GetExactTickCount();
 				request->Image = new CJPEGImage(nWidth, nHeight, pPixelData, 
 					pEXIF, nBPP, hash, IF_JPEG, false, 0, 1, 0);
+				if (resample.pDIB != NULL) {
+					// Adopt the display DIB produced during the decode.
+					CSize newSize(resample.targetWidth, resample.targetHeight);
+					CSize clippedSize(min(request->ProcessParams.TargetWidth, newSize.cx),
+						min(request->ProcessParams.TargetHeight, newSize.cy));
+					CPoint offsetInImage = request->Image->ConvertOffset(newSize, clippedSize, request->ProcessParams.Offsets);
+					request->Image->AdoptPreResampledDIB(resample.pDIB, newSize, clippedSize, offsetInImage, 0.0,
+						request->ProcessParams.ImageProcParams, request->ProcessParams.ProcFlags);
+					resample.pDIB = NULL; // ownership transferred
+				}
 				request->Image->SetJPEGComment(Helpers::GetJPEGComment((void*)pBuffer, nFileSize));
 				request->Image->SetJPEGChromoSampling(eChromoSubSampling);
+				double t_after_img = Helpers::GetExactTickCount();
+				request->Image->SetLoadPhaseTimes(dDecodeTime, t_after_meta - t_before_meta, t_after_img - t_before_img, 0.0);
 			} else if (bOutOfMemory) {
 				request->OutOfMemory = true;
 			} else {
 				// failed, try GDI+
 				delete[] pPixelData;
+				if (resample.pDIB != NULL) delete[] resample.pDIB;
 				ProcessReadGDIPlusRequest(request);
 			}
 		}

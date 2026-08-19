@@ -1063,6 +1063,25 @@ void* CJPEGImage::GetDIBInternal(CSize fullTargetSize, CSize clippingSize, CPoin
 	return pDIB;
 }
 
+// Adopt a pre-resampled 32bpp DIB (top-down, pitch = width*4) produced during
+// the load's parallel decode, so the next GetDIB() with matching parameters
+// becomes a cache hit instead of re-resampling.
+void CJPEGImage::AdoptPreResampledDIB(void* pDIB, CSize fullTargetSize, CSize clippingSize, CPoint targetOffset, double dRotation,
+	const CImageProcessingParams& imageProcParams, EProcessingFlags eProcFlags) {
+	delete[] m_pDIBPixels;
+	delete[] m_pDIBPixelsLUTProcessed;
+	m_pDIBPixels = (unsigned char*)pDIB;
+	m_pDIBPixelsLUTProcessed = NULL;
+	m_pLastDIB = NULL;
+	m_FullTargetSize = fullTargetSize;
+	m_ClippingSize = clippingSize;
+	m_TargetOffset = targetOffset;
+	m_dRotationLQ = dRotation;
+	m_imageProcParams = imageProcParams;
+	m_eProcFlags = eProcFlags;
+	m_bFirstReprocessing = false;
+}
+
 void* CJPEGImage::ApplyUnsharpMask(const CUnsharpMaskParams * pUnsharpMaskParams, bool bNoChangesLDCandLUT) {
 	bool bThisUnsharpMaskValid = pUnsharpMaskParams != NULL;
 	if (bThisUnsharpMaskValid != m_bUnsharpMaskParamsValid) {

@@ -1,13 +1,86 @@
 
 #include "stdafx.h"
 #include "TJPEGWrapper.h"
+#include "ParallelJPEG.h"
 #include "libjpeg-turbo\include\turbojpeg.h"
 #include "libjpeg-turbo\include\jpeglib.h"
 #include "libjpeg-turbo\include\jerror.h"
 #include "MaxImageDef.h"
 #include "Helpers.h"
+#include "BasicProcessing.h"
+#include "SettingsProvider.h"
 #include <vector>
 #include <thread>
+
+// Guard the parallel decoder: on any structured exception, fall back to the
+// single-threaded path below instead of crashing the app.
+static int ParallelJPEGSEHFilter(EXCEPTION_POINTERS*) {
+	return EXCEPTION_EXECUTE_HANDLER;
+}
+
+static unsigned char* SafeParallelDecode(const void* buffer, int sizebytes, int& width, int& height, int& nSub,
+	const ParallelJPEG::ProgressFn& progress, void* user) {
+	__try {
+		return ParallelJPEG::Decode(buffer, sizebytes, width, height, nSub, progress, user);
+	}
+	__except (ParallelJPEGSEHFilter(GetExceptionInformation())) {
+		return NULL;
+	}
+}
+
+static CBasicProcessing::SIMDArchitecture ToSIMDArch(Helpers::CPUType cpuType) {
+	switch (cpuType) {
+	case Helpers::CPU_MMX: return CBasicProcessing::MMX;
+	case Helpers::CPU_SSE: return CBasicProcessing::SSE;
+	case Helpers::CPU_AVX2: return CBasicProcessing::AVX2;
+	default: return CBasicProcessing::SSE;
+	}
+}
+
+// Late-start resample state: the decode's progress callback fires when the last
+// band completes (whole source decoded); at that point we run the full display
+// resample on the load thread's pool, overlapping the decode's join/return
+// overhead instead of running after ReadImage returns.
+struct LateResampleCtx {
+	int clientWidth, clientHeight;
+	Helpers::EAutoZoomMode zoomMode;
+	double zoom;
+	double sharpen;
+	EFilterType filter;
+	CBasicProcessing::SIMDArchitecture simd;
+	unsigned char* pDIB;
+	int targetW, targetH;
+	bool started;
+};
+
+static void LateResampleCallback(void* user, const unsigned char* src, int srcW, int srcH) {
+	LateResampleCtx* s = (LateResampleCtx*)user;
+	if (s->started) return;
+	s->started = true;
+	if (srcW <= 0 || srcH <= 0 || src == NULL) return;
+	// Compute the fit size and allocate the display DIB.
+	CSize t;
+	if (s->zoom < 0.0) {
+		t = Helpers::GetImageRect(srcW, srcH, s->clientWidth, s->clientHeight, s->zoomMode, s->zoom);
+	} else {
+		t = CSize((int)(srcW * s->zoom + 0.5), (int)(srcH * s->zoom + 0.5));
+	}
+	t.cx = max(1, min(65535, t.cx)); t.cy = max(1, min(65535, t.cy));
+	size_t rowBytes = (size_t)t.cx * 4;
+	unsigned char* d = new (std::nothrow) unsigned char[rowBytes * t.cy];
+	if (d == NULL) return;
+	s->targetW = t.cx; s->targetH = t.cy;
+	s->pDIB = d;
+	// Resample the whole image in one pool call (the decode threads are done,
+	// so the pool has the machine to itself).
+	unsigned char* pOut = (unsigned char*)CBasicProcessing::SampleDown_HQ_SIMD(
+		CSize(t.cx, t.cy), CPoint(0, 0), CSize(t.cx, t.cy),
+		CSize(srcW, srcH), src, 3, s->sharpen, s->filter, s->simd);
+	if (pOut != NULL) {
+		delete[] s->pDIB;
+		s->pDIB = pOut;
+	}
+}
 
 void * TurboJpeg::ReadImage(int &width,
 					   int &height,
@@ -15,12 +88,45 @@ void * TurboJpeg::ReadImage(int &width,
 					   TJSAMP &chromoSubsampling,
 					   bool &outOfMemory,
 					   const void *buffer,
-					   int sizebytes)
+					   int sizebytes,
+					   TJResampleTarget* pResample)
 {
 	outOfMemory = false;
 	width = height = 0;
 	nchannels = 4;
 	chromoSubsampling = TJSAMP_420;
+
+	// Fast path: parallel band decode for baseline 8-bit JPEGs. Falls back to
+	// the single-threaded decode below for anything else.
+	{
+		int nSub = -1;
+		LateResampleCtx lr;
+		memset(&lr, 0, sizeof(lr));
+		ParallelJPEG::ProgressFn progress = NULL;
+		void* user = NULL;
+		if (pResample != NULL && pResample->clientWidth > 0 && pResample->clientHeight > 0) {
+			lr.clientWidth = pResample->clientWidth;
+			lr.clientHeight = pResample->clientHeight;
+			lr.zoomMode = pResample->zoomMode;
+			lr.zoom = pResample->zoom;
+			lr.sharpen = pResample->sharpen;
+			lr.filter = pResample->filter;
+			lr.simd = ToSIMDArch(CSettingsProvider::This().AlgorithmImplementation());
+			progress = LateResampleCallback;
+			user = &lr;
+		}
+		unsigned char* pParallel = SafeParallelDecode(buffer, sizebytes, width, height, nSub, progress, user);
+		if (pParallel != NULL) {
+			nchannels = 3;
+			if (nSub >= 0) chromoSubsampling = (TJSAMP)nSub;
+			if (progress != NULL && lr.pDIB != NULL) {
+				pResample->pDIB = lr.pDIB;
+				pResample->targetWidth = lr.targetW;
+				pResample->targetHeight = lr.targetH;
+			}
+			return pParallel;
+		}
+	}
 
 	thread_local tjhandle hDecoder = NULL;
 	if (hDecoder == NULL) {
