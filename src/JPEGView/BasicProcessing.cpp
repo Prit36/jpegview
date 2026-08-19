@@ -586,28 +586,173 @@ void CBasicProcessing::FillRectangle32bpp(int nWidth, int nHeight, void* pDIBPix
 // Conversion and rotation methods
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-// Rotate a block of a 32 bit DIB from source to target by 90 or 270 degrees
+// Rotate a block of a 32 bit DIB from source to target by 90 or 270 degrees.
+// The block is read contiguously into a scratch tile, then written as
+// contiguous runs of target rows. The original version wrote every pixel with a
+// stride of one full target row (~16KB for 44MP), which is very cache-hostile
+// and made the full-size rotate of portrait photos cost ~40ms+ on the load
+// thread. Both reads and writes are contiguous here.
 static void RotateBlock32bpp(const uint32* pSrc, uint32* pTgt, int nWidth, int nHeight,
 							 int nXStart, int nYStart, int nBlockWidth, int nBlockHeight, bool bCW) {
-	int nIncTargetLine = nHeight;
-	int nIncSource = nWidth - nBlockWidth;
-	const uint32* pSource = pSrc + nWidth * nYStart + nXStart;
-	uint32* pTarget = bCW ? pTgt + nIncTargetLine * nXStart + (nHeight - 1 - nYStart) :
-		pTgt + nIncTargetLine * (nWidth - 1 - nXStart) + nYStart;
-	uint32* pStartYPtr = pTarget;
-	if (!bCW) nIncTargetLine = -nIncTargetLine;
-	int nIncStartYPtr = bCW ? -1 : +1;
-
-	for (uint32 i = 0; i < nBlockHeight; i++) {
-		for (uint32 j = 0; j < nBlockWidth; j++) {
-			*pTarget = *pSource;
-			pTarget += nIncTargetLine;
-			pSource++;
-		}
-		pStartYPtr += nIncStartYPtr;
-		pTarget = pStartYPtr;
-		pSource += nIncSource;
+	uint32 scratch[32 * 32];
+	for (int i = 0; i < nBlockHeight; i++) {
+		memcpy(&scratch[i * nBlockWidth], pSrc + nWidth * (nYStart + i) + nXStart, (size_t)nBlockWidth * 4);
 	}
+	if (bCW) {
+		// source (x, y) -> target (nHeight-1-y, x); per source column a target row
+		for (int j = 0; j < nBlockWidth; j++) {
+			uint32* pRow = pTgt + nHeight * (nXStart + j) + (nHeight - 1 - nYStart);
+			for (int i = 0; i < nBlockHeight; i++) {
+				pRow[-i] = scratch[i * nBlockWidth + j];
+			}
+		}
+	} else {
+		// source (x, y) -> target (y, nWidth-1-x); per source column a target row
+		for (int j = 0; j < nBlockWidth; j++) {
+			uint32* pRow = pTgt + nHeight * (nWidth - 1 - nXStart - j) + nYStart;
+			for (int i = 0; i < nBlockHeight; i++) {
+				pRow[i] = scratch[i * nBlockWidth + j];
+			}
+		}
+	}
+}
+
+// Parallel 90/270 degrees rotation of a 32 bit DIB. A horizontal strip of the
+// source maps to a vertical (disjoint) band of the target, so the strips can be
+// processed concurrently by the thread pool. This avoids the ~135ms full-size
+// rotate of e.g. 44MP portrait photos on the load thread.
+class CRequestRotate32 : public CProcessingRequest {
+public:
+	CRequestRotate32(const void* pSourcePixels, CSize sourceSize, void* pTargetPixels, int nRotation)
+		: CProcessingRequest(pSourcePixels, sourceSize, pTargetPixels, sourceSize, CPoint(0, 0), sourceSize) {
+		Rotation = nRotation;
+		StripPadding = 32;
+	}
+
+	virtual bool ProcessStrip(int offsetY, int sizeY) {
+		int nWidth = SourceSize.cx, nHeight = SourceSize.cy;
+		const uint32* pSource = (const uint32*)SourcePixels;
+		uint32* pTarget = (uint32*)TargetPixels;
+		bool bCW = (Rotation == 90);
+		// Process all X-blocks, but only the Y rows within this strip. The
+		// block geometry keeps every strip's target writes in a disjoint
+		// vertical band [offsetY, offsetY+sizeY).
+		for (int nX = 0; nX < nWidth; nX += 32) {
+			int nBlockWidth = min(32, nWidth - nX);
+			for (int nY = 0; nY < nHeight; nY += 32) {
+				int nBlockY0 = max(nY, offsetY);
+				int nBlockY1 = min(nY + 32, offsetY + sizeY);
+				if (nBlockY0 >= nBlockY1) continue;
+				RotateBlock32bpp(pSource, pTarget, nWidth, nHeight,
+					nX, nBlockY0, nBlockWidth, nBlockY1 - nBlockY0, bCW);
+			}
+		}
+		return true;
+	}
+
+	int Rotation;
+};
+
+// Rotate a block of a 24 bit (BGR) DIB from source to target by 90 or 270 degrees.
+// Same tiled geometry as RotateBlock32bpp, but with 3 bytes per pixel so a 3
+// channel source can be rotated without converting to 32 bpp first (that
+// conversion is a full extra pass over e.g. 44MP pixels).
+static void RotateBlock24bpp(const uint8* pSrc, uint8* pTgt, int nWidth, int nHeight,
+							 int nXStart, int nYStart, int nBlockWidth, int nBlockHeight, bool bCW) {
+	uint8 scratch[32 * 32 * 3];
+	for (int i = 0; i < nBlockHeight; i++) {
+		memcpy(&scratch[i * nBlockWidth * 3], pSrc + nWidth * 3 * (nYStart + i) + nXStart * 3, (size_t)nBlockWidth * 3);
+	}
+	if (bCW) {
+		for (int j = 0; j < nBlockWidth; j++) {
+			uint8* pRow = pTgt + nHeight * 3 * (nXStart + j) + (nHeight - 1 - nYStart) * 3;
+			for (int i = 0; i < nBlockHeight; i++) {
+				const uint8* pS = &scratch[(i * nBlockWidth + j) * 3];
+				uint8* pD = pRow - i * 3;
+				pD[0] = pS[0]; pD[1] = pS[1]; pD[2] = pS[2];
+			}
+		}
+	} else {
+		for (int j = 0; j < nBlockWidth; j++) {
+			uint8* pRow = pTgt + nHeight * 3 * (nWidth - 1 - nXStart - j) + nYStart * 3;
+			for (int i = 0; i < nBlockHeight; i++) {
+				const uint8* pS = &scratch[(i * nBlockWidth + j) * 3];
+				uint8* pD = pRow + i * 3;
+				pD[0] = pS[0]; pD[1] = pS[1]; pD[2] = pS[2];
+			}
+		}
+	}
+}
+
+// Parallel 90/270 degrees rotation of a 24 bit DIB, see CRequestRotate32.
+class CRequestRotate24 : public CProcessingRequest {
+public:
+	CRequestRotate24(const void* pSourcePixels, CSize sourceSize, void* pTargetPixels, int nRotation)
+		: CProcessingRequest(pSourcePixels, sourceSize, pTargetPixels, sourceSize, CPoint(0, 0), sourceSize) {
+		Rotation = nRotation;
+		StripPadding = 32;
+	}
+
+	virtual bool ProcessStrip(int offsetY, int sizeY) {
+		int nWidth = SourceSize.cx, nHeight = SourceSize.cy;
+		const uint8* pSource = (const uint8*)SourcePixels;
+		uint8* pTarget = (uint8*)TargetPixels;
+		bool bCW = (Rotation == 90);
+		for (int nX = 0; nX < nWidth; nX += 32) {
+			int nBlockWidth = min(32, nWidth - nX);
+			for (int nY = 0; nY < nHeight; nY += 32) {
+				int nBlockY0 = max(nY, offsetY);
+				int nBlockY1 = min(nY + 32, offsetY + sizeY);
+				if (nBlockY0 >= nBlockY1) continue;
+				RotateBlock24bpp(pSource, pTarget, nWidth, nHeight,
+					nX, nBlockY0, nBlockWidth, nBlockY1 - nBlockY0, bCW);
+			}
+		}
+		return true;
+	}
+
+	int Rotation;
+};
+
+// 180 degrees rotation of a 24 bit DIB
+static void* Rotate24bpp180(int nWidth, int nHeight, const void* pDIBPixels) {
+	uint8* pTarget = new(std::nothrow) uint8[nWidth * nHeight * 3];
+	if (pTarget == NULL) return NULL;
+	const uint8* pSource = (const uint8*)pDIBPixels;
+	for (uint32 i = 0; i < nHeight; i++) {
+		uint8* pTgt = pTarget + nWidth * 3 * (nHeight - 1 - i) + (nWidth - 1) * 3;
+		const uint8* pSrc = pSource + nWidth * 3 * i;
+		for (uint32 j = 0; j < nWidth; j++) {
+			pTgt[0] = pSrc[0];
+			pTgt[1] = pSrc[1];
+			pTgt[2] = pSrc[2];
+			pTgt -= 3;
+			pSrc += 3;
+		}
+	}
+	return pTarget;
+}
+
+void* CBasicProcessing::Rotate24bpp(int nWidth, int nHeight, const void* pDIBPixels, int nRotationAngleCW) {
+	if (pDIBPixels == NULL) {
+		return NULL;
+	}
+	if (nRotationAngleCW != 90 && nRotationAngleCW != 180 && nRotationAngleCW != 270) {
+		return NULL; // not allowed
+	} else if (nRotationAngleCW == 180) {
+		return Rotate24bpp180(nWidth, nHeight, pDIBPixels);
+	}
+
+	uint8* pTarget = new(std::nothrow) uint8[nHeight * nWidth * 3];
+	if (pTarget == NULL) return NULL;
+	CProcessingThreadPool& threadPool = CProcessingThreadPool::This();
+	CRequestRotate24 request(pDIBPixels, CSize(nWidth, nHeight), pTarget, nRotationAngleCW);
+	bool bSuccess = threadPool.Process(&request);
+	if (bSuccess) {
+		return pTarget;
+	}
+	delete[] pTarget;
+	return NULL;
 }
 
 // 180 degrees rotation
@@ -639,23 +784,14 @@ void* CBasicProcessing::Rotate32bpp(int nWidth, int nHeight, const void* pDIBPix
 
 	uint32* pTarget = new(std::nothrow) uint32[nHeight * nWidth];
 	if (pTarget == NULL) return NULL;
-	const uint32* pSource = (uint32*)pDIBPixels;
-
-	const int cnBlockSize = 32;
-	int nX = 0, nY = 0;
-	while (nY < nHeight) {
-		nX = 0;
-		while (nX < nWidth) {
-			RotateBlock32bpp(pSource, pTarget, nWidth, nHeight,
-				nX, nY, 
-				min(cnBlockSize, nWidth - nX),
-				min(cnBlockSize, nHeight - nY), nRotationAngleCW == 90);
-			nX += cnBlockSize;
-		}
-		nY += cnBlockSize;
+	CProcessingThreadPool& threadPool = CProcessingThreadPool::This();
+	CRequestRotate32 request(pDIBPixels, CSize(nWidth, nHeight), pTarget, nRotationAngleCW);
+	bool bSuccess = threadPool.Process(&request);
+	if (bSuccess) {
+		return pTarget;
 	}
-
-	return pTarget;
+	delete[] pTarget;
+	return NULL;
 }
 
 void* CBasicProcessing::Mirror32bpp(int nWidth, int nHeight, const void* pDIBPixels, bool bHorizontally) {

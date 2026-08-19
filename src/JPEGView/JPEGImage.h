@@ -194,6 +194,11 @@ public:
 	// Verify that the image is currently rotated by the specified parameters and rotate the original pixels of the image if not.
 	bool VerifyRotation(const CRotationParams& rotationParams);
 
+	// Applies a pending integer rotation (deferred by Rotate()) to the original
+	// pixels. Idempotent and cheap when there is nothing pending. Thread safe:
+	// only one caller performs the rotation, other callers wait for it to finish.
+	void EnsureRotationApplied();
+
 	// Returns if this image has been cropped or not
 	bool IsCropped() { return m_bCropped; }
 
@@ -204,7 +209,7 @@ public:
 	bool IsProcessedNoParamDB() { return m_bIsProcessedNoParamDB; }
 
 	// raw access to original pixels - do not delete or store the returned pointer
-	void* OriginalPixels() { return  m_pOrigPixels; }
+	void* OriginalPixels() { EnsureRotationApplied(); return m_pOrigPixels; }
 	const void* OriginalPixels() const { return m_pOrigPixels; }
 	// remove original pixels from class - OriginalPixels() will return NULL afterwards
 	void DetachOriginalPixels() { m_pOrigPixels = NULL; }
@@ -425,6 +430,12 @@ private:
 	bool m_bIsProcessedNoParamDB;
 	CRotationParams m_rotationParams; // current rotation
 	bool m_bRotationByEXIF; // is the rotation given by EXIF
+
+	// Pending integer rotation (0/90/180/270) that must still be applied to the
+	// original pixels. -1 while a thread is applying it. The dimensions and
+	// m_rotationParams already reflect the final orientation, only the pixel
+	// buffer lags behind until EnsureRotationApplied() runs.
+	volatile LONG m_nPendingRotation;
 
 	// This is the geometry that was requested during last GetDIB() call
 	CSize m_FullTargetSize; 

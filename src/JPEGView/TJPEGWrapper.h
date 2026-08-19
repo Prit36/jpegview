@@ -18,6 +18,7 @@ struct TJResampleTarget {
 	unsigned char* pDIB; // out (parallel path only): allocated BGRX top-down DIB, caller takes ownership (delete[])
 	int targetWidth;    // out: computed fit size
 	int targetHeight;   // out: computed fit size
+	int rotation;       // in: EXIF auto-rotate to apply (0,90,180,270). 0 = none. When 90/270 the resample target is computed for the rotated size.
 };
 
 class TurboJpeg

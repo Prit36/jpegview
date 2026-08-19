@@ -110,6 +110,15 @@ static bool findSegments(const unsigned char* buf, long sz, long* sosEnd, long* 
 		}
 		if (buf[i] != 0xFF) { i++; continue; }
 		int m = buf[i + 1];
+		// Some encoders pad segment boundaries with extra 0xFF fill bytes
+		// (e.g. RAW15571 has FF FF FF E1 between APP segments). Skip them,
+		// otherwise they are parsed as a segment with a garbage length and the
+		// walk jumps into the middle of the entropy data.
+		while (m == 0xFF) {
+			i++;
+			if (i >= sz - 1) return false;
+			m = buf[i + 1];
+		}
 		if (m == 0xDA) {
 			int len = (int)parseSegLen(buf + i + 2);
 			*sosEnd = i + 2 + len;

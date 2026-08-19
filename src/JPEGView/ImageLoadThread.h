@@ -75,6 +75,15 @@ private:
 		CProcessParams ProcessParams;
 		bool OutOfMemory;  // load caused an out of memory condition
 		bool ExceptionError;  // an unhandled exception caused the load to fail
+		// Pending pre-resampled DIB from the parallel decode's late-start
+		// resample (TJPEGWrapper). Kept here until ProcessImageAfterLoad can
+		// decide whether it matches the final rotated target.
+		void* pendingDIB = NULL;
+		CSize pendingFullSize = CSize(0,0);
+		CSize pendingClippedSize = CSize(0,0);
+		CPoint pendingOffset = CPoint(0,0);
+		EProcessingFlags pendingProcFlags = PFLAG_None;
+		CImageProcessingParams pendingImageProcParams;
 	};
 
 	// Request to release image file

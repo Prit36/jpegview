@@ -55,6 +55,7 @@ public:
 	// Clockwise rotation of a 32 bit DIB. The rotation angle must be 90, 180 or 270 degrees, in all other
 	// cases the return value is NULL
 	static void* Rotate32bpp(int nWidth, int nHeight, const void* pDIBPixels, int nRotationAngleCW);
+	static void* Rotate24bpp(int nWidth, int nHeight, const void* pDIBPixels, int nRotationAngleCW);
 
 	// Mirror 32 bit DIB
 	static void* Mirror32bpp(int nWidth, int nHeight, const void* pDIBPixels, bool bHorizontally);

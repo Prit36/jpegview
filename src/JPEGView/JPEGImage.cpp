@@ -136,6 +136,7 @@ CJPEGImage::CJPEGImage(int nWidth, int nHeight, void* pPixels, void* pEXIFData, 
 	m_bIsProcessedNoParamDB = false;
 	m_bRotationByEXIF = false;
 	m_bFirstReprocessing = true;
+	m_nPendingRotation = 0;
 	m_dLastOpTickCount = 0;
 	m_dLoadTickCount = 0;
 	m_dUnsharpMaskTickCount = 0;
@@ -299,6 +300,7 @@ void CJPEGImage::FreeUnsharpMaskResources() {
 }
 
 bool CJPEGImage::ApplyUnsharpMaskToOriginalPixels(const CUnsharpMaskParams & unsharpMaskParams) {
+	EnsureRotationApplied();
 	InvalidateAllCachedPixelData();
 
 	double dStartTime = Helpers::GetExactTickCount();
@@ -325,6 +327,7 @@ bool CJPEGImage::ApplyUnsharpMaskToOriginalPixels(const CUnsharpMaskParams & uns
 }
 
 bool CJPEGImage::RotateOriginalPixels(double dRotation, bool bAutoCrop, bool bKeepAspectRatio) {
+	EnsureRotationApplied();
 	InvalidateAllCachedPixelData();
 
 	CPoint offset;
@@ -348,6 +351,7 @@ bool CJPEGImage::RotateOriginalPixels(double dRotation, bool bAutoCrop, bool bKe
 }
 
 bool CJPEGImage::TrapezoidOriginalPixels(const CTrapezoid& trapezoid, bool bAutoCrop, bool bKeepAspectRatio) {
+	EnsureRotationApplied();
 	InvalidateAllCachedPixelData();
 
 	int nXStart, nXEnd;
@@ -389,6 +393,7 @@ bool CJPEGImage::TrapezoidOriginalPixels(const CTrapezoid& trapezoid, bool bAuto
 }
 
 bool CJPEGImage::ResizeOriginalPixels(EResizeFilter filter, CSize newSize) {
+	EnsureRotationApplied();
 	int newWidth = newSize.cx, newHeight = newSize.cy;
 	if (newWidth <= 0 || newHeight <= 0) {
 		return false;
@@ -446,6 +451,7 @@ void CJPEGImage::ResampleWithPan(void* & pDIBPixels, void* & pDIBPixelsLUTProces
 								 CSize clippingSize, CPoint targetOffset, CRect oldClippingRect,
 								 EProcessingFlags eProcFlags, const CImageProcessingParams & imageProcParams, 
 								 double dRotation, EResizeType eResizeType) {
+	EnsureRotationApplied();
 	CPoint oldOffset = oldClippingRect.TopLeft();
 	CSize oldSize = oldClippingRect.Size();
 	CRect newClippingRect = CRect(targetOffset, clippingSize);
@@ -571,7 +577,7 @@ void CJPEGImage::ResampleWithPan(void* & pDIBPixels, void* & pDIBPixelsLUTProces
 
 void* CJPEGImage::Resample(CSize fullTargetSize, CSize clippingSize, CPoint targetOffset, 
 						  EProcessingFlags eProcFlags, double dSharpen, double dRotation, EResizeType eResizeType) {
-
+	EnsureRotationApplied();
 	Helpers::CPUType cpu = CSettingsProvider::This().AlgorithmImplementation();
 	// NOTE: Hacky workaround... there is probably a very obscure bug in the AVX2 implementation
 	//       which causes WaitForSingleObject to wait indefinitely on SampleUp_HQ_SIMD()
@@ -684,16 +690,13 @@ bool CJPEGImage::VerifyRotation(const CRotationParams& rotationParams) {
 bool CJPEGImage::Rotate(int nRotation) {
 	double dStartTickCount = Helpers::GetExactTickCount();
 
-	// Rotation can only be done in 32 bpp
-	if (!ConvertSrcTo4Channels()) {
-		return false;
-	}
-
-	InvalidateAllCachedPixelData();
-	void* pNewOriginalPixels = CBasicProcessing::Rotate32bpp(m_nOrigWidth, m_nOrigHeight, m_pOrigPixels, nRotation);
-	if (pNewOriginalPixels == NULL) return false;
-	delete[] m_pOrigPixels;
-	m_pOrigPixels = pNewOriginalPixels;
+	// The actual pixel rotation is deferred to EnsureRotationApplied() (called
+	// by every consumer of the original pixels, and opportunistically by the
+	// load thread after the first paint). This keeps the expensive full-size
+	// rotate (~40ms for 44MP) out of the time to first paint of portrait
+	// images. The dimensions and rotation parameters below always reflect the
+	// final orientation, only the pixel buffer lags behind.
+	m_nPendingRotation = (m_nPendingRotation + nRotation) % 360;
 	if (nRotation != 180) {
 		// swap width and height
 		int nTemp = m_nOrigWidth;
@@ -706,9 +709,54 @@ bool CJPEGImage::Rotate(int nRotation) {
 	return true;
 }
 
+void CJPEGImage::EnsureRotationApplied() {
+	for (;;) {
+		LONG nPending = m_nPendingRotation;
+		if (nPending == 0) return;
+		if (nPending == -1) {
+			// another thread is applying the rotation, wait for it
+			Sleep(1);
+			continue;
+		}
+		// claim the rotation for this thread
+		if (InterlockedCompareExchange(&m_nPendingRotation, -1, nPending) != nPending) {
+			continue;
+		}
+		if (m_pOrigPixels != NULL) {
+			// The pixel buffer still has the pre-rotation dimensions while
+			// m_nOrigWidth/Height already reflect the final orientation.
+			int nRotW = m_nOrigWidth, nRotH = m_nOrigHeight;
+			if (nPending == 90 || nPending == 270) {
+				int nTemp = nRotW;
+				nRotW = nRotH;
+				nRotH = nTemp;
+			}
+			void* pNewOriginalPixels = (m_nOriginalChannels == 4) ?
+				CBasicProcessing::Rotate32bpp(nRotW, nRotH, m_pOrigPixels, (int)nPending) :
+				CBasicProcessing::Rotate24bpp(nRotW, nRotH, m_pOrigPixels, (int)nPending);
+			if (pNewOriginalPixels != NULL) {
+				delete[] m_pOrigPixels;
+				m_pOrigPixels = pNewOriginalPixels;
+			} else {
+				// allocation failed - revert the metadata so that buffer and
+				// dimensions stay consistent (the image is simply unrotated)
+				if (nPending == 90 || nPending == 270) {
+					int nTemp = m_nOrigWidth;
+					m_nOrigWidth = m_nOrigHeight;
+					m_nOrigHeight = nTemp;
+				}
+				m_rotationParams.Rotation = (m_rotationParams.Rotation - (int)nPending + 360) % 360;
+			}
+		}
+		m_nPendingRotation = 0;
+		return;
+	}
+}
+
 bool CJPEGImage::Mirror(bool bHorizontally) {
 	double dStartTickCount = Helpers::GetExactTickCount();
 
+	EnsureRotationApplied();
 	// Rotation can only be done in 32 bpp
 	if (!ConvertSrcTo4Channels()) {
 		return false;
@@ -727,6 +775,7 @@ bool CJPEGImage::Mirror(bool bHorizontally) {
 }
 
 bool CJPEGImage::Crop(CRect cropRect) {
+	EnsureRotationApplied();
 	// Cropping can only be done in 32 bpp
 	if (!ConvertSrcTo4Channels()) {
 		return false;
@@ -988,6 +1037,7 @@ void* CJPEGImage::GetDIBInternal(CSize fullTargetSize, CSize clippingSize, CPoin
 	}
 	// ApplyCorrectionLUTandLDC() could have failed, then recreate the DIBs
 	if (pDIB == NULL) {
+		EnsureRotationApplied();
 		// if the image is reprocessed more than once, it is worth to convert the original to 4 channels
 		// as this is faster for further processing
 		if (!m_bFirstReprocessing) {
@@ -1282,6 +1332,7 @@ void* CJPEGImage::ApplyCorrectionLUTandLDC(const CImageProcessingParams & imageP
 }
 
 bool CJPEGImage::ConvertSrcTo4Channels() {
+	EnsureRotationApplied();
 	if (m_nOriginalChannels == 3) {
 		void* pNewOriginalPixels = CBasicProcessing::Convert3To4Channels(m_nOrigWidth, m_nOrigHeight, m_pOrigPixels);
 		if (pNewOriginalPixels != NULL) {
@@ -1493,6 +1544,7 @@ void CJPEGImage::InvalidateAllCachedPixelData() {
 }
 
 CJPEGImage* CJPEGImage::CreateThumbnailImage() {
+	EnsureRotationApplied();
 	if (m_pLDC == NULL) {
 		m_pLDC = new CLocalDensityCorr(*this, true);
 	}
