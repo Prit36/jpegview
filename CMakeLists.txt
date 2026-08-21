@@ -93,3 +93,6 @@ endif()
 
 add_subdirectory(src/WICLoader)
 add_subdirectory(src/JPEGView)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tools/proftool/CMakeLists.txt")
+    add_subdirectory(tools/proftool)
+endif()

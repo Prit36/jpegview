@@ -11,6 +11,7 @@
 #include "SettingsProvider.h"
 #include <vector>
 #include <thread>
+#include <cstdarg>
 
 // Guard the parallel decoder: on any structured exception, fall back to the
 // single-threaded path below instead of crashing the app.
@@ -37,6 +38,9 @@ static CBasicProcessing::SIMDArchitecture ToSIMDArch(Helpers::CPUType cpuType) {
 	}
 }
 
+// Diagnostics for the pipelined resample (enabled with JPEGVIEW_RESAMPLE_LOG=1).
+static void LogResampleDiag(const char* fmt, ...);
+
 // Late-start resample state: the decode's progress callback fires when the last
 // band completes (whole source decoded); at that point we run the full display
 // resample on the load thread's pool, overlapping the decode's join/return
@@ -52,72 +56,82 @@ struct LateResampleCtx {
 	int targetW, targetH;
 	bool started;
 	int rotation; // 0,90,180,270 - EXIF auto-rotate to handle
+
+	LateResampleCtx() : clientWidth(0), clientHeight(0), zoomMode(Helpers::ZM_FitToScreenNoZoom),
+		zoom(-1.0), sharpen(0.0), filter(Filter_Downsampling_Narrow), simd(CBasicProcessing::SSE),
+		pDIB(NULL), targetW(0), targetH(0), started(false), rotation(0) {}
 };
 
-static void LateResampleCallback(void* user, const unsigned char* src, int srcW, int srcH) {
-	LateResampleCtx* s = (LateResampleCtx*)user;
-	if (s->started) return;
-	s->started = true;
-	if (srcW <= 0 || srcH <= 0 || src == NULL) {
-		return;
-	}
-	// Compute the fit size. For 90/270 the final display size is for the
-	// rotated image (srcH x srcW), but we can avoid rotating the 44MP source
-	// by resampling the unrotated source to the transposed size (1080x720)
-	// and then rotating the small 0.78MP result. This is ~17ms cheaper than
-	// rotating the large source and also keeps the resample on the 3-channel
-	// fast path. For 180 we resample to the same size then rotate 180.
-	CSize finalSize;
+// Compute the final display size and the (possibly transposed) resample size.
+static void ComputeResampleGeometry(LateResampleCtx* s, int srcW, int srcH, CSize& finalSize, CSize& resampleSize) {
 	if (s->zoom < 0.0) {
 		if ((s->rotation == 90 || s->rotation == 270) && srcW != srcH) {
-			// Rotated dimensions
-			CSize tmp = Helpers::GetImageRect(srcH, srcW, s->clientWidth, s->clientHeight, s->zoomMode, s->zoom);
-			finalSize = tmp;
+			finalSize = Helpers::GetImageRect(srcH, srcW, s->clientWidth, s->clientHeight, s->zoomMode, s->zoom);
 		} else {
 			finalSize = Helpers::GetImageRect(srcW, srcH, s->clientWidth, s->clientHeight, s->zoomMode, s->zoom);
 		}
 	} else {
 		if (s->rotation == 90 || s->rotation == 270) {
-			// Zoomed size for rotated image
 			finalSize = CSize((int)(srcH * s->zoom + 0.5), (int)(srcW * s->zoom + 0.5));
 		} else {
 			finalSize = CSize((int)(srcW * s->zoom + 0.5), (int)(srcH * s->zoom + 0.5));
 		}
 	}
 	finalSize.cx = max(1, min(65535, finalSize.cx)); finalSize.cy = max(1, min(65535, finalSize.cy));
+	resampleSize = finalSize;
+	if (s->rotation == 90 || s->rotation == 270) {
+		resampleSize = CSize(finalSize.cy, finalSize.cx);
+	}
+}
 
-	CSize resampleSize = finalSize;
+// Diagnostics for the late-start resample (enabled with JPEGVIEW_RESAMPLE_LOG=1).
+static void LogResampleDiag(const char* fmt, ...) {
+	static const bool sbEnabled = getenv("JPEGVIEW_RESAMPLE_LOG") != NULL;
+	if (!sbEnabled) return;
+	FILE* fL = NULL;
+	char pLog[MAX_PATH];
+	GetTempPathA(MAX_PATH, pLog);
+	strcat_s(pLog, "jpgv_resample.log");
+	if (fopen_s(&fL, pLog, "a") == 0 && fL != NULL) {
+		va_list args;
+		va_start(args, fmt);
+		vfprintf(fL, fmt, args);
+		va_end(args);
+		fclose(fL);
+	}
+}
+
+static void LateResampleCallback(void* user, const unsigned char* src, int srcW, int srcH) {
+	LateResampleCtx* s = (LateResampleCtx*)user;
+	if (s->pDIB != NULL) return; // already finalized
+	double tCB0 = (getenv("JPEGVIEW_PJ_PROF") != NULL) ? Helpers::GetExactTickCount() : 0.0;
+	if (srcW <= 0 || srcH <= 0 || src == NULL) {
+		return;
+	}
+
+	CSize finalSize, resampleSize;
+	ComputeResampleGeometry(s, srcW, srcH, finalSize, resampleSize);
+
 	bool needSmallRotate = false;
 	if (s->rotation == 90 || s->rotation == 270) {
-		// Resample to transposed size, then small rotate to final
-		resampleSize = CSize(finalSize.cy, finalSize.cx);
 		needSmallRotate = true;
 	} else if (s->rotation == 180) {
 		needSmallRotate = true;
 	}
 
-	// Allocate and resample to resampleSize (transposed for 90/270)
-	size_t rowBytes = (size_t)resampleSize.cx * 4;
-	unsigned char* d = new (std::nothrow) unsigned char[rowBytes * resampleSize.cy];
-	if (d == NULL) return;
-	// Temporary target for resample - we will allocate via SampleDown which allocates its own buffer,
-	// but we need to handle rotation case where we want to reuse the same logic.
-	// Instead, directly call SampleDown and handle small rotate after.
-	unsigned char* pResampled = (unsigned char*)CBasicProcessing::SampleDown_HQ_SIMD(
+	// One-shot resample of the fully decoded source.
+	unsigned char* pFinal = (unsigned char*)CBasicProcessing::SampleDown_HQ_SIMD(
 		CSize(resampleSize.cx, resampleSize.cy), CPoint(0, 0), CSize(resampleSize.cx, resampleSize.cy),
 		CSize(srcW, srcH), src, 3, s->sharpen, s->filter, s->simd);
-	if (pResampled == NULL) {
-		delete[] d;
+	if (pFinal == NULL) {
 		return;
 	}
-	delete[] d;
 
-	unsigned char* pFinal = pResampled;
 	if (needSmallRotate) {
 		// Small rotate of the already downsampled image (0.78MP vs 44MP)
-		void* pRotated = CBasicProcessing::Rotate32bpp(resampleSize.cx, resampleSize.cy, pResampled, s->rotation);
+		void* pRotated = CBasicProcessing::Rotate32bpp(resampleSize.cx, resampleSize.cy, pFinal, s->rotation);
 		if (pRotated != NULL) {
-			delete[] pResampled;
+			delete[] pFinal;
 			pFinal = (unsigned char*)pRotated;
 		} else {
 			// Fallback: keep resampled as is (will be slightly wrong orientation but better than failure)
@@ -128,6 +142,10 @@ static void LateResampleCallback(void* user, const unsigned char* src, int srcW,
 	s->targetW = finalSize.cx;
 	s->targetH = finalSize.cy;
 	s->pDIB = pFinal;
+	if (tCB0 > 0.0) {
+		double tCB1 = Helpers::GetExactTickCount();
+		LogResampleDiag("final %.2f ms (%dx%d -> %dx%d)\n", tCB1 - tCB0, srcW, srcH, finalSize.cx, finalSize.cy);
+	}
 }
 
 void * TurboJpeg::ReadImage(int &width,
@@ -149,10 +167,10 @@ void * TurboJpeg::ReadImage(int &width,
 	{
 		int nSub = -1;
 		LateResampleCtx lr;
-		memset(&lr, 0, sizeof(lr));
 		ParallelJPEG::ProgressFn progress = NULL;
 		void* user = NULL;
-		if (pResample != NULL && pResample->clientWidth > 0 && pResample->clientHeight > 0) {
+		if (pResample != NULL && pResample->clientWidth > 0 && pResample->clientHeight > 0
+			&& getenv("JPEGVIEW_NO_LATE_RESAMPLE") == NULL) {
 			lr.clientWidth = pResample->clientWidth;
 			lr.clientHeight = pResample->clientHeight;
 			lr.zoomMode = pResample->zoomMode;
@@ -174,6 +192,9 @@ void * TurboJpeg::ReadImage(int &width,
 				pResample->targetHeight = lr.targetH;
 			}
 			return pParallel;
+		}
+		if (getenv("JPEGVIEW_PJ_PROF") != NULL) {
+			fprintf(stderr, "[TJ] parallel decode failed/unsupported -> single-thread fallback\n");
 		}
 	}
 

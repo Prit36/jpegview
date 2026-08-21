@@ -74,8 +74,7 @@ class ProcessRunner:
         if self.is_win32:
             self.psapi = ctypes.WinDLL("psapi.dll")
             self.kernel32 = ctypes.WinDLL("kernel32.dll")
-            self.user32 = ctypes.WinDLL("user32.dll")
-            
+
             self._freq = ctypes.c_int64()
             self.kernel32.QueryPerformanceFrequency(ctypes.byref(self._freq))
 
@@ -101,23 +100,6 @@ class ProcessRunner:
             return working_set_mb, peak_working_set_mb
         return 0.0, 0.0
 
-    def _find_window_for_pid(self, pid: int) -> int | None:
-        if not self.is_win32:
-            return None
-        found_hwnds: list[int] = []
-
-        def enum_cb(hwnd: int, extra: Any) -> bool:
-            if self.user32.IsWindowVisible(hwnd):
-                lpdw_pid = wintypes.DWORD()
-                self.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(lpdw_pid))
-                if lpdw_pid.value == pid:
-                    found_hwnds.append(hwnd)
-            return True
-
-        WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-        self.user32.EnumWindows(WNDENUMPROC(enum_cb), 0)
-        return found_hwnds[0] if found_hwnds else None
-
     def run_image_load_benchmark(
         self,
         exe_path: Path,
@@ -126,7 +108,12 @@ class ProcessRunner:
     ) -> dict[str, Any]:
         """
         Runs Time to First Paint (TTFP) benchmark on an image file.
-        Uses accurate native telemetry when available, or precise Win32 GUI automation for legacy binaries.
+        Modern JPEGView binaries self-report precise internal telemetry via the
+        /benchmark flag and exit themselves (/benchmark_exit), so the harness
+        stays completely passive during the measured window: no window
+        enumeration, no periodic memory queries (GetProcessMemoryInfo takes the
+        child's address-space lock and measurably stalls its decode threads).
+        Peak RSS is read once after exit (it is a cumulative high-water mark).
         """
         temp_json = Path(tempfile.gettempdir()) / f"telemetry_{os.getpid()}_{time.time_ns()}.json"
 
@@ -146,8 +133,8 @@ class ProcessRunner:
         proc = subprocess.Popen(
             cmd,
             cwd=str(exe_path.parent),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
 
         peak_rss_mb = 0.0
@@ -155,49 +142,27 @@ class ProcessRunner:
         if self.is_win32:
             h_proc = self.kernel32.OpenProcess(0x0400 | 0x0010, False, proc.pid)
 
-        t_first_paint: float | None = None
-        window_handle: int | None = None
-
         try:
-            poll_interval = 0.005
-            deadline = self._now_ms() + (timeout_sec * 1000.0)
-
-            while self._now_ms() < deadline:
-                if proc.poll() is not None:
-                    if t_first_paint is None:
-                        t_first_paint = self._now_ms()
+            # Passive wait: the child exits by itself after writing telemetry.
+            while proc.poll() is None:
+                if self._now_ms() > t_start + timeout_sec * 1000.0:
                     break
-
-                if h_proc:
-                    _, cur_peak = self._get_process_memory_mb(h_proc)
-                    if cur_peak > peak_rss_mb:
-                        peak_rss_mb = cur_peak
-
-                # For legacy binaries that do not support /benchmark_exit, detect the window
-                # when it becomes fully visible and responsive, wait for first paint, then close.
-                if not window_handle and self.is_win32:
-                    window_handle = self._find_window_for_pid(proc.pid)
-                    if window_handle:
-                        t_first_paint = self._now_ms()
-                        # If temp_json was created or process is running benchmark, let it exit naturally.
-                        # For legacy binaries without telemetry, wait for first paint and close.
-                        if not temp_json.exists():
-                            time.sleep(0.15)
-                            WM_CLOSE = 0x0010
-                            self.user32.PostMessageW(window_handle, WM_CLOSE, 0, 0)
-
-                time.sleep(poll_interval)
+                time.sleep(0.005)
 
             if proc.poll() is None:
                 proc.kill()
                 proc.wait(timeout=2)
-
         finally:
+            # Single post-exit query: PeakWorkingSetSize is a high-water mark,
+            # so this captures the true peak with zero in-flight overhead.
             if h_proc:
+                _, peak_after = self._get_process_memory_mb(h_proc)
+                if peak_after > peak_rss_mb:
+                    peak_rss_mb = peak_after
                 self.kernel32.CloseHandle(h_proc)
 
         t_end = self._now_ms()
-        external_wall_time_ms = (t_first_paint or t_end) - t_start
+        external_wall_time_ms = t_end - t_start
 
         telemetry: dict[str, Any] = {}
         if temp_json.exists():

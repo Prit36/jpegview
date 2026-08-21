@@ -179,12 +179,12 @@ public:
 	// Returns a 32 bpp BGRA DIB of size 'clippedTargetSize'
 	static void* SampleDown_HQ(CSize fullTargetSize, CPoint fullTargetOffset, CSize clippedTargetSize,
 		CSize sourceSize, const void* pPixels, int nChannels, double dSharpen, EFilterType eFilter);
-
 	// Same as above, SIMD (AVX2/SSE/MMX) implementation.
 	// Notice that the A channel is not processed and set to fixed value 0xFF.
 	// Notice that the returned image is always 32 bpp!
 	static void* SampleDown_HQ_SIMD(CSize fullTargetSize, CPoint fullTargetOffset, CSize clippedTargetSize,
-		CSize sourceSize, const void* pPixels, int nChannels, double dSharpen, EFilterType eFilter, SIMDArchitecture simd);
+		CSize sourceSize, const void* pPixels, int nChannels, double dSharpen,
+		EFilterType eFilter, SIMDArchitecture simd);
 
 	// High quality upsampling of 32 or 24 bpp BGR(A) image using bicubic interpolation.
 	// Notice that the A channel is not processed and set to fixed value 0xFF.

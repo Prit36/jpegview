@@ -164,9 +164,14 @@ namespace Helpers {
 
 	// Gets a window rectangle (in screen coordinates) that fits the given image
 	CRect GetWindowRectMatchingImageSize(HWND hWnd, CSize minSize, CSize maxSize, double& dZoom, CJPEGImage* pImage, bool bForceCenterWindow, bool bKeepAspectRatio, bool bWindowBorderless);
+	CRect GetWindowRectMatchingImageSize(HWND hWnd, CSize minSize, CSize maxSize, double& dZoom, int imageWidth, int imageHeight, bool bForceCenterWindow, bool bKeepAspectRatio, bool bWindowBorderless);
 
 	// Gets if the given image can be displayed without sampling down the image.
 	bool CanDisplayImageWithoutResize(HWND hWnd, CJPEGImage* pImage);
+
+	// Reads the SOF dimensions of a JPEG file directly from its header
+	// (first 64 KB). Returns false for non-JPEG or unreadable files.
+	bool PeekImageDimensions(LPCTSTR sFileName, int& width, int& height);
 
 	// Calculates the maximum included rectangle in a trapezoid, keeping the given aspect ratio of the sides
 	CRect CalculateMaxIncludedRectKeepAR(const CTrapezoid& trapezoid, double dAspectRatio);

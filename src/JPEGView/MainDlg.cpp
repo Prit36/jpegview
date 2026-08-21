@@ -508,6 +508,21 @@ LRESULT CMainDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	m_bMouseOn = !m_bFullScreenMode;
 	::ShowCursor(m_bMouseOn);
 
+	// Overlap the (costly) window sizing with the background decode: the final
+	// window rect only depends on the image dimensions, which the file header
+	// reveals instantly. The later AdjustWindowToImage becomes a no-op when the
+	// computed rect matches.
+	if (!m_bFullScreenMode && IsAdjustWindowToImage() && !m_sStartupFile.IsEmpty()) {
+		int nEarlyW = 0, nEarlyH = 0;
+		if (Helpers::PeekImageDimensions(m_sStartupFile, nEarlyW, nEarlyH)) {
+			double dZoom = m_dZoom;
+			CRect earlyRect = Helpers::GetWindowRectMatchingImageSize(m_hWnd, CSize(MIN_WND_WIDTH, MIN_WND_HEIGHT),
+				HUGE_SIZE, dZoom, nEarlyW, nEarlyH, true, true, m_bWindowBorderless);
+			this->SetWindowPos(HWND_TOP, earlyRect.left, earlyRect.top, earlyRect.Width(), earlyRect.Height(), SWP_NOZORDER | SWP_NOCOPYBITS | SWP_NOREDRAW);
+			this->GetClientRect(&m_clientRect);
+		}
+	}
+
 	// request image now that UI is fully initialized
 	m_phaseTimings.tRequestImageStart = Helpers::GetExactTickCount();
 	m_pCurrentImage = m_pJPEGProvider->RequestImage(m_pFileList, CJPEGProvider::FORWARD,
@@ -3230,8 +3245,10 @@ bool CMainDlg::IsImageExactlyFittingWindow() {
 void CMainDlg::AdjustWindowToImage(bool bAfterStartup) {
 	if (IsAdjustWindowToImage() && (m_pCurrentImage != NULL || bAfterStartup)) {
 		// window size shall be adjusted to image size (at least keep aspect ratio)
+		double dT0 = (GetEnvironmentVariableW(L"JPEGVIEW_PJ_PROF", NULL, 0) > 0) ? Helpers::GetExactTickCount() : 0.0;
 		double dZoom = m_dZoom;
 		CRect windowRect = Helpers::GetWindowRectMatchingImageSize(m_hWnd, CSize(MIN_WND_WIDTH, MIN_WND_HEIGHT), HUGE_SIZE, dZoom, m_pCurrentImage, bAfterStartup, dZoom < 0, m_bWindowBorderless);
+		double dT1 = (dT0 > 0.0) ? Helpers::GetExactTickCount() : 0.0;
 		CRect defaultRect = CMultiMonitorSupport::GetDefaultWindowRect();
 		if (bAfterStartup && CSettingsProvider::This().ExplicitWindowRect()) {
 			windowRect = CRect(defaultRect.TopLeft(), windowRect.Size());
@@ -3247,6 +3264,10 @@ void CMainDlg::AdjustWindowToImage(bool bAfterStartup) {
 		}
 		this->GetClientRect(&m_clientRect);
 		m_bResizeForNewImage = false;
+		if (dT0 > 0.0) {
+			double dT2 = Helpers::GetExactTickCount();
+			fprintf(stderr, "[ADJ] rect=%.2fms setpos=%.2fms\n", dT1 - dT0, dT2 - dT1);
+		}
 	}
 }
 
