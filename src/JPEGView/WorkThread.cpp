@@ -15,7 +15,7 @@ CWorkThread::CWorkThread(bool bCoInitialize)
 	::InitializeCriticalSection(&m_csList);
 	m_wakeUp = ::CreateEvent(0, TRUE, FALSE, NULL);
 
-	m_hThread = (HANDLE)_beginthread(ThreadFunc, 0, this);
+	m_hThread = (HANDLE)_beginthreadex(NULL, 0, ThreadFunc, this, 0, NULL);
 }
 
 CWorkThread::~CWorkThread(void) {
@@ -55,6 +55,7 @@ void CWorkThread::Terminate() {
 	if (m_hThread != NULL) {
 		::SetEvent(m_wakeUp);
 		::WaitForSingleObject(m_hThread, 10000);
+		::CloseHandle(m_hThread);
 		m_hThread = NULL;
 	}
 }
@@ -78,8 +79,7 @@ void CWorkThread::Abort() {
 // Private
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-void CWorkThread::ThreadFunc(void* arg) {
-
+unsigned int __stdcall CWorkThread::ThreadFunc(void* arg) {
 	CWorkThread* thisPtr = (CWorkThread*) arg;
 	if (thisPtr->m_bCoInitialize) {
 		::CoInitialize(NULL);
@@ -108,7 +108,11 @@ void CWorkThread::ThreadFunc(void* arg) {
 			thisPtr->ProcessRequest(*requestHandled);
 			requestHandled->Processed = true;
 
-			// signal end of processing
+			if (!thisPtr->m_bTerminate) {
+				thisPtr->AfterFinishProcess(*requestHandled);
+			}
+
+			// signal end of processing AFTER all processing is finished
 			if (requestHandled->EventFinished != NULL) {
 				if (requestHandled->EventFinishedCounter == NULL) {
 					::SetEvent(requestHandled->EventFinished);
@@ -118,9 +122,6 @@ void CWorkThread::ThreadFunc(void* arg) {
 						::SetEvent(requestHandled->EventFinished);
 					}
 				}
-			}
-			if (!thisPtr->m_bTerminate) {
-				thisPtr->AfterFinishProcess(*requestHandled);
 			}
 			nNumUnprocessedRequests--;
 		}
@@ -134,7 +135,7 @@ void CWorkThread::ThreadFunc(void* arg) {
 	if (thisPtr->m_bCoInitialize) {
 		::CoUninitialize();
 	}
-	_endthread();
+	return 0;
 }
 
 void CWorkThread::DeleteAllRequestsMarkedForDeletion(CWorkThread* thisPtr) {

@@ -70,7 +70,7 @@ protected:
 	volatile bool m_bTerminate; // flags termination for thread
 
 private:
-	static void  __cdecl ThreadFunc(void* arg);
+	static unsigned int __stdcall ThreadFunc(void* arg);
 	static void DeleteAllRequestsMarkedForDeletion(CWorkThread* thisPtr);
 
 	bool m_bCoInitialize;

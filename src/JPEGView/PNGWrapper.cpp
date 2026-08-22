@@ -224,7 +224,7 @@ bool PngReader::BeginReading(void* buffer, size_t sizebytes, bool& outOfMemory)
 		}
 		rowbytes = (unsigned int)png_get_rowbytes(png_ptr, info_ptr);
 		size = height * rowbytes;
-		p_image = (unsigned char*)malloc(size);
+		p_image = new (std::nothrow) unsigned char[size];
 		p_frame = (unsigned char*)malloc(size);
 		p_temp = (unsigned char*)malloc(size);
 		rows_image = (png_bytepp)malloc(height * sizeof(png_bytep));
@@ -349,8 +349,10 @@ void* PngReader::ReadImage(int& width,
 		}
 		
 	}
-	if (!has_animation)
+	if (!has_animation) {
+		cache.p_image = NULL;
 		DeleteCache();
+	}
 	return pixels;
 }
 
@@ -361,7 +363,7 @@ void PngReader::DeleteCacheInternal(bool free_buffer)
 	free(cache.rows_image);
 	free(cache.p_temp);
 	free(cache.p_frame);
-	free(cache.p_image);
+	delete[] (unsigned char*)cache.p_image;
 	png_destroy_read_struct(&cache.png_ptr, &cache.info_ptr, NULL);
 	void* temp_buffer = cache.buffer;
 	size_t temp_buffer_size = cache.buffer_size;
