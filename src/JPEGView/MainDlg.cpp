@@ -300,8 +300,12 @@ CMainDlg::CMainDlg(bool bForceFullScreen) {
 
 CMainDlg::~CMainDlg() {
 	delete m_pDirectoryWatcher;
+	if (m_pJPEGProvider != NULL) {
+		delete m_pJPEGProvider;
+		m_pJPEGProvider = NULL;
+	}
 	delete m_pFileList;
-	if (m_pJPEGProvider != NULL) delete m_pJPEGProvider;
+	m_pFileList = NULL;
 	delete m_pImageProcParams;
 	delete m_pImageProcParamsKept;
 	delete m_pZoomNavigatorCtl;

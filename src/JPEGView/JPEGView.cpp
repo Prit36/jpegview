@@ -7,9 +7,8 @@
 #include "MainDlg.h"
 #include "SettingsProvider.h"
 
-#ifdef DEBUG
 #include <dbghelp.h>
-#endif
+#pragma comment(lib, "dbghelp.lib")
 
 // _CrtDumpMemoryLeaks
 
@@ -162,12 +161,11 @@ static bool ParseCommandLineForBenchmarkExit(LPCTSTR sCommandLine) {
 }
 
 
-#ifdef DEBUG
 static CRITICAL_SECTION s_lock;
 
 static BOOL GenerateDump(EXCEPTION_POINTERS* pExceptionPointers)
 {
-	WCHAR* szAppName = L"JPEGView";
+	const WCHAR* szAppName = L"JPEGView";
 	DWORD dwBufferSize = MAX_PATH;
 	HANDLE hDumpFile;
 	SYSTEMTIME stLocalTime;
@@ -196,29 +194,18 @@ static BOOL GenerateDump(EXCEPTION_POINTERS* pExceptionPointers)
 static LONG WINAPI CrashHandler(EXCEPTION_POINTERS * pExceptionInfo)
 {
 	::EnterCriticalSection(&s_lock);
-	if (GenerateDump(pExceptionInfo))
-	{
-		::MessageBox(NULL, CString(_T("Unhandled exception\nMinidump file written to:\n")) + Helpers::JPEGViewAppDataPath(), _T("Unhandled exception"), MB_OK);
-	}
-	else
-	{
-		::MessageBox(NULL, _T("Unhandled exception\nError writing minidump file"), _T("Error writing minidump"), MB_OK);
-	}
+	GenerateDump(pExceptionInfo);
 	::LeaveCriticalSection(&s_lock);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
-#endif
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int /*nCmdShow*/)
 {
 	double tProcessStart = Helpers::GetExactTickCount();
 	HRESULT hRes = ::CoInitialize(NULL);
 
-#ifdef DEBUG
 	::InitializeCriticalSection(&s_lock);
-
 	::SetUnhandledExceptionFilter(CrashHandler);
-#endif
 
 	// use the locale from the operating system, however for numeric input/output always use 'C' locale
 	// with the OS locale the INI file can not be read correctly (due to the different decimal point characters)
@@ -270,31 +257,33 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	int nRet = 0;
 	//Run application
 	if (!bFileLoadedByExistingInstance) {
-		CMainDlg dlgMain(bForceFullScreen);
-
-		dlgMain.SetStartupInfo(sStartupFile, nAutostartSlideShow, eSorting, eTransitionEffect, nTransitionTime, bAutoExit, nDisplayMonitor);
-		if (bBenchmarkMode) {
-			dlgMain.SetBenchmarkInfo(true, sBenchmarkOutFile, nBenchmarkNav, bBenchmarkExit, tProcessStart);
-		}
-
 		// Initialize GDI+ in parallel with background image prefetch
 		Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-		ULONG_PTR gdiplusToken;
+		ULONG_PTR gdiplusToken = 0;
 		Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
-		try {
-			nRet = (int)dlgMain.DoModal();
-			if (CSettingsProvider::This().StickyWindowSize() && !dlgMain.IsFullScreenMode()) {
-				CSettingsProvider::This().SaveStickyWindowRect(dlgMain.WindowRectOnClose());
+		{
+			CMainDlg dlgMain(bForceFullScreen);
+
+			dlgMain.SetStartupInfo(sStartupFile, nAutostartSlideShow, eSorting, eTransitionEffect, nTransitionTime, bAutoExit, nDisplayMonitor);
+			if (bBenchmarkMode) {
+				dlgMain.SetBenchmarkInfo(true, sBenchmarkOutFile, nBenchmarkNav, bBenchmarkExit, tProcessStart);
 			}
-			::ShowCursor(TRUE);
+
+			try {
+				nRet = (int)dlgMain.DoModal();
+				if (CSettingsProvider::This().StickyWindowSize() && !dlgMain.IsFullScreenMode()) {
+					CSettingsProvider::This().SaveStickyWindowRect(dlgMain.WindowRectOnClose());
+				}
+				::ShowCursor(TRUE);
+			}
+
+			catch (...) {
+				::ShowCursor(TRUE);
+			}
 		}
 
-		catch (...) {
-			::ShowCursor(TRUE);
-		}
-
-		// Shut down GDI+
+		// Shut down GDI+ after CMainDlg has been fully destroyed
 		Gdiplus::GdiplusShutdown(gdiplusToken);
 	}
 
