@@ -552,38 +552,6 @@ bool CanDisplayImageWithoutResize(HWND hWnd, CJPEGImage* pImage) {
 	return pImage->OrigWidth() + borderSize.cx <= workingArea.Width() && pImage->OrigHeight() + borderSize.cy <= workingArea.Height();
 }
 
-bool PeekImageDimensions(LPCTSTR sFileName, int& width, int& height) {
-	width = 0; height = 0;
-	if (sFileName == NULL || sFileName[0] == 0) return false;
-	HANDLE hFile = ::CreateFile(sFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile == INVALID_HANDLE_VALUE) return false;
-	unsigned char buf[65536];
-	DWORD nRead = 0;
-	::ReadFile(hFile, buf, sizeof(buf), &nRead, NULL);
-	::CloseHandle(hFile);
-	long sz = (long)nRead;
-	if (sz < 16 || buf[0] != 0xFF || buf[1] != 0xD8) return false; // JPEG SOI only
-	long i = 2;
-	while (i < sz - 9) {
-		if (buf[i] != 0xFF) { i++; continue; }
-		int m = buf[i + 1];
-		while (m == 0xFF && i + 1 < sz) { i++; m = buf[i + 1]; }
-		if (m == 0xD8 || m == 0x01 || (m >= 0xD0 && m <= 0xD7)) { i += 2; continue; }
-		if (m == 0xD9) return false;
-		if (i + 4 > sz) return false;
-		int len = ((int)buf[i + 2] << 8) | buf[i + 3];
-		if ((m >= 0xC0 && m <= 0xCF) && m != 0xC4 && m != 0xC8 && m != 0xCC) {
-			if (i + 9 > sz) return false;
-			height = ((int)buf[i + 5] << 8) | buf[i + 6];
-			width = ((int)buf[i + 7] << 8) | buf[i + 8];
-			return width > 0 && height > 0;
-		}
-		if (len < 2) return false;
-		i += 2 + len;
-	}
-	return false;
-}
-
 CRect CalculateMaxIncludedRectKeepAR(const CTrapezoid& trapezoid, double dAspectRatio) {
 	int w1 = trapezoid.x1e - trapezoid.x1s;
 	int w2 = trapezoid.x2e - trapezoid.x2s;

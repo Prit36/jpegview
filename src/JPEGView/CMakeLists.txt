@@ -52,7 +52,7 @@ set(JPEGVIEW_SOURCES
     PanelController.cpp
     PanelMgr.cpp
     ParameterDB.cpp
-    ParallelJPEGV2.cpp
+    ParallelJPEG.cpp
     PNGWrapper.cpp
     PrintDlg.cpp
     PrintImage.cpp
@@ -187,11 +187,21 @@ foreach(DLL_PATH ${RUNTIME_DLLS})
     endif()
 endforeach()
 
-# Copy default configuration INI
-add_custom_command(TARGET JPEGView POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_SOURCE_DIR}/Config/JPEGView.ini"
-        "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/JPEGView.ini"
-    COMMENT "Copying JPEGView.ini"
+# Copy default configuration and KeyMap files
+set(CONFIG_FILES
+    "JPEGView.ini"
+    "KeyMap.txt.default"
+    "symbols.km"
+    "KeyMap-README.html"
+    "readme.html"
 )
+foreach(CFG_FILE ${CONFIG_FILES})
+    add_custom_command(TARGET JPEGView POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/Config/${CFG_FILE}"
+            "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/${CFG_FILE}"
+        COMMENT "Copying ${CFG_FILE}"
+    )
+endforeach()
+
 

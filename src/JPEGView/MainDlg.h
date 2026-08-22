@@ -81,6 +81,8 @@ public:
 		MESSAGE_HANDLER(WM_GETDLGCODE, OnGetDlgCode)
 		MESSAGE_HANDLER(WM_TIMER, OnTimer)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, OnContextMenu)
+		MESSAGE_HANDLER(WM_CTLCOLORDLG, OnCtlColorDlg)
+		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, OnCtlColorDlg)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, OnCtlColorEdit)
 		MESSAGE_HANDLER(WM_IMAGE_LOAD_COMPLETED, OnImageLoadCompleted)
 		MESSAGE_HANDLER(WM_DISPLAYED_FILE_CHANGED_ON_DISK, OnDisplayedFileChangedOnDisk)
@@ -106,6 +108,7 @@ public:
 	LRESULT OnOK(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnCancel(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEraseBackground(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnCtlColorDlg(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnGetMinMaxInfo(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -138,28 +141,7 @@ public:
 	// Called by main()
 	void SetStartupInfo(LPCTSTR sStartupFile, int nAutostartSlideShow, Helpers::ESorting eSorting, Helpers::ETransitionEffect eEffect, 
 		int nTransitionTime, bool bAutoExit, int nDisplayMonitor);
-	void SetBenchmarkInfo(bool bBenchmark, LPCTSTR sBenchmarkOut, int nNavCount, bool bBenchmarkExit, double tStart);
-	void SetPreDoModalTime(double tPreDoModal) { m_phaseTimings.tBeforeDoModal = tPreDoModal; }
-
-	// Fine-grained phase timing instrumentation (enabled in benchmark mode)
-	struct PhaseTimings {
-		double tBeforeDoModal;      // process start -> just before DoModal
-		double tInitDialogStart;
-		double tFileListCreated;
-		double tThreadPoolCreated;
-		double tJPEGProviderCreated;
-		double tPanelsCreated;
-		double tRequestImageStart;
-		double tRequestImageDone;
-		double tAfterNewImageDone;
-		double tWndStyleMs;         // durations (ms)
-		double tAdjustWindowMs;
-		double tShowWindowMs;
-		double tFirstPaintStart;
-		double tFirstPaintDone;
-		void Reset() { memset(this, 0, sizeof(*this)); }
-	};
-	PhaseTimings m_phaseTimings; 
+	void SetBenchmarkInfo(bool bBenchmark, LPCTSTR sBenchmarkOut, int nNavCount, bool bBenchmarkExit, double tStart); 
 
 	// Called by the different controller classes
 	HWND GetHWND() { return m_hWnd; }
