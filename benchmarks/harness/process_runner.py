@@ -1,8 +1,7 @@
 """
-Process Execution, Windows HWND Automation, and High-Precision Telemetry Monitor.
+Process Execution and High-Precision Telemetry Monitor.
 Measures process lifecycle, Time-to-First-Paint (TTFP), peak working set RAM, and navigation pacing.
-Compatible with modern JPEGView (/benchmark flag) and legacy binaries (via Win32 GUI automation).
-Modern Python 3.12+ implementation.
+Modern binaries self-report via /benchmark telemetry. See benchmarks/BENCHMARKING.md.
 """
 
 from __future__ import annotations
@@ -19,6 +18,7 @@ from typing import Any
 
 if sys.platform == "win32":
     import ctypes
+    import winreg
     from ctypes import wintypes
 
     class PROCESS_MEMORY_COUNTERS_EX(ctypes.Structure):
@@ -35,6 +35,54 @@ if sys.platform == "win32":
             ("PeakPagefileUsage", ctypes.c_size_t),
             ("PrivateUsage", ctypes.c_size_t),
         ]
+
+
+def check_ifeo_page_heap(image_name: str = "JPEGView.exe") -> None:
+    """
+    Abort if Full Page Heap is enabled for the measured executable via IFEO.
+
+    gflags-style page heap makes every heap allocation of the target process
+    brutally slow (1.5-2.5x total slowdown) and PERSISTS ACROSS REBOOTS in
+    HKLM registry state. It once poisoned an entire optimization session
+    because 'gflags /p /enable' reported an elevation error while still
+    writing the key. See benchmarks/BENCHMARKING.md section 1.
+
+    Set JPEGVIEW_ALLOW_PAGEHEAP=1 to bypass this guard deliberately.
+    """
+    if os.environ.get("JPEGVIEW_ALLOW_PAGEHEAP") == "1" or sys.platform != "win32":
+        return
+    try:
+        key_path = (
+            r"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+            r"\Image File Execution Options\\" + image_name
+        )
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+            global_flag = 0
+            page_heap_flags = 0
+            try:
+                global_flag = int(winreg.QueryValueEx(key, "GlobalFlag")[0], 16)
+            except OSError:
+                pass
+            try:
+                page_heap_flags = int(winreg.QueryValueEx(key, "PageHeapFlags")[0])
+            except OSError:
+                pass
+            page_heap_active = bool(global_flag & 0x02000000) or page_heap_flags != 0
+            if page_heap_active:
+                raise RuntimeError(
+                    f"\n{'=' * 78}\n"
+                    f"REFUSING TO BENCHMARK: Full Page Heap is ENABLED for "
+                    f"'{image_name}' (IFEO GlobalFlag&0x02000000 / PageHeapFlags="
+                    f"{page_heap_flags}).\n"
+                    f"This slows every measurement of that executable by 1.5-2.5x\n"
+                    f"and survives reboots. Fix in an ELEVATED shell:\n\n"
+                    f'  reg delete "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
+                    f'\\Image File Execution Options\\{image_name}" /f\n\n'
+                    f"(deliberately override with JPEGVIEW_ALLOW_PAGEHEAP=1)\n"
+                    f"{'=' * 78}\n"
+                )
+    except FileNotFoundError:
+        pass  # no IFEO entry at all - the good case
 
 
 @dataclass(slots=True, frozen=True)
@@ -71,6 +119,7 @@ class ProcessRunner:
 
     def __init__(self) -> None:
         self.is_win32 = (sys.platform == "win32")
+        check_ifeo_page_heap("JPEGView.exe")
         if self.is_win32:
             self.psapi = ctypes.WinDLL("psapi.dll")
             self.kernel32 = ctypes.WinDLL("kernel32.dll")

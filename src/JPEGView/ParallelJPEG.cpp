@@ -522,8 +522,9 @@ static int WalkProbe(const WalkerConf& cfg, WalkState st, int lastDc[MAX_COMPS_I
 static __int64 WalkScoreAlignment(const WalkerConf& cfg, WalkState st) {
 	int lastDc[MAX_COMPS_IN_SCAN] = { 0 };
 	__int64 pen = 0;
-	int probeRows = 2;
-	int n = probeRows * cfg.mcusPerRow;
+	// One probe row is enough to separate a true alignment from garbage:
+	// misaligned decodes produce exploding |DC| within a single MCU row.
+	int n = cfg.mcusPerRow;
 	LogEntry scratch[16];
 	for (int m = 0; m < n; m += 16) {
 		int chunk = min(16, n - m);
