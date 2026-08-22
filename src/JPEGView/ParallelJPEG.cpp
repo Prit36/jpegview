@@ -1,4 +1,4 @@
-﻿// Parallel baseline JPEG decoder using libjpeg-turbo internals.
+// Parallel baseline JPEG decoder using libjpeg-turbo internals.
 // Splits MCU rows into independent bands decoded concurrently on worker threads.
 // Uses a speculative parallel entropy walk to determine start bit states without serial prescan.
 
@@ -114,8 +114,17 @@ static bool findSegments(const unsigned char* buf, long sz, long* sosEnd, long* 
 			m = buf[i + 1];
 		}
 
+		// Standalone markers without payload
+		if (m == 0xD8 || m == 0xD9 || (m >= 0xD0 && m <= 0xD7) || m == 0x01) {
+			i += 2;
+			continue;
+		}
+
+		if (i + 3 >= sz) return false;
+		int len = static_cast<int>(parseSegLen(buf + i + 2));
+		if (len < 2 || i + 2 + len > sz) return false;
+
 		if (m == 0xDA) { // SOS
-			int len = static_cast<int>(parseSegLen(buf + i + 2));
 			*sosEnd = i + 2 + len;
 			inScan = true;
 			i = *sosEnd;
@@ -123,18 +132,22 @@ static bool findSegments(const unsigned char* buf, long sz, long* sosEnd, long* 
 		}
 
 		if (m == 0xDD) { // DRI
-			*restartInterval = (static_cast<long>(buf[i + 2]) << 8) | buf[i + 3];
-			i += parseSegLen(buf + i + 2);
+			if (len >= 4) {
+				*restartInterval = (static_cast<long>(buf[i + 4]) << 8) | buf[i + 5];
+			}
+			i += 2 + len;
 			continue;
 		}
 
 		if (m >= 0xC0 && m <= 0xCF && m != 0xC4 && m != 0xC8 && m != 0xCC) { // SOF
 			*progressive = (m == 0xC2);
 			if (m != 0xC0) return false; // Only baseline SOF0 supported
+			if (len < 8) return false;
 			*precision = buf[i + 4];
 			*height = (static_cast<int>(buf[i + 5]) << 8) | buf[i + 6];
 			*width = (static_cast<int>(buf[i + 7]) << 8) | buf[i + 8];
 			*comps = buf[i + 9];
+			if (len < 8 + *comps * 3) return false;
 			for (int c = 0; c < *comps; c++) {
 				int h = buf[i + 11 + c * 3] >> 4;
 				int v = buf[i + 11 + c * 3] & 0x0F;
@@ -143,12 +156,11 @@ static bool findSegments(const unsigned char* buf, long sz, long* sosEnd, long* 
 			}
 			*mcuW = 8 * maxH;
 			*mcuH = 8 * maxV;
-			i += parseSegLen(buf + i + 2);
+			i += 2 + len;
 			continue;
 		}
 
-		int len = static_cast<int>(parseSegLen(buf + i + 2));
-		i += (len > 0) ? len : 2;
+		i += 2 + len;
 	}
 	return false;
 }
@@ -280,15 +292,24 @@ static std::vector<unsigned char> buildBandJpeg(const unsigned char* buf, long s
 	for (size_t i = 2; i < out.size() - 1; ) {
 		if (out[i] != 0xFF) { i++; continue; }
 		int m = out[i + 1];
-		if (m == 0xD8 || m == 0xFF || (m >= 0xD0 && m <= 0xD7) || m == 0x00) { i += 2; continue; }
+		while (m == 0xFF) {
+			i++;
+			if (i >= out.size() - 1) break;
+			m = out[i + 1];
+		}
+		if (m == 0xD8 || (m >= 0xD0 && m <= 0xD7) || m == 0x01) { i += 2; continue; }
 		if (m == 0xD9 || m == 0xDA) break;
+		if (i + 3 >= out.size()) break;
+		size_t len = (static_cast<size_t>(out[i + 2]) << 8) | out[i + 3];
+		if (len < 2 || i + 2 + len > out.size()) break;
 		if (m >= 0xC0 && m <= 0xCF && m != 0xC4 && m != 0xC8 && m != 0xCC) {
-			out[i + 5] = static_cast<unsigned char>(bandBot >> 8);
-			out[i + 6] = static_cast<unsigned char>(bandBot & 0xFF);
+			if (len >= 8) {
+				out[i + 5] = static_cast<unsigned char>(bandBot >> 8);
+				out[i + 6] = static_cast<unsigned char>(bandBot & 0xFF);
+			}
 			break;
 		}
-		size_t len = (static_cast<size_t>(out[i + 2]) << 8) | out[i + 3];
-		i += (len > 0) ? len : 2;
+		i += 2 + len;
 	}
 
 	const JOCTET* pA = si.rowStates[rowA].next_input_byte;

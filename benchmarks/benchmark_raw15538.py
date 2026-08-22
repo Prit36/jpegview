@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Dedicated standalone benchmark for opening RAW15538.JPG (17.13 MB camera photo) from actual_test_data.
-Focuses strictly on measuring Time to First Paint (TTFP), decode time, resample time, and peak memory.
+Dedicated standalone single-photo benchmark for measuring Time to First Paint (TTFP),
+decode time, resample time, and peak memory against camera photos in actual_test_data.
 """
 
 from __future__ import annotations
@@ -54,10 +54,16 @@ def calc_stats(samples: list[float]) -> dict[str, float]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Dedicated Benchmark for RAW15538.JPG (17.13 MB) from actual_test_data",
+        description="Dedicated Benchmark for RAW15578.JPG (17.13 MB) from actual_test_data",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
+    parser.add_argument(
+        "--image",
+        type=str,
+        default="RAW15538.JPG",
+        help="Image filename or path to benchmark (default: RAW15538.JPG)"
+    )
     parser.add_argument(
         "--targets",
         type=str,
@@ -90,7 +96,14 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    image_path = BENCHMARKS_DIR / "actual_test_data" / "RAW15538.JPG"
+    image_path = Path(args.image)
+    if not image_path.is_absolute():
+        if (BENCHMARKS_DIR / "actual_test_data" / args.image).exists():
+            image_path = BENCHMARKS_DIR / "actual_test_data" / args.image
+        else:
+            image_path = Path.cwd() / args.image
+    image_path = image_path.resolve()
+
     if not image_path.exists():
         print(f"[-] Error: Image not found at {image_path}")
         sys.exit(1)
@@ -98,7 +111,7 @@ def main() -> None:
     file_size_mb = image_path.stat().st_size / (1024 * 1024)
 
     print("=" * 86)
-    print("  JPEGView Dedicated Single-Photo Benchmark: RAW15538.JPG")
+    print(f"  JPEGView Dedicated Single-Photo Benchmark: {image_path.name}")
     print(f"  Photo: {image_path.name} ({file_size_mb:.2f} MB)")
     print(f"  Iterations: {args.iterations} runs ({args.warmups} warmups)")
     print("=" * 86)
@@ -159,7 +172,7 @@ def main() -> None:
 
     # Summary table
     print("\n" + "=" * 92)
-    print("  RAW15538.JPG Benchmark Comparison Summary")
+    print(f"  {image_path.name} Benchmark Comparison Summary")
     print("=" * 92)
     print(f"{'Target':<18} | {'TTFP Mean':<11} | {'TTFP Min':<10} | {'Decode Mean':<12} | {'Resample Mean':<14} | {'Delta vs Base':<15}")
     print("-" * 92)
@@ -188,7 +201,7 @@ def main() -> None:
     # Save results JSON
     results_dir = BENCHMARKS_DIR / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
-    out_json = results_dir / "raw15538_benchmark_results.json"
+    out_json = results_dir / f"{image_path.stem.lower()}_benchmark_results.json"
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump(target_results, f, indent=2)
     print(f"\n[+] Saved results to: {out_json}")
