@@ -967,12 +967,17 @@ void CImageLoadThread::ProcessReadHEIFRequest(CRequest* request) {
 			nFrameCount = 1;
 			nFrameTimeMs = 0;
 			void* pEXIFData;
-			uint8* pPixelData = (uint8*)HeifReader::ReadImage(nWidth, nHeight, nBPP, nFrameCount, pEXIFData, request->OutOfMemory, request->FrameIndex, pBuffer, nFileSize);
+			bool bHasAlpha = false;
+			uint8* pPixelData = (uint8*)HeifReader::ReadImage(nWidth, nHeight, nBPP, nFrameCount, pEXIFData, request->OutOfMemory, bHasAlpha, request->FrameIndex, pBuffer, nFileSize);
 			if (pPixelData != NULL) {
-				// Multiply alpha value into each AABBGGRR pixel
-				uint32* pImage32 = (uint32*)pPixelData;
-				for (int i = 0; i < nWidth * nHeight; i++)
-					*pImage32++ = Helpers::AlphaBlendBackground(*pImage32, CSettingsProvider::This().ColorTransparency());
+				COLORREF transColor = CSettingsProvider::This().ColorTransparency();
+				if (bHasAlpha && transColor != 0) {
+					#pragma omp parallel for
+					for (int i = 0; i < nWidth * nHeight; i++) {
+						uint32* p = (uint32*)pPixelData + i;
+						*p = Helpers::AlphaBlendBackground(*p, transColor);
+					}
+				}
 
 				request->Image = new CJPEGImage(nWidth, nHeight, pPixelData, pEXIFData, nBPP, 0, IF_HEIF, false, request->FrameIndex, nFrameCount, nFrameTimeMs);
 				free(pEXIFData);
