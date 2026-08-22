@@ -12,6 +12,7 @@ public:
 						 int &frame_count, // number of top-level images
 					     void* &exif_chunk, // Pointer to Exif data (must be freed by caller)
 						 bool &outOfMemory, // set to true when no memory to read image
+						 bool &has_alpha, // set to true if image contains an alpha channel
 						 int frame_index, // index of requested frame
 						 const void *buffer, // memory address containing heic compressed data.
 						 int sizebytes); // size of heic compressed data.
