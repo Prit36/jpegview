@@ -33,6 +33,9 @@
 #include <cstdio>
 #include <algorithm>
 
+// From libjpeg-turbo jutils.c (linked via turbojpeg-static).
+extern "C" const int jpeg_natural_order[DCTSIZE2 + 2];
+
 namespace ParallelJPEG {
 
 // Env-gated phase instrumentation (JPEGVIEW_PJ_PROF=1): prints prescan/band/join
@@ -65,10 +68,12 @@ struct ProfClock {
 struct ErrMgr {
 	jpeg_error_mgr pub;
 	jmp_buf jmp;
+	char lastMsg[JMSG_LENGTH_MAX + 32];
 };
 
 static void error_exit(j_common_ptr cinfo) {
 	ErrMgr* e = (ErrMgr*)cinfo->err;
+	(*cinfo->err->format_message)(cinfo, e->lastMsg);
 	longjmp(e->jmp, 1);
 }
 
@@ -404,6 +409,18 @@ struct WalkerConf {
 	FastTbl acTbl[D_MAX_BLOCKS_IN_MCU];
 	bool dcNeeded[D_MAX_BLOCKS_IN_MCU];
 	bool acNeeded[D_MAX_BLOCKS_IN_MCU];
+
+	// ---- coefficient emission (optional; planes[] non-NULL enables it) ----
+	// When enabled, every decoded MCU's coefficient blocks are written into
+	// these per-component planes (natural raster order of 8x8 blocks). Block
+	// values match libjpeg's jpeg_read_coefficients() output bit-for-bit.
+	JCOEF* planes[MAX_COMPS_IN_SCAN];
+	int planeStride[MAX_COMPS_IN_SCAN]; // blocks per plane row
+	int planeRows[MAX_COMPS_IN_SCAN];   // blocks per plane column
+	int tilesX[MAX_COMPS_IN_SCAN];      // component blocks per MCU, horizontally
+	int tilesY[MAX_COMPS_IN_SCAN];      // component blocks per MCU, vertically
+	unsigned char blockXoff[D_MAX_BLOCKS_IN_MCU]; // position inside the
+	unsigned char blockYoff[D_MAX_BLOCKS_IN_MCU]; // component's MCU tile
 };
 
 struct LogEntry {
@@ -461,8 +478,21 @@ static __forceinline int HuffExtend(int r, int s) {
 
 // Decode one MCU of entropy data (consumption only, no coefficient writes).
 // Returns false if a marker was hit (mirrors decode_mcu_fast bailing out).
-static bool WalkMCU(const WalkerConf& cfg, WalkState& st, int lastDc[MAX_COMPS_IN_SCAN]) {
+// Decode one MCU of entropy data. When cfg.planes[] is wired, decoded
+// coefficient blocks are additionally stored into per-component planes in
+// natural raster order - bit-identical to libjpeg's jpeg_read_coefficients().
+// Returns false if a marker was hit (mirrors decode_mcu_fast bailing out).
+static bool WalkMCU(const WalkerConf& cfg, WalkState& st, int lastDc[MAX_COMPS_IN_SCAN],
+	int mcuX, int mcuY, bool store) {
 	for (int blkn = 0; blkn < cfg.blocksInMCU; blkn++) {
+		JCOEF* block = NULL;
+		if (store) {
+			int ci = cfg.blockComp[blkn];
+			int bx = mcuX * cfg.tilesX[ci] + cfg.blockXoff[blkn];
+			int by = mcuY * cfg.tilesY[ci] + cfg.blockYoff[blkn];
+			block = cfg.planes[ci] + ((size_t)by * cfg.planeStride[ci] + bx) * DCTSIZE2;
+			memset(block, 0, DCTSIZE2 * sizeof(JCOEF));
+		}
 		int s = WalkHuffSymbol(st, cfg.dcTbl[blkn]);
 		if (st.marker) return false;
 		if (s) {
@@ -475,6 +505,10 @@ static bool WalkMCU(const WalkerConf& cfg, WalkState& st, int lastDc[MAX_COMPS_I
 			s += lastDc[ci];
 			lastDc[ci] = s;
 		}
+		if (store && block != NULL) {
+			block[0] = (JCOEF)s; // DC stored even when !dcNeeded: bit consumption is
+				// identical and jpeg_read_coefficients() always stores full values.
+		}
 		const FastTbl& actbl = cfg.acTbl[blkn];
 		for (int k = 1; k < 64; k++) {
 			int sa = WalkHuffSymbol(st, actbl);
@@ -483,8 +517,12 @@ static bool WalkMCU(const WalkerConf& cfg, WalkState& st, int lastDc[MAX_COMPS_I
 			sa &= 15;
 			if (sa) {
 				k += r;
+				if (k > 63) break; // invalid stream; bits already consumed
 				WALK_FILL(st);
-				st.bits_left -= sa; // extension bits: consume only
+				int rv = (int)((st.get_buffer >> (st.bits_left -= sa)) & (((unsigned __int64)1 << sa) - 1));
+				if (store && block != NULL) {
+					block[jpeg_natural_order[k]] = (JCOEF)HuffExtend(rv, sa);
+				}
 			} else {
 				if (r != 15) break;
 				k += 15;
@@ -507,7 +545,7 @@ static int WalkProbe(const WalkerConf& cfg, WalkState st, int lastDc[MAX_COMPS_I
 	int nMCU, LogEntry* log, bool logOn) {
 	int done = 0;
 	for (int m = 0; m < nMCU; m++) {
-		if (!WalkMCU(cfg, st, lastDc)) break;
+		if (!WalkMCU(cfg, st, lastDc, 0, 0, false)) break;
 		if (st.ptr > cfg.base + cfg.eoiPos - WALK_TAIL_MARGIN) break;
 		if (logOn) {
 			log[done].pos = WalkPos(cfg, st);
@@ -568,6 +606,116 @@ static bool BuildCandidate(const WalkerConf& cfg, long B, int o, WalkState& out)
 	out.get_buffer = gb;
 	out.bits_left = 8 * m - o;
 	out.marker = 0;
+	return true;
+}
+
+// Upfront sanity check of coefficient-plane geometry against the MCU grid.
+// Prints every relevant number so mismatches are visible without a debugger.
+static bool ValidateCoefficientGeometry(const WalkerConf& cfg, const ScanInfo& si,
+	JCOEF* const* planes) {
+	bool ok = true;
+	for (int ci = 0; ci < MAX_COMPS_IN_SCAN; ci++) {
+		bool used = cfg.tilesX[ci] != 0 || cfg.tilesY[ci] != 0 || planes[ci] != NULL;
+		if (!used) continue; // unused scan-component slot (comps_in_scan < 4)
+		long expStride = (long)cfg.mcusPerRow * cfg.tilesX[ci];
+		long expRows = (long)si.mcuRows * cfg.tilesY[ci];
+		size_t blocks = (size_t)cfg.planeStride[ci] * cfg.planeRows[ci];
+		bool cok = cfg.planeStride[ci] == expStride && cfg.planeRows[ci] == expRows &&
+			planes[ci] != NULL && blocks > 0;
+		if (!cok) ok = false;
+		fprintf(stderr,
+			"[PJ][coeff-geom] ci=%d tiles=%dx%d stride=%d(expected %ld) rows=%d(expected %ld) blocks=%zu plane=%p %s\n",
+			ci, cfg.tilesX[ci], cfg.tilesY[ci],
+			cfg.planeStride[ci], expStride, cfg.planeRows[ci], expRows,
+			blocks, (void*)planes[ci], cok ? "ok" : "BAD");
+	}
+	return ok;
+}
+
+// Serial full-image coefficient emission using the walker engine. Writes
+// every MCU of the image into cfg.planes[]. Runs against a zero-padded copy
+// of the entropy stream so final-MCU over-fetch behaves like libjpeg's
+// insufficient_data zero-fill instead of tripping marker detection.
+static bool EmitCoefficientsSerial(const WalkerConf& cfg, const ScanInfo& si) {
+	if (!ValidateCoefficientGeometry(cfg, si, cfg.planes)) return false;
+
+	// Scratch: [0, eoiPos) = original bytes, then 64 zero bytes. No EOI marker
+	// present => no marker detection; over-reads consume zeros.
+	long scratchSz = cfg.eoiPos + 64;
+	unsigned char* scratch = new (std::nothrow) unsigned char[scratchSz];
+	if (scratch == NULL) return false;
+	memcpy(scratch, cfg.base, cfg.eoiPos);
+	memset(scratch + cfg.eoiPos, 0, 64);
+
+	WalkerConf cfg2 = cfg;
+	cfg2.base = scratch;
+
+	WalkState st;
+	st.ptr = scratch + cfg.sosEnd;
+	st.get_buffer = 0; st.bits_left = 0; st.marker = 0;
+	int lastDc[MAX_COMPS_IN_SCAN] = { 0 };
+	bool ok = true;
+	long totalMCUs = (long)cfg.mcusPerRow * si.mcuRows;
+	for (long g = 0; g < totalMCUs; g++) {
+		if (!WalkMCU(cfg2, st, lastDc, (int)(g % cfg.mcusPerRow), (int)(g / cfg.mcusPerRow), true)) { ok = false; break; }
+		if (st.ptr > scratch + scratchSz - 16) { ok = false; break; }
+	}
+	delete[] scratch;
+	return ok;
+}
+
+// Bit-for-bit comparison of our coefficient planes against libjpeg's own
+// jpeg_read_coefficients() output for the same file.
+static bool VerifyCoefficientsAgainstLibjpeg(const unsigned char* buf, long sz,
+	const WalkerConf& cfg, JCOEF* const* planes, size_t* diffOut) {
+	jpeg_decompress_struct cinfo;
+	ErrMgr err;
+	size_t diffs = 0;
+	const char* stage = "create";
+	cinfo.err = jpeg_std_error(&err.pub);
+	err.pub.error_exit = error_exit;
+	err.pub.emit_message = output_message;
+	err.lastMsg[0] = 0;
+	if (setjmp(err.jmp)) {
+		jpeg_destroy_decompress(&cinfo);
+		fprintf(stderr, "[PJ][coeff-verify] libjpeg error at stage '%s': %s\n", stage, err.lastMsg);
+		*diffOut = (size_t)-1;
+		return false;
+	}
+	stage = "header";
+	jpeg_create_decompress(&cinfo);
+	jpeg_mem_src(&cinfo, buf, sz);
+	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
+		jpeg_destroy_decompress(&cinfo);
+		*diffOut = (size_t)-1;
+		return false;
+	}
+	stage = "read_coefficients";
+	jvirt_barray_ptr* coefArrays = jpeg_read_coefficients(&cinfo);
+	if (coefArrays == NULL) {
+		jpeg_destroy_decompress(&cinfo);
+		*diffOut = (size_t)-1;
+		return false;
+	}
+	stage = "compare";
+	for (int ci = 0; ci < cinfo.comps_in_scan && ci < MAX_COMPS_IN_SCAN; ci++) {
+		jpeg_component_info* comp = cinfo.cur_comp_info[ci];
+		jvirt_barray_ptr barray = coefArrays[comp->component_index];
+		const JCOEF* ours = planes[ci];
+		for (int by = 0; by < (int)comp->height_in_blocks; by++) {
+			// One row per access: matches the decoder's own maxaccess pattern
+			// (requesting more triggers 'Bogus virtual array access').
+			JBLOCKARRAY rows = (JBLOCKARRAY)(*(cinfo.mem->access_virt_barray))(
+				(j_common_ptr)&cinfo, barray, (JDIMENSION)by, 1, FALSE);
+			const JCOEF* ref = rows[0][0];
+			for (int i = 0; i < comp->width_in_blocks * DCTSIZE2; i++) {
+				if (ref[i] != ours[i]) diffs++;
+			}
+			ours += (size_t)cfg.planeStride[ci] * DCTSIZE2;
+		}
+	}
+	jpeg_destroy_decompress(&cinfo);
+	*diffOut = diffs;
 	return true;
 }
 
@@ -645,19 +793,48 @@ static void ExtractWalkerConf(PrescanCtx& ctx, const ScanInfo& si, WalkerConf& c
 	cfg.eoiPos = si.eoiPos;
 	cfg.mcusPerRow = si.mcusPerRow;
 	cfg.blocksInMCU = ctx.cinfo.blocks_in_MCU;
-	huff_entropy_decoder_* hd = reinterpret_cast<huff_entropy_decoder_*>(ctx.cinfo.entropy);
 	memset(cfg.blockComp, 0, sizeof(cfg.blockComp));
 	for (int b = 0; b < D_MAX_BLOCKS_IN_MCU; b++) {
 		cfg.dcNeeded[b] = false; cfg.acNeeded[b] = false;
 		CopyDerivedTbl(cfg.dcTbl[b], NULL);
 		CopyDerivedTbl(cfg.acTbl[b], NULL);
 	}
+	memset(cfg.planes, 0, sizeof(cfg.planes));
+	memset(cfg.planeStride, 0, sizeof(cfg.planeStride));
+	memset(cfg.tilesX, 0, sizeof(cfg.tilesX));
+	memset(cfg.tilesY, 0, sizeof(cfg.tilesY));
+	memset(cfg.blockXoff, 0, sizeof(cfg.blockXoff));
+	memset(cfg.blockYoff, 0, sizeof(cfg.blockYoff));
+	huff_entropy_decoder_* hd = reinterpret_cast<huff_entropy_decoder_*>(ctx.cinfo.entropy);
 	for (int b = 0; b < cfg.blocksInMCU; b++) {
 		cfg.blockComp[b] = (unsigned char)ctx.cinfo.MCU_membership[b];
 		cfg.dcNeeded[b] = hd->dc_needed[b] != FALSE;
 		cfg.acNeeded[b] = hd->ac_needed[b] != FALSE;
 		if (hd->dc_cur_tbls[b] != NULL) CopyDerivedTbl(cfg.dcTbl[b], hd->dc_cur_tbls[b]);
 		if (hd->ac_cur_tbls[b] != NULL) CopyDerivedTbl(cfg.acTbl[b], hd->ac_cur_tbls[b]);
+	}
+	// Per-component MCU tiling for coefficient emission: sampling factors and
+	// plane strides in blocks. cur_comp_info[i] is scan-component i's entry.
+	for (int ci = 0; ci < ctx.cinfo.comps_in_scan && ci < MAX_COMPS_IN_SCAN; ci++) {
+		jpeg_component_info* comp = ctx.cinfo.cur_comp_info[ci];
+		if (comp == NULL) continue;
+		cfg.tilesX[ci] = comp->h_samp_factor;
+		cfg.tilesY[ci] = comp->v_samp_factor;
+		cfg.planeStride[ci] = comp->width_in_blocks;
+		cfg.planeRows[ci] = comp->height_in_blocks;
+	}
+	// Position of each block inside its component's MCU tile: libjpeg fills
+	// MCUs row-major per component (all column offsets of a tile row before
+	// advancing to the next tile row).
+	{
+		int hx[MAX_COMPS_IN_SCAN] = { 0 };
+		int hy[MAX_COMPS_IN_SCAN] = { 0 };
+		for (int b = 0; b < cfg.blocksInMCU; b++) {
+			int ci = cfg.blockComp[b];
+			cfg.blockXoff[b] = (unsigned char)hx[ci];
+			cfg.blockYoff[b] = (unsigned char)hy[ci];
+			if (++hx[ci] >= cfg.tilesX[ci]) { hx[ci] = 0; hy[ci]++; }
+		}
 	}
 }
 
@@ -705,7 +882,7 @@ static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResu
 			LogEntry e; e.pos = s.pos; memcpy(e.pred, lastDc, sizeof(e.pred));
 			w.head.push_back(e);
 		}
-		if (!WalkMCU(cfg, st, lastDc)) return false;
+		if (!WalkMCU(cfg, st, lastDc, 0, 0, false)) return false;
 		w.mcus++;
 	}
 	for (int k = 0; k < EXT_N; k++) {
@@ -713,7 +890,7 @@ static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResu
 		if (st.ptr > cfg.base + cfg.eoiPos - WALK_TAIL_MARGIN) break;
 		LogEntry e; e.pos = WalkPos(cfg, st); memcpy(e.pred, lastDc, sizeof(e.pred));
 		w.tail.push_back(e);
-		if (!WalkMCU(cfg, st, lastDc)) break;
+		if (!WalkMCU(cfg, st, lastDc, 0, 0, false)) break;
 	}
 	memcpy(w.predEnd, lastDc, sizeof(w.predEnd));
 	w.walked = true;
@@ -771,7 +948,7 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 						memcpy(s.pred, lastDc, sizeof(s.pred));
 						w.snaps.push_back(s);
 						if ((int)w.head.size() < HEAD_N) { LogEntry e; e.pos = s.pos; memcpy(e.pred, lastDc, sizeof(e.pred)); w.head.push_back(e); }
-						if (!WalkMCU(cfg, st, lastDc)) { okw = false; break; }
+						if (!WalkMCU(cfg, st, lastDc, 0, 0, false)) { okw = false; break; }
 						w.mcus++;
 					}
 					if (okw) {
@@ -779,7 +956,7 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 							if (st.marker || st.ptr > cfg.base + cfg.eoiPos - WALK_TAIL_MARGIN) break;
 							LogEntry e; e.pos = WalkPos(cfg, st); memcpy(e.pred, lastDc, sizeof(e.pred));
 							w.tail.push_back(e);
-							if (!WalkMCU(cfg, st, lastDc)) break;
+							if (!WalkMCU(cfg, st, lastDc, 0, 0, false)) break;
 						}
 						memcpy(w.predEnd, lastDc, sizeof(w.predEnd));
 						w.walked = true; w.alignUsed = 0;
@@ -898,7 +1075,33 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 		ExtractWalkerConf(ctx, si, cfg); // read-only extract; cinfo stays alive for fallback
 		int nSlices = (int)min(12u, hw);
 		walked = SpeculativeWalk(cfg, si, nSlices, &tSpec);
-		if (walked) jpeg_destroy_decompress(&ctx.cinfo);
+		if (walked) {
+			jpeg_destroy_decompress(&ctx.cinfo);
+			if (getenv("JPEGVIEW_COEFF_VERIFY") != NULL) {
+				// Phase-1 correctness gate: emit all coefficients through the
+				// walker engine and compare bit-for-bit against libjpeg's own
+				// jpeg_read_coefficients() output for the same file.
+				JCOEF* planes[MAX_COMPS_IN_SCAN] = { 0 };
+				for (int ci = 0; ci < MAX_COMPS_IN_SCAN; ci++) {
+					size_t nb = (size_t)cfg.planeStride[ci] * cfg.planeRows[ci];
+					if (nb == 0) break;
+					planes[ci] = new JCOEF[nb * DCTSIZE2]; // 64 coefficients per block
+					memset(planes[ci], 0xCD, nb * DCTSIZE2 * sizeof(JCOEF)); // coverage canary
+				}
+				WalkerConf vcfg = cfg;
+				memcpy(vcfg.planes, planes, sizeof(planes));
+				double tEmit0 = prof ? clk.Now() : 0.0;
+				bool okE = ValidateCoefficientGeometry(vcfg, si, vcfg.planes) &&
+					EmitCoefficientsSerial(vcfg, si);
+				size_t diffs = (size_t)-1;
+				bool okV = okE && VerifyCoefficientsAgainstLibjpeg(buf, sz, vcfg, planes, &diffs);
+				fprintf(stderr, "[PJ] coefficient verification: emit=%s compare=%s diffs=%zu (%.1f ms)\n",
+					okE ? "ok" : "FAILED",
+					okE ? (okV ? "OK" : "MISMATCH") : "skipped",
+					diffs, prof ? (clk.Now() - tEmit0) : 0.0);
+				for (int ci = 0; ci < MAX_COMPS_IN_SCAN; ci++) delete[] planes[ci];
+			}
+		}
 		else if (prof) fprintf(stderr, "[PJ] speculative walk failed -> legacy prescan\n");
 	}
 	if (!walked) {
