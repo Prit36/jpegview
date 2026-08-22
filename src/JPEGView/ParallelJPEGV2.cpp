@@ -421,6 +421,10 @@ struct WalkerConf {
 	int tilesY[MAX_COMPS_IN_SCAN];      // component blocks per MCU, vertically
 	unsigned char blockXoff[D_MAX_BLOCKS_IN_MCU]; // position inside the
 	unsigned char blockYoff[D_MAX_BLOCKS_IN_MCU]; // component's MCU tile
+	// Quantization tables (natural order, dequant-ready): quantval[ci][i]
+	UINT16 quants[MAX_COMPS_IN_SCAN][DCTSIZE2];
+	int compsInScan;                    // number of active scan components
+	int imageWidth, imageHeight;        // pixel dimensions
 };
 
 struct LogEntry {
@@ -773,7 +777,17 @@ static void ExtractWalkerConf(PrescanCtx& ctx, const ScanInfo& si, WalkerConf& c
 		cfg.tilesY[ci] = comp->v_samp_factor;
 		cfg.planeStride[ci] = comp->width_in_blocks;
 		cfg.planeRows[ci] = comp->height_in_blocks;
+		// Extract quantization table for this component, converted from zigzag
+		// to natural order (dequant-ready).
+		JQUANT_TBL* qt = comp->quant_table;
+		if (qt != NULL) {
+			for (int i = 0; i < DCTSIZE2; i++)
+				cfg.quants[ci][jpeg_natural_order[i]] = qt->quantval[i];
+		}
 	}
+	cfg.compsInScan = ctx.cinfo.comps_in_scan;
+	cfg.imageWidth = ctx.cinfo.image_width;
+	cfg.imageHeight = ctx.cinfo.image_height;
 	// Position of each block inside its component's MCU tile: libjpeg fills
 	// MCUs row-major per component (all column offsets of a tile row before
 	// advancing to the next tile row).
