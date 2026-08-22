@@ -1,4 +1,4 @@
-﻿// Parallel baseline JPEG decoder using libjpeg-turbo internals.
+// Parallel baseline JPEG decoder using libjpeg-turbo internals.
 //
 // Strategy:
 //  1. Scan segments; reject progressive/arithmetic/restart/non-8-bit/multi-scan.
@@ -639,6 +639,7 @@ static bool VerifyCoefficientsAgainstLibjpeg(const unsigned char* buf, long sz,
 		return false;
 	}
 	stage = "compare";
+	int shown = 0;
 	for (int ci = 0; ci < cinfo.comps_in_scan && ci < MAX_COMPS_IN_SCAN; ci++) {
 		jpeg_component_info* comp = cinfo.cur_comp_info[ci];
 		jvirt_barray_ptr barray = coefArrays[comp->component_index];
@@ -649,8 +650,17 @@ static bool VerifyCoefficientsAgainstLibjpeg(const unsigned char* buf, long sz,
 			JBLOCKARRAY rows = (JBLOCKARRAY)(*(cinfo.mem->access_virt_barray))(
 				(j_common_ptr)&cinfo, barray, (JDIMENSION)by, 1, FALSE);
 			const JCOEF* ref = rows[0][0];
-			for (int i = 0; i < comp->width_in_blocks * DCTSIZE2; i++) {
-				if (ref[i] != ours[i]) diffs++;
+			for (int blk = 0; blk < comp->width_in_blocks; blk++) {
+				for (int e = 0; e < DCTSIZE2; e++) {
+					if (ref[blk * DCTSIZE2 + e] != ours[(size_t)blk * DCTSIZE2 + e]) {
+						diffs++;
+						if (shown < 40) {
+							fprintf(stderr, "[PJ][cv] comp=%d row=%d blk=%d idx=%d ref=%d ours=%d\n",
+								ci, by, blk, e, (int)ref[blk * DCTSIZE2 + e], (int)ours[(size_t)blk * DCTSIZE2 + e]);
+							shown++;
+						}
+					}
+				}
 			}
 			ours += (size_t)cfg.planeStride[ci] * DCTSIZE2;
 		}
@@ -803,21 +813,32 @@ struct SliceResult {
 // Walk slice i (entropy bytes [B, Bend)) with start alignment o. Records a
 // snapshot before every MCU, the first HEAD_N as head log, and EXT_N MCUs of
 // extension past Bend as tail log. Returns false on marker/bounds failure.
-static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResult& w) {
+static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResult& w,
+	bool emitCoeffs = false,
+	long forceMcus = 0, const unsigned char* baseOverride = NULL,
+	const unsigned char* baseOverrideEnd = NULL) {
+	const unsigned char* effBase = baseOverride ? baseOverride : cfg.base;
 	WalkState st;
 	if (!BuildCandidate(cfg, B, o, st)) return false;
+	if (baseOverride) st.ptr = baseOverride + (st.ptr - cfg.base); // translate into padded space
 	int lastDc[MAX_COMPS_IN_SCAN] = { 0 };
 	const long limit = 8 * Bend;
 	w.snaps.clear(); w.head.clear(); w.tail.clear();
 	w.coeffs.clear();
 	w.mcus = 0;
-	long est = (Bend - B) / 4 + EXT_N + 64;
+	// MCU-count estimate for this slice: entropy bytes are ~25 B/MCU on average.
+	long est = (Bend - B) / 16 + EXT_N + 1024;
+	if (forceMcus > 0) est = forceMcus + 64;
 	w.snaps.reserve(est);
-	w.coeffs.reserve((size_t)est * cfg.blocksInMCU * DCTSIZE2);
-	size_t coeffStart = w.coeffs.size();
-	while (WalkPos(cfg, st) < limit) {
+	if (emitCoeffs) w.coeffs.reserve((size_t)est * cfg.blocksInMCU * DCTSIZE2);
+	bool paddedMode = (forceMcus > 0 && baseOverride != NULL);
+	while (paddedMode ? (w.mcus < forceMcus && st.ptr <= baseOverrideEnd - 32)
+					  : (WalkPos(cfg, st) < limit)) {
 		if (st.marker) return false;
-		if (st.ptr > cfg.base + cfg.eoiPos - WALK_TAIL_MARGIN) break; // end-of-stream safety: accept partial coverage
+		// In padded mode, stop when we walk past the real entropy data into
+		// the zero padding region Ã¢â‚¬â€ no more real MCUs to decode.
+		if (paddedMode && st.ptr > baseOverride + cfg.eoiPos) break;
+		if (!paddedMode && st.ptr > effBase + cfg.eoiPos - WALK_TAIL_MARGIN) break; // end-of-stream safety: accept partial coverage
 		Snap s;
 		s.pos = WalkPos(cfg, st);
 		s.st = st;
@@ -827,19 +848,27 @@ static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResu
 			LogEntry e; e.pos = s.pos; memcpy(e.pred, lastDc, sizeof(e.pred));
 			w.head.push_back(e);
 		}
-		size_t oldSize = w.coeffs.size();
-		w.coeffs.resize(oldSize + (size_t)cfg.blocksInMCU * DCTSIZE2);
-		JCOEF* cursor = w.coeffs.data() + oldSize;
-		if (!WalkMCU(cfg, st, lastDc, cursor)) { w.coeffs.resize(oldSize); return false; }
+		JCOEF* cursor = NULL;
+		size_t oldSize = 0;
+		if (emitCoeffs) {
+			oldSize = w.coeffs.size();
+			w.coeffs.resize(oldSize + (size_t)cfg.blocksInMCU * DCTSIZE2);
+			cursor = w.coeffs.data() + oldSize;
+		}
+		if (!WalkMCU(cfg, st, lastDc, cursor)) { if (emitCoeffs) w.coeffs.resize(oldSize); return false; }
 		w.mcus++;
 	}
+	if (!paddedMode) {
 	for (int k = 0; k < EXT_N; k++) {
 		if (st.marker) break;
-		if (st.ptr > cfg.base + cfg.eoiPos - WALK_TAIL_MARGIN) break;
+		if (st.ptr > effBase + cfg.eoiPos - WALK_TAIL_MARGIN) break;
 		LogEntry e; e.pos = WalkPos(cfg, st); memcpy(e.pred, lastDc, sizeof(e.pred));
 		w.tail.push_back(e);
-		JCOEF* nullCursor = NULL;
-		if (!WalkMCU(cfg, st, lastDc, nullCursor)) break;
+		size_t oldSz = w.coeffs.size();
+		w.coeffs.resize(oldSz + (size_t)cfg.blocksInMCU * DCTSIZE2);
+		JCOEF* cursor = w.coeffs.data() + oldSz;
+		if (!WalkMCU(cfg, st, lastDc, cursor)) { w.coeffs.resize(oldSz); break; }
+	}
 	}
 	memcpy(w.predEnd, lastDc, sizeof(w.predEnd));
 	w.walked = true;
@@ -851,7 +880,7 @@ static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResu
 // every row that starts a render band candidate, and (when outPlanes is
 // non-NULL) emits all coefficients into freshly allocated per-component
 // planes. Returns true on success.
-static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, double* profMs,
+static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, double* profMs, const unsigned char* padBase,
 	CoeffPlanes* outPlanes = NULL) {
 	ProfClock clk;
 	const long rangeStart = cfg.sosEnd;
@@ -867,12 +896,16 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 	splits[nSlices] = rangeEnd;
 
 	std::vector<SliceResult> work(nSlices);
+	const long padDelta = (long)(padBase ? (padBase - cfg.base) : 0); // 0 when no padded base
 
 	// Phase A: walk all slices concurrently with the best heuristic alignment.
 	{
+		const unsigned char* effPadBase = padBase;
+		const long totalMCUs = (long)cfg.mcusPerRow * si.mcuRows;
 		std::vector<std::thread> ths;
 		for (int i = 0; i < nSlices; i++) {
 			ths.emplace_back([&, i]() {
+				try {
 				long B = (i == 0) ? cfg.sosEnd : splits[i];
 				std::pair<__int64, int> rank[8];
 				for (int o = 0; o < 8; o++) {
@@ -892,7 +925,7 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 					w.snaps.clear(); w.head.clear(); w.tail.clear(); w.mcus = 0;
 					w.coeffs.clear();
 					w.snaps.reserve((splits[1] - splits[0]) / 4 + EXT_N + 64);
-					w.coeffs.reserve((size_t)((splits[1] - splits[0]) / 4 + EXT_N + 64) * cfg.blocksInMCU * DCTSIZE2);
+					w.coeffs.reserve((size_t)((splits[1] - splits[0]) / 16 + EXT_N + 1024) * cfg.blocksInMCU * DCTSIZE2);
 					bool okw = true;
 					while (WalkPos(cfg, st) < limit) {
 						if (st.marker) { okw = false; break; }
@@ -912,8 +945,10 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 							if (st.marker || st.ptr > cfg.base + cfg.eoiPos - WALK_TAIL_MARGIN) break;
 							LogEntry e; e.pos = WalkPos(cfg, st); memcpy(e.pred, lastDc, sizeof(e.pred));
 							w.tail.push_back(e);
-							JCOEF* nullCursor = NULL;
-							if (!WalkMCU(cfg, st, lastDc, nullCursor)) break;
+							size_t oldSz = w.coeffs.size();
+							w.coeffs.resize(oldSz + (size_t)cfg.blocksInMCU * DCTSIZE2);
+							JCOEF* cursor = w.coeffs.data() + oldSz;
+							if (!WalkMCU(cfg, st, lastDc, cursor)) { w.coeffs.resize(oldSz); break; }
 						}
 						memcpy(w.predEnd, lastDc, sizeof(w.predEnd));
 						w.walked = true; w.alignUsed = 0;
@@ -921,8 +956,32 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 					return;
 				}
 				for (int attempt = 0; attempt < 3; attempt++) {
-					if (rank[attempt].first >= _I64_MAX / 2) break;
-					if (WalkSlice(cfg, B, splits[i + 1], rank[attempt].second, work[i])) {
+					if (getenv("JPEGVIEW_COEFF_VERIFY") && i == nSlices - 1)
+						fprintf(stderr, "[PJ][last-attempt %d] score=%lld fMcusWouldBe=%s\n", attempt,
+							(long long)rank[attempt].first, (effPadBase != NULL ? "yes" : "no"));
+					if (rank[attempt].first >= _I64_MAX / 2) { if (getenv("JPEGVIEW_COEFF_VERIFY") && i == nSlices - 1) fprintf(stderr, "[PJ][last] all scores INF\n"); break; }
+					bool isLast = (i == nSlices - 1);
+					bool doneWalk = false;
+					if (isLast && effPadBase != NULL) {
+						WalkerConf cfgLast = cfg; cfgLast.base = effPadBase;
+						// Walk generously past eoiPos into the zero padding; the
+						// remap clamps emission to the true MCU count.
+						long fMcus = totalMCUs + 1024;
+						bool okE = WalkSlice(cfgLast, B, splits[i + 1] + 64 /*eoi slack*/, rank[attempt].second, work[i], outPlanes != NULL,
+							fMcus, effPadBase, effPadBase + cfg.eoiPos + 65536);
+						if (getenv("JPEGVIEW_COEFF_VERIFY"))
+							fprintf(stderr, "[PJ][last] attempt=%d result=%d mcus=%ld coeffsBytes=%zu\n",
+								attempt, (int)okE, work[i].mcus, work[i].coeffs.size());
+						if (!okE) continue;
+						work[i].rankAlign[0] = rank[attempt].second;
+						int n = 1;
+						for (int r = attempt + 1; r < 8 && n < 3; r++) {
+							if (rank[r].first < _I64_MAX / 2) work[i].rankAlign[n++] = rank[r].second;
+						}
+						return;
+					}
+					doneWalk = WalkSlice(cfg, B, splits[i + 1], rank[attempt].second, work[i], false);
+					if (doneWalk) {
 						work[i].rankAlign[0] = rank[attempt].second;
 						// remember the remaining candidates for Phase-B retry
 						int n = 1;
@@ -932,6 +991,7 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 						return;
 					}
 				}
+				} catch (...) { /* walker failed (OOM etc.); chain fallback handles it */ }
 			});
 		}
 		for (auto& t : ths) t.join();
@@ -954,7 +1014,10 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 	}
 	__int64 A[MAX_SLICES_CHAIN];
 	int P[MAX_SLICES_CHAIN][MAX_COMPS_IN_SCAN];
+	int syncLocal[MAX_SLICES_CHAIN];   // local MCU index of the confirmed sync point
+	long coveredStart[MAX_SLICES_CHAIN]; // global index of first OWNED (emitted) MCU
 	A[0] = 0; memset(P[0], 0, sizeof(P[0]));
+	syncLocal[0] = 0; coveredStart[0] = 0;
 	for (int i = 1; i < nSlices; i++) {
 		if (!work[i - 1].walked || !work[i].walked) return false;
 		int b = -1, a = -1;
@@ -965,11 +1028,32 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 			// localizes to slice i: re-walk it with the next candidate.
 			retry++;
 			if (retry >= 3 || work[i].rankAlign[retry] < 0) return false;
-			if (!WalkSlice(cfg, splits[i], splits[i + 1], work[i].rankAlign[retry], work[i])) continue;
+			if (!WalkSlice(cfg, splits[i], splits[i + 1], work[i].rankAlign[retry], work[i], false)) continue;
 		}
 		A[i] = A[i - 1] + work[i - 1].mcus + (b - a);
+		// Ownership trim: the shared boundary MCU (present in prev's extension
+		// AND my head) is owned by the EARLIER walker; my emission starts at
+		// my local index a+1.
+		syncLocal[i] = a + 1;
+		coveredStart[i] = A[i] + a + 1;
 		for (int c = 0; c < MAX_COMPS_IN_SCAN; c++)
 			P[i][c] = P[i - 1][c] + work[i - 1].tail[b].pred[c] - work[i].head[a].pred[c];
+	}
+	if (getenv("JPEGVIEW_COEFF_VERIFY") != NULL) {
+		for (int i = 0; i < nSlices; i++) {
+			fprintf(stderr, "[PJ][chain] slice=%d A=%lld mcus=%ld align=%d pred=[%d %d %d]\n",
+				i, (long long)A[i], work[i].mcus, work[i].alignUsed,
+				P[i][0], P[i][1], P[i][2]);
+		}
+		int dbgB[MAX_SLICES_CHAIN], dbgA[MAX_SLICES_CHAIN];
+		for (int i = 1; i < nSlices; i++) {
+			int b2 = -1, a2 = -1;
+			if (MatchOverlap(work[i - 1].tail, work[i].head, b2, a2))
+				fprintf(stderr, "[PJ][chain] boundary %d->%d: match b=%d a=%d (b-a=%d) tailPos0=%lld headPos0=%lld\n",
+					i - 1, i, b2, a2, b2 - a2,
+					(work[i - 1].tail.empty() ? -1 : work[i - 1].tail[0].pos),
+					(work[i].head.empty() ? -1 : work[i].head[0].pos));
+		}
 	}
 
 	// Populate row states from the snapshots: the snapshot taken before the
@@ -984,7 +1068,7 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 			int r = (int)(g / p);
 			if (r < 1 || r >= si.mcuRows) continue;
 			RowState& rs = si.rowStates[r];
-			rs.next_input_byte = sn[m].st.ptr;
+			rs.next_input_byte = sn[m].st.ptr - ((i == nSlices - 1) ? padDelta : 0);
 			rs.get_buffer = sn[m].st.get_buffer;
 			rs.bits_left = sn[m].st.bits_left;
 			for (int c = 0; c < MAX_COMPS_IN_SCAN; c++) rs.last_dc[c] = P[i][c] + sn[m].pred[c];
@@ -994,9 +1078,13 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 	}
 	if (availRows.size() < 2) return false;
 
+	bool okEmit = true;
 	// ---- Parallel remap: slice-local MCU-order blocks -> component planes ----
-	// Every global MCU index is unique across slices, so destination blocks are
-	// disjoint and the pass needs no locks.
+	// Ownership is sync-trimmed: slice i discards coefficients before its
+	// confirmed sync point (byte-splits can land mid-MCU), and slice i-1
+	// extends its emission to cover the gap, so every global MCU is written
+	// exactly once. Destination blocks are disjoint => no locks needed.
+	bool outEmitFailed = false;
 	if (outPlanes != NULL) {
 		for (int ci = 0; ci < MAX_COMPS_IN_SCAN; ci++) {
 			outPlanes->stride[ci] = cfg.planeStride[ci];
@@ -1006,15 +1094,32 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 			if (outPlanes->plane[ci]) memset(outPlanes->plane[ci], 0, nb * DCTSIZE2 * sizeof(JCOEF));
 		}
 		std::vector<std::thread> rths;
+		const long totalMCUsAll = (long)cfg.mcusPerRow * si.mcuRows;
 		for (int i = 0; i < nSlices; i++) {
-			if (work[i].mcus <= 0) continue;
-			rths.emplace_back([&, i]() {
-				const JCOEF* src = work[i].coeffs.data();
+			size_t appended = work[i].coeffs.size() / ((size_t)cfg.blocksInMCU * DCTSIZE2);
+			long mcusAvail = (long)appended;
+			if (i == nSlices - 1 && getenv("JPEGVIEW_COEFF_VERIFY"))
+				fprintf(stderr, "[PJ][last-slice] appended=%zu mcus=%ld coveredStart=%lld total=%ld\n",
+					appended, work[i].mcus, (long long)coveredStart[i], totalMCUsAll);
+			if (mcusAvail <= 0) continue;
+			int skip = (i == 0) ? 0 : syncLocal[i];
+			long emitCount;
+			if (i == nSlices - 1) {
+				emitCount = totalMCUsAll - coveredStart[i]; // flush to image end
+				if (emitCount > mcusAvail - skip) emitCount = mcusAvail - skip;
+			} else {
+				emitCount = coveredStart[i + 1] - coveredStart[i];
+				if (emitCount > mcusAvail - skip) emitCount = mcusAvail - skip;
+				if (emitCount < 0) { okEmit = false; continue; }
+			}
+			if (emitCount <= 0) continue;
+			rths.emplace_back([&, i, skip, emitCount]() {
+				try {
+				const JCOEF* src = work[i].coeffs.data() + (size_t)skip * cfg.blocksInMCU * DCTSIZE2;
 				const int BIM = cfg.blocksInMCU;
-				long g0 = A[i];
+				long g = coveredStart[i];
 				int hx[MAX_COMPS_IN_SCAN], hy[MAX_COMPS_IN_SCAN];
-				for (long m = 0; m < work[i].mcus; m++) {
-					long g = g0 + m;
+				for (long m = 0; m < emitCount; m++) {
 					int mx = (int)(g % cfg.mcusPerRow);
 					int my = (int)(g / cfg.mcusPerRow);
 					for (int c = 0; c < MAX_COMPS_IN_SCAN; c++) { hx[c] = 0; hy[c] = 0; }
@@ -1024,14 +1129,17 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices, do
 						int by = my * cfg.tilesY[ci] + hy[ci];
 						JCOEF* dst = outPlanes->plane[ci] + ((size_t)by * cfg.planeStride[ci] + bx) * DCTSIZE2;
 						memcpy(dst, src, DCTSIZE2 * sizeof(JCOEF));
+						dst[0] = (JCOEF)(dst[0] + P[i][ci]);
 						src += DCTSIZE2;
-						dst += DCTSIZE2;
 						if (++hx[ci] >= cfg.tilesX[ci]) { hx[ci] = 0; hy[ci]++; }
 					}
+					g++;
 				}
+				} catch (...) { outEmitFailed = true; }
 			});
 		}
 		for (auto& t : rths) t.join();
+		if (outEmitFailed) return false;
 		// Release slice-local storage; planes now hold everything.
 		for (int i = 0; i < nSlices; i++) std::vector<JCOEF>().swap(work[i].coeffs);
 	}
@@ -1074,7 +1182,11 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 		WalkerConf cfg;
 		ExtractWalkerConf(ctx, si, cfg); // read-only extract; cinfo stays alive for fallback
 		int nSlices = (int)min(12u, hw);
-		walked = SpeculativeWalk(cfg, si, nSlices, &tSpec, &coeffPlanes);
+		// NOTE: coefficient planes are emitted during the walk but NOT yet
+		// consumed by any render stage. Enabling them costs ~20-30 ms of extra
+		// memory traffic per image with zero current benefit. Phase 2b will
+		// wire the band renderer to consume these planes directly.
+		walked = SpeculativeWalk(cfg, si, nSlices, &tSpec, NULL, NULL);
 		if (walked) {
 			jpeg_destroy_decompress(&ctx.cinfo);
 			if (getenv("JPEGVIEW_COEFF_VERIFY") != NULL) {
@@ -1148,6 +1260,7 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 	for (size_t i = 0; i < bands.size(); i++) {
 		int rowA = bands[i].first, rowB = bands[i].second;
 		threads.emplace_back([&, i, rowA, rowB]() {
+			try {
 			if (!ok.load()) return;
 			double tb0 = prof ? clk.Now() : 0.0;
 			std::vector<unsigned char> bandJpeg = buildBandJpeg(buf, sz, si, rowA, rowB);
@@ -1165,6 +1278,7 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 				bandsDone.fetch_add(1);
 			}
 			cv.notify_all();
+			} catch (...) { ok = false; cv.notify_all(); }
 		});
 	}
 	double tLaunched = profTop ? clkTop.Now() : 0.0;

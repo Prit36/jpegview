@@ -13,6 +13,17 @@ namespace ParallelJPEG {
 	// after the whole decode. May be NULL.
 	typedef void(*ProgressFn)(void* user, const unsigned char* src, int srcW, int srcH);
 
+	// Per-component coefficient planes emitted by the speculative walk (one
+	// 8x8 block of 16-bit coefficients per entry, natural raster order).
+	// Bit-identical to libjpeg's jpeg_read_coefficients() output.
+	// (short matches JCOEF; 4 = MAX_COMPS_IN_SCAN - kept libjpeg-free here.)
+	struct CoeffPlanes {
+		short* plane[4];
+		int stride[4]; // blocks per row
+		int rows[4];   // block rows
+		CoeffPlanes() { for (int i = 0; i < 4; i++) { plane[i] = NULL; stride[i] = 0; rows[i] = 0; } }
+	};
+
 	// Decode a baseline, 8-bit, 3-component JPEG in parallel.
 	// On success returns a new[] BGR-24 buffer with pitch = TJPAD(width*3);
 	// width, height and subsampling are set (subsampling matches the TJSAMP

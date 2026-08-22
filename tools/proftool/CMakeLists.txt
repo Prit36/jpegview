@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(proftool
     proftool.cpp
     atlstub.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/JPEGView/ParallelJPEG.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/JPEGView/ParallelJPEGV2.cpp
 )
 
 target_include_directories(proftool PRIVATE
@@ -18,7 +18,7 @@ target_include_directories(proftool PRIVATE
 
 if(MSVC)
     target_compile_definitions(proftool PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN)
-    target_compile_options(proftool PRIVATE /Ox /Oi /Ot /Ob3 /fp:fast /GS- /Gy /GL /arch:AVX2)
+    target_compile_options(proftool PRIVATE /Ox /Oi /Ot /Ob3 /fp:fast /GS- /Gy /GL /arch:AVX2 /Zi)
     target_link_options(proftool PRIVATE /LTCG /OPT:REF /OPT:ICF)
 endif()
 

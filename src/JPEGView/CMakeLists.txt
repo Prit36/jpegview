@@ -52,7 +52,7 @@ set(JPEGVIEW_SOURCES
     PanelController.cpp
     PanelMgr.cpp
     ParameterDB.cpp
-    ParallelJPEG.cpp
+    ParallelJPEGV2.cpp
     PNGWrapper.cpp
     PrintDlg.cpp
     PrintImage.cpp
