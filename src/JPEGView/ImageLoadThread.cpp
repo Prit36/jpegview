@@ -433,13 +433,10 @@ void CImageLoadThread::ProcessRequest(CRequestBase& request) {
 		// then process the image if read was successful
 	if (rq.Image != NULL) {
 		rq.Image->SetLoadTickCount(Helpers::GetExactTickCount() - dStartTime);
-		double tPostStart = Helpers::GetExactTickCount();
 		if (!ProcessImageAfterLoad(&rq)) {
 			delete rq.Image;
 			rq.Image = NULL;
 			rq.OutOfMemory = true;
-		} else {
-			rq.Image->SetPostProcessTime(Helpers::GetExactTickCount() - tPostStart);
 		}
 	}
 }
@@ -542,7 +539,7 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 					if (request->Image != NULL) {
 						request->Image->SetJPEGComment(Helpers::GetJPEGComment((void*)pBuffer, nFileSize));
 					}
-					pStream->Release();
+				pStream->Release();
 					delete pBitmap;
 				} else {
 					request->OutOfMemory = true;
@@ -554,47 +551,18 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 			TJSAMP eChromoSubSampling = TJSAMP_420;
 			bool bOutOfMemory = false;
 
-			double t_start_read = Helpers::GetExactTickCount();
-			// Late-start resample: the parallel decode runs the display resample
-			// as soon as its final band completes, so the resample overlaps the
-			// decode's join/return overhead instead of running after ReadImage.
 			TJResampleTarget resample;
 			memset(&resample, 0, sizeof(resample));
 			double dRotation = fabs(request->ProcessParams.RotationParams.Rotation) + fabs(request->ProcessParams.UserRotation);
-			// EXIF orientation handling for the late-start resample.
-			// Previously the late path always assumed the image would be
-			// displayed unrotated (8192x5464 -> 1619x1080). For portrait EXIF
-			// images (orient 6/8) the expected display is 720x1080, so the
-			// late DIB was for the wrong orientation and was discarded after
-			// VerifyRotation() invalidated the cache, wasting the resample and
-			// forcing a second 117ms resample in post. Instead, detect the
-			// EXIF rotation here and make the late path rotation-aware: it
-			// resamples to the transposed size and small-rotates to the final
-			// size, so the result can be adopted after VerifyRotation without
-			// a second large resample. This makes portrait ~1.9x faster.
+
 			int exifRotation = 0;
 			if (CSettingsProvider::This().AutoRotateEXIF()) {
 				int ori = GetEXIFOrientationFast(pBuffer, nFileSize);
 				if (ori == 6) exifRotation = 90;
 				else if (ori == 8) exifRotation = 270;
 				else if (ori == 3) exifRotation = 180;
-// Fallback raw scan for thumbnail-guarded cases. The EXIF
-			// orientation tag can only be in the first APP1 segment, so bound
-			// the scan there instead of walking the whole (multi-MB) file.
-			if (exifRotation == 0 && ori == 1) {
-				const uint8* p = (const uint8*)pBuffer;
-				int nScanEnd = min(nFileSize, 65538); // 2 marker bytes + 65535 max APP1 length
-				for (int ii = 0; ii < nScanEnd - 12; ++ii) {
-						if (p[ii]==0x01 && p[ii+1]==0x12 && p[ii+2]==0x00 && p[ii+3]==0x03) {
-							uint16 vLE = p[ii+8] | (p[ii+9]<<8);
-							uint16 vBE = (p[ii+8]<<8) | p[ii+9];
-							if (vLE==6 || vBE==6) { exifRotation = 90; break; }
-							if (vLE==8 || vBE==8) { exifRotation = 270; break; }
-							if (vLE==3 || vBE==3) { exifRotation = 180; break; }
-						}
-					}
-				}
 			}
+
 			bool bCanStream = fabs(dRotation) < 1e-6 &&
 				request->ProcessParams.TargetWidth > 0 && request->ProcessParams.TargetHeight > 0;
 			if (bCanStream) {
@@ -606,30 +574,17 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 				resample.filter = CSettingsProvider::This().DownsamplingFilter();
 				resample.rotation = exifRotation;
 			}
+
 			void* pPixelData = TurboJpeg::ReadImage(nWidth, nHeight, nBPP, eChromoSubSampling, bOutOfMemory, pBuffer, nFileSize,
 				bCanStream ? &resample : NULL);
-			double t_end_read = Helpers::GetExactTickCount();
-			double dDecodeTime = t_end_read - t_start_read;
 
-			// Color (4-bpp / 3-bpp) and b/w (1-bpp) JPEG is supported
 			if (pPixelData != NULL && (nBPP == 4 || nBPP == 3 || nBPP == 1)) {
-				double t_before_meta = Helpers::GetExactTickCount();
 				void* pEXIF = Helpers::FindEXIFBlock((void*)pBuffer, nFileSize);
 				__int64 hash = Helpers::CalculateJPEGFileHash((void*)pBuffer, nFileSize);
-				double t_after_meta = Helpers::GetExactTickCount();
 
-				double t_before_img = Helpers::GetExactTickCount();
 				request->Image = new CJPEGImage(nWidth, nHeight, pPixelData, 
 					pEXIF, nBPP, hash, IF_JPEG, false, 0, 1, 0);
 				if (resample.pDIB != NULL) {
-					// Defer adoption until after rotation is handled in
-					// ProcessImageAfterLoad. The late DIB is already for the
-					// final (rotated) target size when exifRotation is set
-					// (portrait case produces 720x1080, not 1619x1080), so it
-					// can be adopted after VerifyRotation without being
-					// invalidated. Storing it in the request avoids the
-					// double-resample that previously made portrait ~1.9x slower
-					// than landscape (RAW15571 313ms vs RAW15538 166ms).
 					request->pendingDIB = resample.pDIB;
 					request->pendingFullSize = CSize(resample.targetWidth, resample.targetHeight);
 					request->pendingClippedSize = CSize(min(request->ProcessParams.TargetWidth, resample.targetWidth),
@@ -637,18 +592,15 @@ void CImageLoadThread::ProcessReadJPEGRequest(CRequest * request) {
 					request->pendingOffset = request->Image->ConvertOffset(request->pendingFullSize, request->pendingClippedSize, request->ProcessParams.Offsets);
 					request->pendingProcFlags = request->ProcessParams.ProcFlags;
 					request->pendingImageProcParams = request->ProcessParams.ImageProcParams;
-					resample.pDIB = NULL; // ownership transferred to request
+					resample.pDIB = NULL;
 				}
 				request->Image->SetJPEGComment(Helpers::GetJPEGComment((void*)pBuffer, nFileSize));
 				request->Image->SetJPEGChromoSampling(eChromoSubSampling);
-				double t_after_img = Helpers::GetExactTickCount();
-				request->Image->SetLoadPhaseTimes(dDecodeTime, t_after_meta - t_before_meta, t_after_img - t_before_img, 0.0);
 			} else if (bOutOfMemory) {
 				request->OutOfMemory = true;
 			} else {
-				// failed, try GDI+
-				delete[] pPixelData;
-				if (resample.pDIB != NULL) delete[] resample.pDIB;
+				delete[] (unsigned char*)pPixelData;
+				if (resample.pDIB != NULL) delete[] (unsigned char*)resample.pDIB;
 				ProcessReadGDIPlusRequest(request);
 			}
 		}
