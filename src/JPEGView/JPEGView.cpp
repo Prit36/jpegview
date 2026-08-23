@@ -261,7 +261,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 		ULONG_PTR gdiplusToken = 0;
 		Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-		GpuHeifDecoder::IsHardwareSupported();
 
 		{
 			CMainDlg dlgMain(bForceFullScreen);
