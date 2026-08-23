@@ -290,6 +290,8 @@ class IsoHeifDemuxer {
 public:
 	const uint8_t* m_data = nullptr;
 	size_t m_size = 0;
+	size_t m_idatOffset = 0;
+	size_t m_idatLength = 0;
 	std::map<uint32_t, IsoItem> m_items;
 	std::map<uint32_t, IsoGrid> m_grids;
 	std::vector<uint32_t> m_topLevelItemIds;
@@ -299,6 +301,8 @@ public:
 	bool Parse(const uint8_t* data, size_t size) {
 		m_data = data;
 		m_size = size;
+		m_idatOffset = 0;
+		m_idatLength = 0;
 		m_items.clear();
 		m_grids.clear();
 		m_topLevelItemIds.clear();
@@ -368,6 +372,28 @@ private:
 		size_t end = min(start + length, m_size);
 		size_t off = start;
 
+		// First pass: locate idat box if present
+		while (off + 8 <= end) {
+			uint64_t boxSize = ReadU32(off);
+			std::string boxType((const char*)&m_data[off + 4], 4);
+			size_t headerSize = 8;
+			if (boxSize == 1) {
+				boxSize = ReadU64(off + 8);
+				headerSize = 16;
+			} else if (boxSize == 0) {
+				boxSize = end - off;
+			}
+			if (boxSize < headerSize || off + boxSize > end) break;
+
+			if (boxType == "idat") {
+				m_idatOffset = off + headerSize;
+				m_idatLength = boxSize - headerSize;
+			}
+			off += boxSize;
+		}
+
+		// Second pass: parse other metadata boxes
+		off = start;
 		while (off + 8 <= end) {
 			uint64_t boxSize = ReadU32(off);
 			std::string boxType((const char*)&m_data[off + 4], 4);
@@ -444,8 +470,12 @@ private:
 		for (uint32_t i = 0; i < count && p < start + length && p < m_size; i++) {
 			uint32_t itemId = (ver < 2) ? ReadU16(p) : ReadU32(p);
 			p += (ver < 2) ? 2 : 4;
-			if (ver >= 1) p += 2;
-			p += 2;
+			uint16_t constructionMethod = 0;
+			if (ver >= 1) {
+				constructionMethod = ReadU16(p);
+				p += 2;
+			}
+			p += 2; // data_reference_index
 			uint64_t baseOffset = ReadVarInt(p, baseOffsetSize);
 			p += baseOffsetSize;
 			uint16_t extentCount = ReadU16(p);
@@ -456,7 +486,12 @@ private:
 				p += offsetSize;
 				uint64_t extentLength = ReadVarInt(p, lengthSize);
 				p += lengthSize;
-				m_items[itemId].offset = baseOffset + extentOffset;
+
+				uint64_t finalOffset = baseOffset + extentOffset;
+				if (constructionMethod == 1) {
+					finalOffset += m_idatOffset;
+				}
+				m_items[itemId].offset = finalOffset;
 				m_items[itemId].length = extentLength;
 			}
 		}
@@ -784,18 +819,20 @@ bool GpuHeifDecoder::DecodeHeif(
 		const auto& grid = demuxer.m_grids[targetItemId];
 		if (grid.tileItemIds.empty()) return false;
 
-		// Read grid header from item offset
+		// Read ImageGrid header from item offset: version(1B), flags(1B), rows_minus_one(1B), cols_minus_one(1B), output_width, output_height
 		if (targetItem.offset + 8 > sizeBytes) return false;
-		uint8_t flags = data[targetItem.offset];
-		uint8_t rows = data[targetItem.offset + 1] + 1;
-		uint8_t cols = data[targetItem.offset + 2] + 1;
+		uint8_t version = data[targetItem.offset];
+		uint8_t flags = data[targetItem.offset + 1];
+		uint8_t rows = data[targetItem.offset + 2] + 1;
+		uint8_t cols = data[targetItem.offset + 3] + 1;
 
 		if (flags & 1) { // 32-bit width/height
-			finalW = (data[targetItem.offset + 3] << 24) | (data[targetItem.offset + 4] << 16) | (data[targetItem.offset + 5] << 8) | data[targetItem.offset + 6];
-			finalH = (data[targetItem.offset + 7] << 24) | (data[targetItem.offset + 8] << 16) | (data[targetItem.offset + 9] << 8) | data[targetItem.offset + 10];
+			if (targetItem.offset + 12 > sizeBytes) return false;
+			finalW = (data[targetItem.offset + 4] << 24) | (data[targetItem.offset + 5] << 16) | (data[targetItem.offset + 6] << 8) | data[targetItem.offset + 7];
+			finalH = (data[targetItem.offset + 8] << 24) | (data[targetItem.offset + 9] << 16) | (data[targetItem.offset + 10] << 8) | data[targetItem.offset + 11];
 		} else { // 16-bit width/height
-			finalW = (data[targetItem.offset + 3] << 8) | data[targetItem.offset + 4];
-			finalH = (data[targetItem.offset + 5] << 8) | data[targetItem.offset + 6];
+			finalW = (data[targetItem.offset + 4] << 8) | data[targetItem.offset + 5];
+			finalH = (data[targetItem.offset + 6] << 8) | data[targetItem.offset + 7];
 		}
 
 		if (finalW > MAX_IMAGE_DIMENSION || finalH > MAX_IMAGE_DIMENSION || (double)finalW * finalH > MAX_IMAGE_PIXELS || finalW < 1 || finalH < 1) {
