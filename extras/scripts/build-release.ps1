@@ -109,6 +109,8 @@ Remove-Item $Stage -Recurse -Force
 # ---------------------------------------------------------------------------
 Write-Host "==> Generating SHA256SUMS..." -ForegroundColor Cyan
 $sums = Join-Path $OutDir "SHA256SUMS.txt"
+# Start fresh so re-runs don't append stale hashes from a previous build.
+Remove-Item $sums -ErrorAction SilentlyContinue
 Get-ChildItem $OutDir -File | Where-Object { $_.Name -ne "SHA256SUMS.txt" } | ForEach-Object {
 	$hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
 	"$hash  $($_.Name)" | Out-File $sums -Append -Encoding ascii
