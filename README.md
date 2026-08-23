@@ -1,7 +1,7 @@
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue)](https://github.com/Prit36/jpegview/blob/master/LICENSE.txt)
 [![OS Support](https://img.shields.io/badge/Windows-10%20%7C%2011%20x64-blue)](#system-requirements)
 
-# JPEGView (Prit Prajapati fork) - Ultra-Fast Image Viewer and Editor
+# JPEGView - Ultra-Fast Image Viewer and Editor
 
 A performance-focused, modernized fork of [sylikc/jpegview](https://github.com/sylikc/jpegview), which itself continues the legacy of the excellent [JPEGView by David Kleiner](https://sourceforge.net/projects/jpegview/).
 
@@ -152,7 +152,7 @@ The bundled documentation ([readme.html](src/JPEGView/Config/readme.html)) ships
 JPEGView was created by [David Kleiner](https://sourceforge.net/projects/jpegview/) (2006-2018).
 [Kevin M (sylikc)](https://github.com/sylikc/jpegview) revived it on GitHub in 2020, adding new codecs and keeping it alive through v1.3.46 (2023).
 
-Since August 2026 this repository is maintained by **Prit Prajapati**, focusing on modernizing the toolchain, dropping legacy platforms, and squeezing every millisecond out of image loading and display.
+Since August 2026 this repository is maintained, focusing on modernizing the toolchain, dropping legacy platforms, and squeezing every millisecond out of image loading and display.
 
 ## Special Thanks
 
