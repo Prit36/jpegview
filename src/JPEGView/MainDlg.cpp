@@ -2083,7 +2083,7 @@ void CMainDlg::ExecuteCommand(int nCommand) {
 		case IDM_ABOUT:
 			{
 				MouseOn();
-				HMODULE hMod = ::LoadLibrary(_T("Msftedit.dll"));
+				HMODULE hMod = ::LoadLibrary(_T("riched20.dll"));
 				CAboutDlg dlgAbout;
 				dlgAbout.DoModal();
 				::FreeLibrary(hMod);
