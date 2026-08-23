@@ -276,6 +276,8 @@ struct IsoItem {
 	uint16_t matrix_coefficients = 1; // BT.709 default
 	bool full_range = true;
 	bool has_nclx = false;
+	uint8_t rotation = 0; // 0 = 0 deg, 1 = 90 CCW, 2 = 180, 3 = 270 CCW
+	int8_t mirror = -1;  // -1 = none, 0 = vertical, 1 = horizontal
 };
 
 struct IsoGrid {
@@ -545,6 +547,10 @@ private:
 								} else if ((colrType == "prof" || colrType == "rICC") && prop.second.size() > 12) {
 									m_items[itemId].icc_profile.assign(prop.second.begin() + 12, prop.second.end());
 								}
+							} else if (prop.first == "irot" && prop.second.size() >= 9) {
+								m_items[itemId].rotation = prop.second[8] & 0x03;
+							} else if (prop.first == "imir" && prop.second.size() >= 9) {
+								m_items[itemId].mirror = prop.second[8] & 0x01;
 							}
 						}
 					}
@@ -764,6 +770,41 @@ static void ConvertNV12ToBgraRegion(
 	}
 }
 
+static void RotateImageTiled(const uint32_t* src, uint32_t* dst, int w, int h, int angle_ccw, int mirror_mode) {
+	int outW = (angle_ccw == 1 || angle_ccw == 3) ? h : w;
+	int outH = (angle_ccw == 1 || angle_ccw == 3) ? w : h;
+	const int BLOCK = 64;
+
+	#pragma omp parallel for schedule(static)
+	for (int by = 0; by < h; by += BLOCK) {
+		for (int bx = 0; bx < w; bx += BLOCK) {
+			int max_y = min(by + BLOCK, h);
+			int max_x = min(bx + BLOCK, w);
+			for (int y = by; y < max_y; y++) {
+				for (int x = bx; x < max_x; x++) {
+					int srcX = (mirror_mode == 1) ? (w - 1 - x) : x;
+					int srcY = (mirror_mode == 0) ? (h - 1 - y) : y;
+					int dstX = 0, dstY = 0;
+					if (angle_ccw == 1) { // 90 CCW
+						dstX = srcY;
+						dstY = w - 1 - srcX;
+					} else if (angle_ccw == 2) { // 180
+						dstX = w - 1 - srcX;
+						dstY = h - 1 - srcY;
+					} else if (angle_ccw == 3) { // 270 CCW (90 CW)
+						dstX = h - 1 - srcY;
+						dstY = srcX;
+					} else {
+						dstX = srcX;
+						dstY = srcY;
+					}
+					dst[dstY * outW + dstX] = src[y * w + x];
+				}
+			}
+		}
+	}
+}
+
 } // anonymous namespace
 
 bool GpuHeifDecoder::IsHardwareSupported()
@@ -883,6 +924,20 @@ bool GpuHeifDecoder::DecodeHeif(
 			}
 		}
 
+		// Apply rotation and mirroring if present
+		if (targetItem.rotation != 0 || targetItem.mirror >= 0) {
+			uint32_t outW = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalH : finalW;
+			uint32_t outH = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalW : finalH;
+			uint8_t* pRotated = new(std::nothrow) uint8_t[(size_t)outW * outH * 4];
+			if (pRotated) {
+				RotateImageTiled((const uint32_t*)pDstPixels, (uint32_t*)pRotated, (int)finalW, (int)finalH, targetItem.rotation, targetItem.mirror);
+				delete[] pDstPixels;
+				pDstPixels = pRotated;
+				finalW = outW;
+				finalH = outH;
+			}
+		}
+
 		width = (int)finalW;
 		height = (int)finalH;
 		pPixelData = pDstPixels;
@@ -928,6 +983,20 @@ bool GpuHeifDecoder::DecodeHeif(
 			if (transform) {
 				ICCProfileTransform::DoTransform(transform, pDstPixels, pDstPixels, finalW, finalH);
 				ICCProfileTransform::DeleteTransform(transform);
+			}
+		}
+
+		// Apply rotation and mirroring if present
+		if (targetItem.rotation != 0 || targetItem.mirror >= 0) {
+			uint32_t outW = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalH : finalW;
+			uint32_t outH = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalW : finalH;
+			uint8_t* pRotated = new(std::nothrow) uint8_t[(size_t)outW * outH * 4];
+			if (pRotated) {
+				RotateImageTiled((const uint32_t*)pDstPixels, (uint32_t*)pRotated, (int)finalW, (int)finalH, targetItem.rotation, targetItem.mirror);
+				delete[] pDstPixels;
+				pDstPixels = pRotated;
+				finalW = outW;
+				finalH = outH;
 			}
 		}
 
