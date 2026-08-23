@@ -84,7 +84,7 @@ LRESULT CAboutDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	m_richEdit.SetWindowText(CString(CNLS::GetString(_T("Licensed under the GNU general public license (GPL), see readme file for details"))) + 
 		_T(":\nfile://") + GetReadmeFileName() + _T("\n") + 
 		CNLS::GetString(_T("Project home page")) + 
-		_T(":\nhttps://github.com/sylikc/jpegview/\n"));
+		_T(":\nhttps://github.com/Prit36/jpegview/\n"));
 	m_richEdit.SetEventMask(ENM_LINK);
 
 	HICON hIconLarge = (HICON)::LoadImage(_Module.GetResourceInstance(), MAKEINTRESOURCE(IDR_MAINFRAME),

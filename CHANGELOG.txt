@@ -1,6 +1,94 @@
 JPEGView Changelog
 ******************
 
+[2.1.0] 2026-08-23  (Prit Prajapati fork - modernization & performance release)
+This is the first tracked release of the Prit Prajapati (Prit36) fork, which started
+from sylikc/jpegview master after v1.3.46 and went through a full modernization and
+performance overhaul: 43 commits between 2026-08-16 and 2026-08-23.
+
+Huge thanks to David Kleiner (original author, 2006-2018), Kevin M "sylikc"
+(revived and maintained the project on GitHub through v1.3.46, 2020-2023) and
+qbnu (HEIF/AVIF/JXL/aWebP/aPNG/QOI/PSD/LibRaw codec support) - none of this
+would exist without them. All prior release notes below are theirs.
+
+New features:
+- GPU hardware-accelerated HEIF/HEIC decoding via Media Foundation HEVC hardware MFT
+  and Direct3D 11
+  * Native zero-copy ISOBMFF/HEIF parser supporting single items and grid tiles
+  * irot (rotation) / imir (mirroring) transformation properties are parsed and applied
+  * Multithreaded AVX2 SIMD NV12->BGRA color conversion with NCLX and ICC support
+  * >7x faster decode of 45MP single HEICs (~2100ms down to ~296ms)
+  * Decoder is initialized on-demand so other formats pay no startup cost
+- Parallel multi-threaded decoding of baseline JPEGs ("ParallelJPEG"):
+  * N speculative entropy walkers replicate the Huffman bit-consumption exactly,
+    probe all byte alignments and resynchronize; each band is then rendered from a
+    synthetic sub-JPEG on the proven libjpeg-turbo SIMD path
+  * Verified pixel-exact against single-threaded libjpeg on a 521-photo corpus
+  * Decode stage ~160ms -> ~50ms standalone (3.2x) on 45MP photos
+- Direct2D 1.3 based HDR-capable rendering path (initial modernization work)
+- Memory-mapped file I/O for zero-copy JPEG stream reading with virtual memory prefetch
+- CMake build (in addition to the MSBuild solution) with vcpkg manifest and automatic
+  post-build deployment of config files and runtime dependency DLLs
+
+Performance improvements:
+- Time-to-first-paint (TTFP) on 45MP camera photos reduced from ~171ms to ~80-90ms
+- Startup latency: optional codec/graphics DLLs are delay-loaded, directory scanning
+  is lazy with instant initial file seeding so decoding starts at T=0
+- Resampling: parallel SIMD resampling using all CPU cores (legacy 4-core cap removed),
+  4x unrolled AVX2 downsampling, SIMD transpose, balanced thread-pool slicing,
+  streaming 24-bit BGR output
+- Pipelined band decode with late-start hidden resample; full-size EXIF rotation is
+  deferred past first paint (fast 24-bit rotate path); window sizing overlaps decode
+- TurboJPEG fast-upsampling, merged SIMD upsampling, direct BGRX decode with
+  thread-local handle caching
+- SSE2/SSSE3 vectorized pixel unpacking, OpenMP-parallel LUTs, static CRC tables,
+  single-pass directory scans, 64-byte aligned allocations
+- Whole-program optimization across all targets (/GL, /LTCG, /Ox, /Ob3, /fp:fast,
+  /Qpar, /GT) with AVX2 codegen enabled for x64
+- HEIF CPU path: multithreaded libde265 decoding, fused parallel YCbCr->BGRA fast
+  path bypassing libheif's scalar conversion pipeline, alpha detection to skip
+  redundant blending of opaque images
+
+Bugs fixed:
+- Parallel JPEG walker: marker segment stride bug (0xFF prefix handling) in segment
+  scan and synthetic band building; corrected DRI restart-interval extraction
+- Shutdown race condition: worker-thread completion now waits for AfterFinishProcess;
+  worker threads joined cleanly via _beginthreadex + explicit handle management
+- GDI+ shutdown crash by strictly scoping main-dialog lifetime before GdiplusShutdown
+- Use-after-free in PNG reader for non-animated images; aligned memory allocators
+- Image format detection now inspects magic header bytes before falling back to
+  file extensions (fixes misdetected files with wrong extensions)
+- Startup window flash fixed by refining window styling and dark class background
+- WM_COMMAND menu routing could drop IDM_NEXT; single-pass directory scan in FileList
+  (was 40 sequential FindFirstFile calls); CRC table no longer recomputed per image
+- HEIF: construction_method==1 (idat) offset resolution, ImageGrid descriptor header
+  parsing (1-byte version field), out-of-bounds chroma clamp read crashing on
+  page-aligned even-height images, missing color conversion in CPU fallback path
+
+Changed behavior:
+- Legacy platform support removed; this fork now targets modern systems only:
+  * 64-bit Windows 11 / Windows 10 / Windows Server 2025 (x64 only, no Win32/x86)
+  * AVX2-capable CPU recommended (SSE2 baseline)
+  * Visual Studio 2026 toolchain, C++23, CMake 4.x-compatible (min 3.31)
+- Removed legacy code: Windows XP/Vista/7/8 version checks and fallback branches,
+  dcraw backup sources, VS2017 project files, unused FileExtensionsDlg
+- File associations now use the modern Windows 10/11 Default Apps experience via
+  IApplicationAssociationRegistrationUI
+- Modernized internals: stdext::hash_map -> std::unordered_map, __cpuid-based CPU
+  feature probing, SHGetKnownFolderPath instead of legacy shell APIs
+
+Other changes:
+- Updated third-party dependencies to latest releases:
+  * libjpeg-turbo 3.2.0 (NASM SIMD), libpng 1.6.58 (+APNG patch), zlib 1.3.2
+  * libwebp 1.6.0, LibRaw 0.22.2, Little-CMS/lcms2 2.19.1
+  * libjxl 0.12.0, libavif 1.4.2, dav1d 1.5.4, libde265 1.0.18, libheif 1.23.1
+  * qoi.h synchronized
+- New benchmarks/ suite for systematic multi-target performance measurement:
+  honest telemetry via the app's own /benchmark self-exit mechanism, per-image and
+  all-images suites with multi-run statistics, dataset download tooling, IFEO
+  page-heap guard so measurements cannot be silently doubled
+  (earlier harness numbers were unreliable - e.g. fake TTFP of 7ms / nav of 6600fps)
+
 [1.3.46] 2023-10-07
 New features:
 - Add support for more RAW image formats with LibRaw, ex: CR3 (ICC profiles are supported)
@@ -59,9 +147,9 @@ Localization updates:
 - New language: "tr" Turkish, thanks Kaya Zeren
 - New language: "bg" Bulgarian, thanks Ivan Georgiev
 - New translation: "sr" Serbian, thanks Ljuba Cirovic
-- New translation: "hu" Hungarian, thanks József Ujvári
+- New translation: "hu" Hungarian, thanks Jï¿½zsef Ujvï¿½ri
 - New translation: "fi" Finnish, thanks Kari Eveli
-- New translation: "sk" Slovak, thanks Marián Hikaník
+- New translation: "sk" Slovak, thanks Mariï¿½n Hikanï¿½k
 - New translation: "ta" Tamil, thanks Nirmal G.
 - Updated Japanese translation, thanks maboroshin (GH https://github.com/maboroshin)
 - Updated Korean translation, thanks VenusGirl (GH https://github.com/VenusGirl)
@@ -588,7 +676,7 @@ Bugs fixed:
 - Lossless rotate and crop now works in folders containing Unicode characters in the path.
   Note that the file title must not contain Unicode characters due to the fact that jpegtrans.exe does not support this.
 New features:
-- Portuguese (Portugal) translation, thanks to Sérgio Marques
+- Portuguese (Portugal) translation, thanks to Sï¿½rgio Marques
 - Support for viewing embedded JPEG images in camera RAW files using code from the dcraw project (v8.86).
 - Support for loading images using Windows Image Codecs (WIC). By default WIC is used to load JPEG XR files (also called
   High definition photo). When using Windows Vista or Windows 7, the Windows Camera Codec pack can be installed to get
@@ -681,7 +769,7 @@ New features:
 Bugs fixed:
 - Fixed crash on startup when ShowFullScreen=true in INI file
 New features:
-- Swedish translation (thanks to Åke)
+- Swedish translation (thanks to ï¿½ke)
 
 [1.0.22] 2011-01-14
 Bugs fixed:

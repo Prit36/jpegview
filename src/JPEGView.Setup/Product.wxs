@@ -19,7 +19,7 @@
 
 
 	<!-- The URL for add/remove programs -->
-	<?define InfoURL="https://github.com/sylikc/jpegview" ?>
+	<?define InfoURL="https://github.com/Prit36/jpegview" ?>
 
 	<!-- 32-bit / 64-bit variables -->
 	<?if $(var.Platform) = x64 ?>

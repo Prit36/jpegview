@@ -152,7 +152,7 @@
                     <ul style="margin-top:0in;margin-bottom:0in">
                         <li>Executable is only 1 MB</li>
                         <li>C++/MMX/SSE/AVX2 code</li>
-                        <li>32 bit and 64 bit versions</li>
+                        <li>Native 64-bit version</li>
                         <li>Support for multiple CPU cores to speedup processing</li>
                         <li>Minimal dependencies on external libraries</li>
                     </ul>
@@ -253,8 +253,8 @@
                     less than 256 MB is acceptable if only small images (less than 5 MegaPixels) are viewed.
                 </li>
                 <li>
-                    CPU should be SSE2 capable (perfect is a CPU with 128 bit SSE2 processing and multiple CPU cores)<br />
-                    Other CPUs also work but performance decreases somewhat
+                    CPU must be 64-bit (x64) and should be AVX2 capable<br />
+                    SSE2 is the minimum baseline; other CPUs also work but performance decreases somewhat
                 </li>
                 <li>A mouse with a scroll wheel (for zooming) and navigation buttons on the side is highly recommended</li>
                 <li>
@@ -264,12 +264,12 @@
             </ul>
             <b>Supported Operating Systems</b><br />
             <ul style="margin-top:0in;margin-bottom:0in">
-                <li>Windows 10 / 8.1 / 8</li>
-                <li>Windows 7</li>
-                <li>Windows Vista</li>
-                <li>Windows XP (SP2 required)</li>
-                <li>Windows 2000 : Not supported anymore, use version 1.0.21</li>
+                <li>Windows 11 (64-bit)</li>
+                <li>Windows 10 (64-bit)</li>
+                <li>Windows Server 2025 (64-bit)</li>
             </ul>
+            Legacy operating systems (Windows XP, Vista, 7, 8 / 8.1) and 32-bit editions are no longer
+            supported by this fork - use an upstream sylikc release (v1.3.46 or earlier) for those.
             <b>Supported Languages</b><br />
             <ul style="margin-top:0in;margin-bottom:0in">
                 <li>Basque</li>
@@ -294,8 +294,8 @@
             By default JPEGView uses the same language as the operating system. However another language can be forced using the INI file.
             Translations to other languages can be done very easily by providing an UTF8 coded text mapping file, see
             <a href="./strings_de.txt">strings_de.txt</a> as an example.<br />
-            If you want that your translation is included into the next JPEGView release, contact me at
-            <a href="mailto:sylikc@gmail.com">sylikc@gmail.com</a><br />
+            If you want that your translation is included into a future JPEGView release, open an issue or pull request at
+            <a href="https://github.com/Prit36/jpegview/">https://github.com/Prit36/jpegview/</a><br />
             <b>Registry</b><br />
             JPEGView does not touch the registry except when registering file extensions to be displayed with
             JPEGView. This will add some registry entries in the 'Current User' branch of the registry.<br />
@@ -1189,15 +1189,18 @@
             any side of the screen and pan the image as desired. Finally select 'Set as desktop wallpaper' > 'Use processed image as displayed'.
 
             <h2><a name="Copyright"></a>License &amp; Copyright</h2>
-            Copyright &copy; 2006-2017 David Kleiner<br /><br />
+            Copyright &copy; 2006-2017 David Kleiner<br />
+            Copyright &copy; 2020-2023 Kevin M (sylikc)<br />
+            Modernization &amp; performance fork &copy; 2026 Prit Prajapati<br /><br />
             This program is free software; you can redistribute it and/or modify
             it under the terms of the GNU General Public License as published by
             the Free Software Foundation, version 2.
             The full text of the GPL can be found <a href="http://opensource.org/licenses/gpl-2.0.php">here.</a><br />
             JPEGView is hosted by <a href="http://www.github.com">GitHub</a>. You can check for a new version,
             get the source code or report a bug using the following URL:<br />
+            <a href="https://github.com/Prit36/jpegview/">https://github.com/Prit36/jpegview/</a><br />
+            The upstream project this fork is based on lives at
             <a href="https://github.com/sylikc/jpegview/">https://github.com/sylikc/jpegview/</a><br />
-            </a>
             <br />
             JPEGView contains the following binary libraries:<br />
             - Turbo JPEG, Copyright (C)2009-2011 D. R. Commander.  All Rights Reserved.<br />
@@ -1208,7 +1211,7 @@
             - Windows Template Library 8.1, Copyright &copy; 2006 Microsoft Corporation<br />
             - <a href="http://www.cybercom.net/~dcoffin/dcraw/">dcraw</a>, &copy; 1997-2011 by Dave Coffin<br />
             <br />
-            Developed and compiled with Visual Studio 2010/2013 Professional
+            Developed and compiled with Visual Studio 2026, C++23 and CMake
             <br /><br />
             Thanks to:<br />
             <ul style="margin-top:0in;margin-bottom:0in">
@@ -1271,6 +1274,21 @@
                 </li>
                 <li>
                     Damian for the Polish translation
+                </li>
+                <li>
+                    Kevin M (sylikc) for reviving JPEGView on GitHub, maintaining it through v1.3.46
+                    and adding modern codec support - this fork is built on top of his work
+                </li>
+                <li>
+                    <a href="https://github.com/qbnu">qbnu</a> for adding HEIF/HEIC/AVIF, JPEG XL,
+                    animated WebP/PNG, QOI, PSD, LibRaw and ICC profile support
+                </li>
+                <li>
+                    All translators of the sylikc era: Jadran Rudec (Slovenian), Kaya Zeren (Turkish),
+                    Ivan Georgiev (Bulgarian), Ljuba Cirovic (Serbian), József Ujvári (Hungarian),
+                    Kari Eveli (Finnish), Marián Hikaník (Slovak), Nirmal G. (Tamil),
+                    maboroshin (Japanese), VenusGirl (Korean), Ronan Plantec (French), Michalis (Greek),
+                    Marcin Czerwien (Polish) and everyone else keeping the translations current
                 </li>
             </ul>
         </div>
