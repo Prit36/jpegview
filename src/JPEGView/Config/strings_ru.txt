@@ -176,7 +176,7 @@ Increase/decrease lightening of shadows (LDC must be on)	Регулировка 
 Increase/decrease sharpness	Регулировка резкости
 Insufficient rights to change the privilege (DACL) on the registry entry. Continue?	Недостаточно прав для изменения привилегии (DACL) в записи реестра. Продолжить?
 JPEGView Help	Справка JPEGView
-JPEGView is a lean, fast and highly configurable viewer/editor for JPEG, BMP, PNG, WEBP, TGA, GIF and TIFF images with a minimal GUI.	JPEGView — это компактная и быстрая программа для просмотра/редактирования JPEG, JPEG XR (HD Photo), BMP, PNG, WebP, TGA, GIF, TIFF и RAW с богатыми возможностями настройки и лаконичным интерфейсом.
+JPEGView is a lean, fast and highly configurable viewer/editor for JPEG, BMP, PNG, WEBP, TGA, GIF and TIFF images with a minimal GUI.	JPEGView – это компактная и быстрая программа для просмотра/редактирования JPEG, JPEG XR (HD Photo), BMP, PNG, WebP, TGA, GIF, TIFF и RAW с богатыми возможностями настройки и лаконичным интерфейсом.
 JPEGView is registered as default viewer for the selected file formats.	Установите/снимите отметки у типов файлов для регистрации/дерегистрации JPEGView как стандартной программы их просмотра.
 Keep aspect ratio on crop	Соблюдать пропорции при обрезке
 Keep parameters	Запоминать параметры
