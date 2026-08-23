@@ -1,0 +1,464 @@
+﻿<!--
+	JPEGView Setup - modern WiX (v4+) authoring
+	Converted from ../Product.wxs (WiX v3) when the fork dropped legacy toolchains.
+
+	Differences vs the v3 authoring:
+	* x64-only (the fork dropped Win32/x86)
+	* WixUI_Advanced was removed from WiX v4+; WixUI_InstallDir provides the
+	  equivalent per-machine folder-selection experience
+	* The ProgramFiles64Folder override custom-actions are unnecessary here -
+	  Scope="perMachine" + StandardDirectory handles it
+
+	Build (see extras/scripts/build-release.ps1):
+	  wix build -arch x64 -ext WixToolset.UI.wixext -loc ..\Product_en-us.wxl ^
+	    -d JPEGView.ProjectDir=...\src\JPEGView -d JPEGView.TargetDir=...\bin\x64\Release\ ^
+	    -d WICLoader.TargetDir=...\src\WICLoader\bin\x64\Release\ Product.wxs -out JPEGView64_en-us.msi
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+	<!-- The upgrade code must never change as long as the product lives!
+	     Kept identical to the upstream sylikc MSI so existing installs major-upgrade in place. -->
+	<?define UpgradeCode="cc010056-8703-4ec9-a56e-7cb52641d6f4" ?>
+
+	<!-- The URL for add/remove programs -->
+	<?define InfoURL="https://github.com/Prit36/jpegview" ?>
+
+	<?define JxlDllFolder = "$(var.JPEGView.ProjectDir)\libjxl\bin64" ?>
+	<?define HeifDllFolder = "$(var.JPEGView.ProjectDir)\libheif\bin64" ?>
+	<?define AvifDllFolder = "$(var.JPEGView.ProjectDir)\libavif\bin64" ?>
+	<?define LcmsDllFolder = "$(var.JPEGView.ProjectDir)\lcms2\bin64" ?>
+	<?define RawDllFolder = "$(var.JPEGView.ProjectDir)\libraw\bin64" ?>
+
+	<!-- Package version binds to the built exe's FileVersion at bind time,
+	     so the MSI always matches the app version automatically. -->
+	<?define VersionNumber="!(bind.FileVersion.JPEGView.exe)" ?>
+
+	<Package
+		Name="!(loc.ApplicationName)"
+		Manufacturer="!(loc.ManufacturerFullName)"
+		Version="$(var.VersionNumber)"
+		UpgradeCode="$(var.UpgradeCode)"
+		Scope="perMachine"
+		Language="!(loc.Language)"
+		Codepage="1252"
+		InstallerVersion="500"
+		Compressed="yes">
+
+		<!-- single self-contained MSI (cabinet embedded) -->
+		<MediaTemplate EmbedCab="yes" />
+
+		<!-- Modern per-machine install-dir UI (replacement for removed WixUI_Advanced) -->
+		<ui:WixUI Id="WixUI_InstallDir" InstallDirectory="APPLICATIONFOLDER" />
+
+		<WixVariable Id="WixUILicenseRtf" Value="$(var.SetupResDir)\License.rtf" />
+		<WixVariable Id="WixUIBannerBmp" Value="$(var.SetupResDir)\BannerTop.bmp" />
+		<WixVariable Id="WixUIDialogBmp" Value="$(var.SetupResDir)\Dialog.bmp" />
+
+		<Icon Id="Icon.exe" SourceFile="$(var.JPEGView.ProjectDir)\res\JPEGView.ico" />
+
+		<!-- Add/remove programs properties -->
+		<Property Id="ARPPRODUCTICON" Value="Icon.exe" />
+		<Property Id="ARPHELPLINK" Value="$(var.InfoURL)" />
+		<Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+		<!-- ARPNOMODIFY is set by WixUI_InstallDir itself -->
+
+		<!-- Always upgrade, never install side-by-side -->
+		<MajorUpgrade DowngradeErrorMessage="!(loc.NewerInstalled)" AllowSameVersionUpgrades="yes" />
+
+		<!-- Record the chosen install location for add/remove programs -->
+		<CustomAction Id="SetARPINSTALLLOCATION" Property="ARPINSTALLLOCATION" Value="[APPLICATIONFOLDER]" />
+		<InstallExecuteSequence>
+			<Custom Action="SetARPINSTALLLOCATION" After="InstallValidate" />
+		</InstallExecuteSequence>
+
+		<Feature Id="Complete" Title="!(loc.FeatureCompleteDescription)" Level="1">
+			<Feature Id="MainProgram" Title="!(loc.FeatureMainProgramTitle)" Description="!(loc.FeatureMainProgramDescription)" Level="1">
+				<ComponentRef Id="APPLICATIONFOLDER_comp"/>
+				<ComponentRef Id="JPEGViewExe"/>
+				<ComponentRef Id="NavPanel.png"/>
+
+				<!-- JXL support -->
+				<ComponentRef Id="brotlicommonDLL"/>
+				<ComponentRef Id="brotlidecDLL"/>
+				<ComponentRef Id="jxl_decDLL"/>
+				<ComponentRef Id="jxl_threadsDLL"/>
+
+				<!-- HEIF/AVIF support -->
+				<ComponentRef Id="dav1dDLL"/>
+				<ComponentRef Id="libde265DLL"/>
+				<ComponentRef Id="heifDLL"/>
+				<ComponentRef Id="avifDLL"/>
+
+				<!-- RAW support -->
+				<ComponentRef Id="rawDLL"/>
+				<!-- ICC profile support -->
+				<ComponentRef Id="lcmsDLL"/>
+
+				<ComponentRef Id="WICLoaderDLL"/>
+
+				<!-- Configuration & documentation -->
+				<ComponentRef Id="JPEGView.ini"/>
+				<ComponentRef Id="JPEGView.ini.tpl"/>
+				<ComponentRef Id="JPEGView_ru.ini"/>
+				<ComponentRef Id="JPEGView_ru.ini.tpl"/>
+				<ComponentRef Id="KeyMap.txt.default"/>
+				<ComponentRef Id="KeyMap.txt.default_ru"/>
+				<ComponentRef Id="symbols.km"/>
+				<ComponentRef Id="LICENSE.txt"/>
+				<ComponentRef Id="readme.html"/>
+				<ComponentRef Id="readme_ru.html"/>
+				<ComponentRef Id="readme_uk.html"/>
+				<ComponentRef Id="KeyMap_README.html"/>
+				<ComponentRef Id="KeyMap_README_ru.html"/>
+
+				<!-- Localizations -->
+				<ComponentRef Id="strings.txt" />
+				<ComponentRef Id="strings_be.txt" />
+				<ComponentRef Id="strings_bg.txt" />
+				<ComponentRef Id="strings_cs.txt" />
+				<ComponentRef Id="strings_de.txt" />
+				<ComponentRef Id="strings_el.txt" />
+				<ComponentRef Id="strings_es.txt" />
+				<ComponentRef Id="strings_esar.txt" />
+				<ComponentRef Id="strings_eu.txt" />
+				<ComponentRef Id="strings_fi.txt" />
+				<ComponentRef Id="strings_fr.txt" />
+				<ComponentRef Id="strings_hu.txt" />
+				<ComponentRef Id="strings_it.txt" />
+				<ComponentRef Id="strings_ja.txt" />
+				<ComponentRef Id="strings_ko.txt" />
+				<ComponentRef Id="strings_pl.txt" />
+				<ComponentRef Id="strings_pt.txt" />
+				<ComponentRef Id="strings_ptbr.txt" />
+				<ComponentRef Id="strings_ro.txt" />
+				<ComponentRef Id="strings_ru.txt" />
+				<ComponentRef Id="strings_sk.txt" />
+				<ComponentRef Id="strings_sl.txt" />
+				<ComponentRef Id="strings_sr.txt" />
+				<ComponentRef Id="strings_sv.txt" />
+				<ComponentRef Id="strings_ta.txt" />
+				<ComponentRef Id="strings_tr.txt" />
+				<ComponentRef Id="strings_uk.txt" />
+				<ComponentRef Id="strings_zh.txt" />
+				<ComponentRef Id="strings_zhtw.txt" />
+			</Feature>
+
+			<Feature Id="AppShortcut" Title="Install Shortcuts to Start Menu">
+				<ComponentRef Id="ApplicationShortcut" />
+				<ComponentRef Id="DocsShortcut" />
+			</Feature>
+
+			<Feature Id="DesktopShortcut" Title="Install Shortcut to Desktop">
+				<ComponentRef Id="DesktopShortcut" />
+			</Feature>
+		</Feature>
+
+		<!-- Start menu / desktop shortcuts -->
+		<StandardDirectory Id="ProgramMenuFolder">
+			<Directory Id="ApplicationProgramsFolder" Name="JPEGView">
+				<Component Id="ApplicationShortcut" Guid="5acc19d4-706e-49f3-95a6-16f943e23049">
+					<Shortcut Id="ApplicationStartMenuShortcut"
+						Name="JPEGView"
+						Description="Fast Image Viewer/Editor with a minimal GUI"
+						Target="[APPLICATIONFOLDER]JPEGView.exe"
+						WorkingDirectory="APPLICATIONFOLDER"
+						Icon="Icon.exe"/>
+					<RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+					<RegistryValue Root="HKCU" Key="Software\Prit36\JPEGView" Name="AppSC" Type="integer" Value="1" KeyPath="yes"/>
+				</Component>
+				<Component Id="DocsShortcut" Guid="*">
+					<Shortcut Id="DocsStartMenuShortcut"
+						Name="Readme Help"
+						Description="JPEGView HTML Help"
+						Target="[APPLICATIONFOLDER]readme.html"
+						WorkingDirectory="APPLICATIONFOLDER"/>
+					<RegistryValue Root="HKCU" Key="Software\Prit36\JPEGView" Name="DocsSC" Type="integer" Value="1" KeyPath="yes"/>
+				</Component>
+
+				<Component Id="DesktopShortcut" Guid="*">
+					<RegistryValue Root="HKCU"
+						Key="SOFTWARE\Prit36\JPEGView" Name="DesktopSC" Value="1"
+						Type="integer" KeyPath="yes" />
+					<Shortcut Id="desktopSC" Target="[APPLICATIONFOLDER]JPEGView.exe"
+							Directory="DesktopFolder" Name="JPEGView"
+							Icon="Icon.exe"
+							WorkingDirectory="APPLICATIONFOLDER"/>
+				</Component>
+			</Directory>
+		</StandardDirectory>
+		<StandardDirectory Id="DesktopFolder" />
+	</Package>
+
+	<Fragment>
+		<StandardDirectory Id="ProgramFiles64Folder">
+			<Directory Id="APPLICATIONFOLDER" Name="!(loc.ApplicationName)">
+				<!-- Installation directory as a component so it gets emptied during uninstall -->
+				<Component Id="APPLICATIONFOLDER_comp" Guid="42282a63-0b30-4a28-bb30-8b668740f6a4">
+					<CreateFolder />
+					<RemoveFile Id="RemoveFilesFromAppDirectory" Name="*.*" On="uninstall" />
+				</Component>
+
+				<!-- Main program file. The MSI version binds to this file's FileVersion. -->
+				<Component Id="JPEGViewExe" Guid="30be6f3f-71ea-4829-82bd-2b3ddb846079">
+					<File Id="JPEGView.exe" Name="JPEGView.exe" Source="$(var.JPEGView.TargetDir)JPEGView.exe" KeyPath="yes" Checksum="yes"/>
+
+					<?define HKLMCapabilities = "SOFTWARE\Prit36\JPEGView\Capabilities" ?>
+
+					<!-- Capabilities keys for Default Apps / Set Program Access and Defaults -->
+					<RegistryValue Root="HKLM" Key="$(var.HKLMCapabilities)" Name="ApplicationDescription" Value="!(loc.ProductDescription)" Type="string" />
+					<RegistryValue Root="HKLM" Key="$(var.HKLMCapabilities)" Name="ApplicationIcon" Value="[APPLICATIONFOLDER]JPEGView.exe,0" Type="string" />
+					<RegistryValue Root="HKLM" Key="$(var.HKLMCapabilities)" Name="ApplicationName" Value="!(loc.ApplicationName)" Type="string" />
+					<RegistryValue Root="HKLM" Key="$(var.HKLMCapabilities)\DefaultIcon" Value="[APPLICATIONFOLDER]JPEGView.exe,1" Type="string" />
+					<RegistryValue Root="HKLM" Key="$(var.HKLMCapabilities)\FileAssociations" Name=".jpg" Value="JPEGView.Document" Type="string" />
+					<RegistryValue Root="HKLM" Key="$(var.HKLMCapabilities)\MIMEAssociations" Name="application/jpg" Value="JPEGView.Document" Type="string" />
+					<RegistryValue Root="HKLM" Key="$(var.HKLMCapabilities)\shell\Open\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\RegisteredApplications" Name="JPEGView" Value="$(var.HKLMCapabilities)" Type="string" />
+
+					<!-- Extend to the "open with" list -->
+					<!-- (Supported filetypes are listed in FileList.cpp: csFileEndingsInternal and csFileEndingsRAW) -->
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\shell\open" Name="FriendlyAppName" Value="!(loc.ApplicationName)" Type="string" />
+					<!-- csFileEndingsInternal -->
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".jpg" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".jpeg" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".jfif" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".bmp" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".png" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".tif" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".tiff" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".gif" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".webp" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".jxl" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".avif" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".heif" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".heic" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".tga" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".qoi" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".psd" Value="" Type="string" />
+					<!-- csFileEndingsRAW -->
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".pef" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".dng" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".crw" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".nef" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".cr2" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".mrw" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".rw2" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".orf" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".x3f" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".arw" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".kdc" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".nrw" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".dcr" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".sr2" Value="" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\Applications\JPEGView.exe\SupportedTypes" Name=".raf" Value="" Type="string" />
+
+					<!-- JPEGView.Document ProgID -->
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\JPEGView.Document" Name="FriendlyTypeName" Value="!(loc.DescREG)" Type="string" />
+					<ProgId Id="JPEGView.Document" Description="!(loc.DescREG)" Icon="Icon.exe" Advertise="yes">
+						<Extension Id="jpg">
+							<Verb Id="open" Command="!(loc.ExplorerMenuOpenREG)" Argument="&quot;%1&quot;" />
+							<MIME Advertise="yes" ContentType="application/jpg" Default="yes" />
+						</Extension>
+					</ProgId>
+
+					<!-- Add an 'Edit with JPEGView' to 'right click' even when not associated -->
+					<!-- SaveImage.cpp :: only extensions which can be saved in code are listed -->
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.jpg\shell\edit.JPEGView.exe" Value="!(loc.ExplorerMenuEditREG)" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.jpg\shell\edit.JPEGView.exe\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.jpeg\shell\edit.JPEGView.exe" Value="!(loc.ExplorerMenuEditREG)" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.jpeg\shell\edit.JPEGView.exe\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.bmp\shell\edit.JPEGView.exe" Value="!(loc.ExplorerMenuEditREG)" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.bmp\shell\edit.JPEGView.exe\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.png\shell\edit.JPEGView.exe" Value="!(loc.ExplorerMenuEditREG)" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.png\shell\edit.JPEGView.exe\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.tiff\shell\edit.JPEGView.exe" Value="!(loc.ExplorerMenuEditREG)" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.tiff\shell\edit.JPEGView.exe\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.tif\shell\edit.JPEGView.exe" Value="!(loc.ExplorerMenuEditREG)" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.tif\shell\edit.JPEGView.exe\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.webp\shell\edit.JPEGView.exe" Value="!(loc.ExplorerMenuEditREG)" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.webp\shell\edit.JPEGView.exe\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.qoi\shell\edit.JPEGView.exe" Value="!(loc.ExplorerMenuEditREG)" Type="string" />
+					<RegistryValue Root="HKLM" Key="SOFTWARE\Classes\SystemFileAssociations\.qoi\shell\edit.JPEGView.exe\command" Value="&quot;[APPLICATIONFOLDER]JPEGView.exe&quot; &quot;%1&quot;" Type="string" />
+				</Component>
+
+				<Component Id="NavPanel.png" Guid="*">
+					<File Id="NavPanel.png" Name="NavPanel.png" Source="$(var.JPEGView.TargetDir)NavPanel.png" />
+				</Component>
+
+				<!-- DLLs required for JXL support -->
+				<Component Id="brotlicommonDLL" Guid="97c26f44-4776-489d-be8a-0b732a42ea34">
+					<File Id="brotlicommon.dll" Name="brotlicommon.dll" Source="$(var.JxlDllFolder)\brotlicommon.dll" />
+				</Component>
+				<Component Id="brotlidecDLL" Guid="dc648a37-d726-40f9-9098-dfde491dbb44">
+					<File Id="brotlidec.dll" Name="brotlidec.dll" Source="$(var.JxlDllFolder)\brotlidec.dll" />
+				</Component>
+				<Component Id="jxl_decDLL" Guid="a65bca95-9ddf-476c-88b5-5048a3a9bde6">
+					<File Id="jxl_dec.dll" Name="jxl_dec.dll" Source="$(var.JxlDllFolder)\jxl_dec.dll" />
+				</Component>
+				<Component Id="jxl_threadsDLL" Guid="964ed16e-138a-4419-9c4c-8eb45a04d0f6">
+					<File Id="jxl_threads.dll" Name="jxl_threads.dll" Source="$(var.JxlDllFolder)\jxl_threads.dll" />
+				</Component>
+
+				<!-- DLLs required for HEIF/AVIF support -->
+				<Component Id="dav1dDLL" Guid="ef9a6d34-487d-4edf-b8fb-58e3e16452e4">
+					<File Id="dav1d.dll" Name="dav1d.dll" Source="$(var.AvifDllFolder)\dav1d.dll" />
+				</Component>
+				<Component Id="libde265DLL" Guid="c6d43557-f20f-478a-b9e7-a213fca72648">
+					<File Id="libde265.dll" Name="libde265.dll" Source="$(var.HeifDllFolder)\libde265.dll" />
+				</Component>
+				<Component Id="heifDLL" Guid="46c300a1-229a-45ad-a861-edf53cc97c46">
+					<File Id="heif.dll" Name="heif.dll" Source="$(var.HeifDllFolder)\heif.dll" />
+				</Component>
+				<Component Id="avifDLL" Guid="1597e47e-b6ae-44f4-b28a-6b7503bdd1d2">
+					<File Id="avif.dll" Name="avif.dll" Source="$(var.AvifDllFolder)\avif.dll" />
+				</Component>
+
+				<!-- DLL required for ICC Profile support (WebP, JXL, HEIF/HEIC/AVIF) -->
+				<Component Id="lcmsDLL" Guid="2a7a5f9a-4100-4eee-8706-a6b9a2a8cf5c">
+					<File Id="lcms2.dll" Name="lcms2.dll" Source="$(var.LcmsDllFolder)\lcms2.dll" />
+				</Component>
+
+				<!-- DLL required for RAW Files support (modern cameras using LibRaw) -->
+				<Component Id="rawDLL" Guid="e469088b-ab00-43cd-a5eb-57f09a6cc3b2">
+					<File Id="libraw.dll" Name="libraw.dll" Source="$(var.RawDllFolder)\libraw.dll" />
+				</Component>
+
+				<!-- DLL required for WIC support (copied into the app output by post-build) -->
+				<Component Id="WICLoaderDLL" Guid="742ca948-b7d3-4ca4-9aab-2592616416ed">
+					<File Id="WICLoader.dll" Name="WICLoader.dll" Source="$(var.JPEGView.TargetDir)WICLoader.dll" />
+				</Component>
+
+				<!-- Configuration files (initially autogenerated with a batch file) -->
+				<Component Id="JPEGView.ini" Guid="*">
+					<File Id="JPEGView.ini" Name="JPEGView.ini" Source="$(var.JPEGView.TargetDir)JPEGView.ini" />
+				</Component>
+				<Component Id="JPEGView.ini.tpl" Guid="*">
+					<File Id="JPEGView.ini.tpl" Name="JPEGView.ini.tpl" Source="$(var.JPEGView.TargetDir)JPEGView.ini.tpl" />
+				</Component>
+				<Component Id="JPEGView_ru.ini" Guid="*">
+					<File Id="JPEGView_ru.ini" Name="JPEGView_ru.ini" Source="$(var.JPEGView.TargetDir)JPEGView_ru.ini" />
+				</Component>
+				<Component Id="JPEGView_ru.ini.tpl" Guid="*">
+					<File Id="JPEGView_ru.ini.tpl" Name="JPEGView_ru.ini.tpl" Source="$(var.JPEGView.TargetDir)JPEGView_ru.ini.tpl" />
+				</Component>
+				<Component Id="KeyMap.txt.default" Guid="*">
+					<File Id="KeyMap.txt.default" Name="KeyMap.txt.default" Source="$(var.JPEGView.TargetDir)KeyMap.txt.default" />
+				</Component>
+				<Component Id="symbols.km" Guid="*">
+					<File Id="symbols.km" Name="symbols.km" Source="$(var.JPEGView.TargetDir)symbols.km" />
+				</Component>
+				<Component Id="KeyMap.txt.default_ru" Guid="*">
+					<File Id="KeyMap.txt.default_ru" Name="KeyMap.txt.default_ru" Source="$(var.JPEGView.TargetDir)KeyMap.txt.default_ru" />
+				</Component>
+
+				<Component Id="LICENSE.txt" Guid="*">
+					<File Id="LICENSE.txt" Name="LICENSE.txt" Source="$(var.JPEGView.TargetDir)LICENSE.txt" />
+				</Component>
+				<Component Id="readme.html" Guid="*">
+					<File Id="readme.html" Name="readme.html" Source="$(var.JPEGView.TargetDir)readme.html" />
+				</Component>
+				<Component Id="readme_ru.html" Guid="*">
+					<File Id="readme_ru.html" Name="readme_ru.html" Source="$(var.JPEGView.TargetDir)readme_ru.html" />
+				</Component>
+				<Component Id="readme_uk.html" Guid="*">
+					<File Id="readme_uk.html" Name="readme_uk.html" Source="$(var.JPEGView.TargetDir)readme_uk.html" />
+				</Component>
+				<Component Id="KeyMap_README.html" Guid="*">
+					<File Id="KeyMap_README.html" Name="KeyMap-README.html" Source="$(var.JPEGView.TargetDir)KeyMap-README.html" />
+				</Component>
+				<Component Id="KeyMap_README_ru.html" Guid="*">
+					<File Id="KeyMap_README_ru.html" Name="KeyMap-README_ru.html" Source="$(var.JPEGView.TargetDir)KeyMap-README_ru.html" />
+				</Component>
+
+				<!-- Localization strings (Id suffixes cannot contain dashes) -->
+				<Component Id="strings.txt" Guid="*">
+					<File Id="strings.txt" Name="strings.txt" Source="$(var.JPEGView.TargetDir)strings.txt" />
+				</Component>
+				<Component Id="strings_be.txt" Guid="*">
+					<File Id="strings_be.txt" Name="strings_be.txt" Source="$(var.JPEGView.TargetDir)strings_be.txt" />
+				</Component>
+				<Component Id="strings_bg.txt" Guid="*">
+					<File Id="strings_bg.txt" Name="strings_bg.txt" Source="$(var.JPEGView.TargetDir)strings_bg.txt" />
+				</Component>
+				<Component Id="strings_cs.txt" Guid="*">
+					<File Id="strings_cs.txt" Name="strings_cs.txt" Source="$(var.JPEGView.TargetDir)strings_cs.txt" />
+				</Component>
+				<Component Id="strings_de.txt" Guid="*">
+					<File Id="strings_de.txt" Name="strings_de.txt" Source="$(var.JPEGView.TargetDir)strings_de.txt" />
+				</Component>
+				<Component Id="strings_el.txt" Guid="*">
+					<File Id="strings_el.txt" Name="strings_el.txt" Source="$(var.JPEGView.TargetDir)strings_el.txt" />
+				</Component>
+				<Component Id="strings_es.txt" Guid="*">
+					<File Id="strings_es.txt" Name="strings_es.txt" Source="$(var.JPEGView.TargetDir)strings_es.txt" />
+				</Component>
+				<Component Id="strings_esar.txt" Guid="*">
+					<File Id="strings_esar.txt" Name="strings_es-ar.txt" Source="$(var.JPEGView.TargetDir)strings_es-ar.txt" />
+				</Component>
+				<Component Id="strings_eu.txt" Guid="*">
+					<File Id="strings_eu.txt" Name="strings_eu.txt" Source="$(var.JPEGView.TargetDir)strings_eu.txt" />
+				</Component>
+				<Component Id="strings_fi.txt" Guid="*">
+					<File Id="strings_fi.txt" Name="strings_fi.txt" Source="$(var.JPEGView.TargetDir)strings_fi.txt" />
+				</Component>
+				<Component Id="strings_fr.txt" Guid="*">
+					<File Id="strings_fr.txt" Name="strings_fr.txt" Source="$(var.JPEGView.TargetDir)strings_fr.txt" />
+				</Component>
+				<Component Id="strings_hu.txt" Guid="*">
+					<File Id="strings_hu.txt" Name="strings_hu.txt" Source="$(var.JPEGView.TargetDir)strings_hu.txt" />
+				</Component>
+				<Component Id="strings_it.txt" Guid="*">
+					<File Id="strings_it.txt" Name="strings_it.txt" Source="$(var.JPEGView.TargetDir)strings_it.txt" />
+				</Component>
+				<Component Id="strings_ja.txt" Guid="*">
+					<File Id="strings_ja.txt" Name="strings_ja.txt" Source="$(var.JPEGView.TargetDir)strings_ja.txt" />
+				</Component>
+				<Component Id="strings_ko.txt" Guid="*">
+					<File Id="strings_ko.txt" Name="strings_ko.txt" Source="$(var.JPEGView.TargetDir)strings_ko.txt" />
+				</Component>
+				<Component Id="strings_pl.txt" Guid="*">
+					<File Id="strings_pl.txt" Name="strings_pl.txt" Source="$(var.JPEGView.TargetDir)strings_pl.txt" />
+				</Component>
+				<Component Id="strings_pt.txt" Guid="*">
+					<File Id="strings_pt.txt" Name="strings_pt.txt" Source="$(var.JPEGView.TargetDir)strings_pt.txt" />
+				</Component>
+				<Component Id="strings_ptbr.txt" Guid="*">
+					<File Id="strings_ptbr.txt" Name="strings_pt-br.txt" Source="$(var.JPEGView.TargetDir)strings_pt-br.txt" />
+				</Component>
+				<Component Id="strings_ro.txt" Guid="*">
+					<File Id="strings_ro.txt" Name="strings_ro.txt" Source="$(var.JPEGView.TargetDir)strings_ro.txt" />
+				</Component>
+				<Component Id="strings_ru.txt" Guid="*">
+					<File Id="strings_ru.txt" Name="strings_ru.txt" Source="$(var.JPEGView.TargetDir)strings_ru.txt" />
+				</Component>
+				<Component Id="strings_sk.txt" Guid="*">
+					<File Id="strings_sk.txt" Name="strings_sk.txt" Source="$(var.JPEGView.TargetDir)strings_sk.txt" />
+				</Component>
+				<Component Id="strings_sl.txt" Guid="*">
+					<File Id="strings_sl.txt" Name="strings_sl.txt" Source="$(var.JPEGView.TargetDir)strings_sl.txt" />
+				</Component>
+				<Component Id="strings_sr.txt" Guid="*">
+					<File Id="strings_sr.txt" Name="strings_sr.txt" Source="$(var.JPEGView.TargetDir)strings_sr.txt" />
+				</Component>
+				<Component Id="strings_sv.txt" Guid="*">
+					<File Id="strings_sv.txt" Name="strings_sv.txt" Source="$(var.JPEGView.TargetDir)strings_sv.txt" />
+				</Component>
+				<Component Id="strings_ta.txt" Guid="*">
+					<File Id="strings_ta.txt" Name="strings_ta.txt" Source="$(var.JPEGView.TargetDir)strings_ta.txt" />
+				</Component>
+				<Component Id="strings_tr.txt" Guid="*">
+					<File Id="strings_tr.txt" Name="strings_tr.txt" Source="$(var.JPEGView.TargetDir)strings_tr.txt" />
+				</Component>
+				<Component Id="strings_uk.txt" Guid="*">
+					<File Id="strings_uk.txt" Name="strings_uk.txt" Source="$(var.JPEGView.TargetDir)strings_uk.txt" />
+				</Component>
+				<Component Id="strings_zh.txt" Guid="*">
+					<File Id="strings_zh.txt" Name="strings_zh.txt" Source="$(var.JPEGView.TargetDir)strings_zh.txt" />
+				</Component>
+				<Component Id="strings_zhtw.txt" Guid="*">
+					<File Id="strings_zhtw.txt" Name="strings_zh-tw.txt" Source="$(var.JPEGView.TargetDir)strings_zh-tw.txt" />
+				</Component>
+			</Directory>
+		</StandardDirectory>
+	</Fragment>
+</Wix>
