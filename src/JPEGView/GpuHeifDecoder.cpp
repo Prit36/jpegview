@@ -11,6 +11,7 @@
 #include <mferror.h>
 #include <d3d11_4.h>
 #include <dxgi1_4.h>
+#include <codecapi.h>
 
 #include <vector>
 #include <map>
@@ -281,7 +282,7 @@ static void ConvertNV12ToBGRA_FusedRot(
 // Media Foundation High-Performance GPU Decoder Manager
 class MfGpuContext {
 public:
-	static const int MAX_DECODERS = 4;
+	static const int MAX_DECODERS = 1;
 	ID3D11Device* m_pDevice = nullptr;
 	ID3D11DeviceContext* m_pContext = nullptr;
 	IMFDXGIDeviceManager* m_pDXGIManager = nullptr;
@@ -325,10 +326,12 @@ public:
 		MFStartup(MF_VERSION);
 
 		D3D_FEATURE_LEVEL fl;
+		D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_0 };
+		UINT createFlags = D3D11_CREATE_DEVICE_VIDEO_SUPPORT | D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS;
 		HRESULT hr = D3D11CreateDevice(
 			nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-			D3D11_CREATE_DEVICE_VIDEO_SUPPORT | D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-			nullptr, 0, D3D11_SDK_VERSION,
+			createFlags,
+			levels, 1, D3D11_SDK_VERSION,
 			&m_pDevice, &fl, &m_pContext
 		);
 		if (FAILED(hr) || !m_pDevice) {
@@ -365,7 +368,7 @@ public:
 		UINT32 count = 0;
 		hr = MFTEnumEx(
 			MFT_CATEGORY_VIDEO_DECODER,
-			MFT_ENUM_FLAG_HARDWARE | MFT_ENUM_FLAG_SYNCMFT | MFT_ENUM_FLAG_ASYNCMFT | MFT_ENUM_FLAG_SORTANDFILTER,
+			MFT_ENUM_FLAG_HARDWARE | MFT_ENUM_FLAG_SYNCMFT | MFT_ENUM_FLAG_SORTANDFILTER,
 			&inputType, NULL, &ppActivate, &count
 		);
 
@@ -387,6 +390,13 @@ public:
 			hr = m_pDecoderActivate->ActivateObject(IID_IMFTransform, (void**)&pDec);
 			if (SUCCEEDED(hr) && pDec) {
 				pDec->ProcessMessage(MFT_MESSAGE_SET_D3D_MANAGER, (ULONG_PTR)m_pDXGIManager);
+				IMFAttributes* pAttrs = nullptr;
+				if (SUCCEEDED(pDec->GetAttributes(&pAttrs)) && pAttrs) {
+					pAttrs->SetUINT32(MF_LOW_LATENCY, TRUE);
+					pAttrs->SetUINT32(CODECAPI_AVLowLatencyMode, TRUE);
+					pAttrs->SetUINT32(CODECAPI_AVDecVideoThumbnailGenerationMode, TRUE);
+					pAttrs->Release();
+				}
 				m_pDecoders[m_numDecoders++] = pDec;
 			}
 		}

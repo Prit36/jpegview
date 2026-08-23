@@ -200,6 +200,15 @@ static LONG WINAPI CrashHandler(EXCEPTION_POINTERS * pExceptionInfo)
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
+static bool IsHeifExtension(const CString& path) {
+	int dot = path.ReverseFind(_T('.'));
+	if (dot < 0) return false;
+	CString ext = path.Mid(dot + 1);
+	return (_tcsicmp(ext, _T("heic")) == 0 || _tcsicmp(ext, _T("heif")) == 0 ||
+			_tcsicmp(ext, _T("hif")) == 0 || _tcsicmp(ext, _T("heics")) == 0 ||
+			_tcsicmp(ext, _T("heifs")) == 0 || _tcsicmp(ext, _T("avci")) == 0);
+}
+
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int /*nCmdShow*/)
 {
 	double tProcessStart = Helpers::GetExactTickCount();
@@ -224,6 +233,16 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	ATLASSERT(SUCCEEDED(hRes));
 
 	CString sStartupFile = ParseCommandLineForStartupFile(lpstrCmdLine);
+	if (IsHeifExtension(sStartupFile)) {
+		HANDLE hWarm = ::CreateThread(NULL, 0, [](LPVOID) -> DWORD {
+			::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+			GpuHeifDecoder::IsHardwareSupported();
+			::CoUninitialize();
+			return 0;
+		}, NULL, 0, NULL);
+		if (hWarm) ::CloseHandle(hWarm);
+	}
+
 	int nAutostartSlideShow = (sStartupFile.GetLength() == 0) ? 0 : ParseCommandLineForAutostart(lpstrCmdLine);
 	bool bForceFullScreen = ParseCommandLineForFullScreen(lpstrCmdLine);
 	bool bAutoExit = ParseCommandLineForAutoExit(lpstrCmdLine);
