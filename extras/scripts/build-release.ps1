@@ -42,6 +42,7 @@ New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 # no admin rights, no system-wide changes.
 # ---------------------------------------------------------------------------
 $ToolsDir = Join-Path $env:LOCALAPPDATA "jpegview-tools"
+New-Item -ItemType Directory -Force -Path $ToolsDir | Out-Null
 $WixExe = Join-Path $ToolsDir "wix\wix.exe"
 if (-not (Test-Path $WixExe)) {
 	Write-Host "==> Installing WiX dotnet tool (user-local)..." -ForegroundColor Cyan
