@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "HEIFWrapper.h"
+#include "GpuHeifDecoder.h"
 #include "MaxImageDef.h"
 #include "ICCProfileTransform.h"
 
@@ -127,10 +128,7 @@ static void ConvertYCbCr420ToBGRA(const uint8_t* pY, int yStride,
 					int cy = row2 >> 1;
 					const uint8_t* cbTop = pCb + (size_t)cy * cbStride;
 					const uint8_t* crTop = pCr + (size_t)cy * crStride;
-					// Clamp to the chroma plane's own row count (NOT the luma bound):
-				// for an even-height image the last luma pair maps to the LAST
-				// chroma row; cy+1 would read one row past the plane end.
-				int cyNext = (cy + 1 < chromaRows) ? (cy + 1) : cy;
+					int cyNext = (cy + 1 < chromaRows) ? (cy + 1) : cy;
 					const uint8_t* cbBot = pCb + (size_t)cyNext * cbStride;
 					const uint8_t* crBot = pCr + (size_t)cyNext * crStride;
 					UpsampleChromaRowPairBilinear(cbTop, cbBot, crTop, crBot, cw,
@@ -174,6 +172,13 @@ void * HeifReader::ReadImage(int &width,
 
 	unsigned char* pPixelData = NULL;
 	exif_chunk = NULL;
+
+	// Primary accelerated path: GPU Hardware HEVC Decoding (Direct3D 11 + Media Foundation MFT)
+	if (GpuHeifDecoder::DecodeHeif(buffer, sizebytes, frame_index, width, height, nchannels, frame_count, (void*&)pPixelData, exif_chunk, has_alpha, outOfMemory)) {
+		if (pPixelData != NULL) {
+			return (void*)pPixelData;
+		}
+	}
 
 	heif::Context context;
 	context.read_from_memory_without_copy(buffer, sizebytes);
@@ -261,10 +266,11 @@ void * HeifReader::ReadImage(int &width,
 		}
 
 		int chromaRows = image.get_height(heif_channel_Cb);
+		ConvertYCbCr420ToBGRA(planeY, strideY, planeCb, strideCb, planeCr, strideCr, chromaRows, pPixelData, width, height, has_alpha, NULL, 0, coeffs, fullRange);
 
 		// An embedded ICC profile overrides the NCLX-derived color interpretation.
 		std::vector<uint8_t> iccp = image.get_raw_color_profile();
-		void* transform = ICCProfileTransform::CreateTransform(iccp.data(), iccp.size(), ICCProfileTransform::FORMAT_BGRA);
+		void* transform = ICCProfileTransform::CreateTransform(iccp.data(), (unsigned int)iccp.size(), ICCProfileTransform::FORMAT_BGRA);
 		if (transform != NULL) {
 			ICCProfileTransform::DoTransform(transform, pPixelData, pPixelData, width, height);
 			ICCProfileTransform::DeleteTransform(transform);

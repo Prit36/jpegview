@@ -19,6 +19,7 @@ set(JPEGVIEW_SOURCES
     FileList.cpp
     FileOpenDialog.cpp
     GUIControls.cpp
+    GpuHeifDecoder.cpp
     HashCompareLPCTSTR.cpp
     HEIFWrapper.cpp
     HelpDisplay.cpp
@@ -148,6 +149,9 @@ target_link_libraries(JPEGView PRIVATE
     oleaut32
     uuid
     delayimp
+    mfplat
+    mfuuid
+    strmiids
 )
 
 if(MSVC)
@@ -161,6 +165,7 @@ if(MSVC)
         "/DELAYLOAD:d3d11.dll"
         "/DELAYLOAD:d2d1.dll"
         "/DELAYLOAD:dwrite.dll"
+        "/DELAYLOAD:mfplat.dll"
     )
 endif()
 
