@@ -6,6 +6,7 @@
 #include "resource.h"
 #include "MainDlg.h"
 #include "SettingsProvider.h"
+#include "GpuHeifDecoder.h"
 
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
@@ -257,10 +258,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	int nRet = 0;
 	//Run application
 	if (!bFileLoadedByExistingInstance) {
-		// Initialize GDI+ in parallel with background image prefetch
 		Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 		ULONG_PTR gdiplusToken = 0;
 		Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+		GpuHeifDecoder::IsHardwareSupported();
 
 		{
 			CMainDlg dlgMain(bForceFullScreen);

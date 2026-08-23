@@ -939,52 +939,38 @@ void CImageLoadThread::ProcessReadAVIFRequest(CRequest* request) {
 }
 
 void CImageLoadThread::ProcessReadHEIFRequest(CRequest* request) {
-	HANDLE hFile;
-	hFile = ::CreateFile(request->FileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-	if (hFile == INVALID_HANDLE_VALUE) {
+	CMemoryMappedFile mmFile;
+	if (!mmFile.Open(std::wstring((LPCTSTR)request->FileName))) {
 		return;
 	}
-	char* pBuffer = NULL;
+
+	const void* pBuffer = mmFile.Data();
+	int nFileSize = (int)mmFile.Size();
+	if (nFileSize <= 0 || nFileSize > MAX_HEIF_FILE_SIZE) {
+		request->OutOfMemory = (nFileSize > MAX_HEIF_FILE_SIZE);
+		return;
+	}
+
 	UINT nPrevErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 	try {
-		unsigned int nNumBytesRead;
-		// Don't read too huge files
-		long long nFileSize = Helpers::GetFileSize(hFile);
-		if (nFileSize > MAX_HEIF_FILE_SIZE) {
-			request->OutOfMemory = true;
-			::CloseHandle(hFile);
-			return;
-		}
-
-		pBuffer = new(std::nothrow) char[nFileSize];
-		if (pBuffer == NULL) {
-			request->OutOfMemory = true;
-			::CloseHandle(hFile);
-			return;
-		}
-		if (::ReadFile(hFile, pBuffer, nFileSize, (LPDWORD)&nNumBytesRead, NULL) && nNumBytesRead == nFileSize) {
-			int nWidth, nHeight, nBPP, nFrameCount, nFrameTimeMs;
-			nFrameCount = 1;
-			nFrameTimeMs = 0;
-			void* pEXIFData;
-			bool bHasAlpha = false;
-			uint8* pPixelData = (uint8*)HeifReader::ReadImage(nWidth, nHeight, nBPP, nFrameCount, pEXIFData, request->OutOfMemory, bHasAlpha, request->FrameIndex, pBuffer, nFileSize);
-			if (pPixelData != NULL) {
-				COLORREF transColor = CSettingsProvider::This().ColorTransparency();
-				if (bHasAlpha && transColor != 0) {
-					#pragma omp parallel for
-					for (int i = 0; i < nWidth * nHeight; i++) {
-						uint32* p = (uint32*)pPixelData + i;
-						*p = Helpers::AlphaBlendBackground(*p, transColor);
-					}
+		int nWidth = 0, nHeight = 0, nBPP = 4, nFrameCount = 1, nFrameTimeMs = 0;
+		void* pEXIFData = NULL;
+		bool bHasAlpha = false;
+		uint8* pPixelData = (uint8*)HeifReader::ReadImage(nWidth, nHeight, nBPP, nFrameCount, pEXIFData, request->OutOfMemory, bHasAlpha, request->FrameIndex, pBuffer, nFileSize);
+		if (pPixelData != NULL) {
+			COLORREF transColor = CSettingsProvider::This().ColorTransparency();
+			if (bHasAlpha && transColor != 0) {
+				#pragma omp parallel for
+				for (int i = 0; i < nWidth * nHeight; i++) {
+					uint32* p = (uint32*)pPixelData + i;
+					*p = Helpers::AlphaBlendBackground(*p, transColor);
 				}
-
-				request->Image = new CJPEGImage(nWidth, nHeight, pPixelData, pEXIFData, nBPP, 0, IF_HEIF, false, request->FrameIndex, nFrameCount, nFrameTimeMs);
-				free(pEXIFData);
 			}
+
+			request->Image = new CJPEGImage(nWidth, nHeight, pPixelData, pEXIFData, nBPP, 0, IF_HEIF, false, request->FrameIndex, nFrameCount, nFrameTimeMs);
+			free(pEXIFData);
 		}
 	} catch(heif::Error he) {
-		// invalid image
 		delete request->Image;
 		request->Image = NULL;
 	} catch (...) {
@@ -993,8 +979,6 @@ void CImageLoadThread::ProcessReadHEIFRequest(CRequest* request) {
 		request->ExceptionError = true;
 	}
 	SetErrorMode(nPrevErrorMode);
-	::CloseHandle(hFile);
-	delete[] pBuffer;
 }
 
 void CImageLoadThread::ProcessReadPSDRequest(CRequest* request) {

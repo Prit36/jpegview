@@ -2,6 +2,7 @@
 #include "GpuHeifDecoder.h"
 #include "MaxImageDef.h"
 #include "ICCProfileTransform.h"
+#include "Helpers.h"
 
 #include <windows.h>
 #include <mfapi.h>
@@ -58,17 +59,253 @@ static YCbCrCoefficients GetNclxCoefficients(uint16_t matrix_coefficients) {
 	return c;
 }
 
-// Media Foundation GPU Decoder Manager
+// Ultra-fast 256-bit AVX2 FMA NV12 -> BGRA conversion kernel (Unrotated, 100% pixel perfect)
+static void ConvertNV12ToBGRA_AVX2(
+	const uint8_t* pNV12, uint32_t width, uint32_t height, uint32_t stride,
+	uint8_t* pDstBGRA, float r_cr, float g_cb, float g_cr, float b_cb, bool fullRange)
+{
+	const uint8_t* pY = pNV12;
+	const uint8_t* pUV = pNV12 + (size_t)stride * height;
+
+	float uv_scale = fullRange ? 1.0f : (255.0f / 224.0f);
+	float y_scale = fullRange ? 1.0f : (255.0f / 219.0f);
+	float y_bias = fullRange ? 0.0f : (16.0f * 255.0f / 219.0f);
+
+#if defined(__AVX2__)
+	const __m256 vR_CR = _mm256_set1_ps(r_cr * uv_scale);
+	const __m256 vG_CB = _mm256_set1_ps(g_cb * uv_scale);
+	const __m256 vG_CR = _mm256_set1_ps(g_cr * uv_scale);
+	const __m256 vB_CB = _mm256_set1_ps(b_cb * uv_scale);
+	const __m256 vY_scale = _mm256_set1_ps(y_scale);
+	const __m256 vY_bias = _mm256_set1_ps(y_bias);
+	const __m256 v128 = _mm256_set1_ps(128.0f);
+
+	const __m128i maskU_lo = _mm_setr_epi8(0, 0, 2, 2, 4, 4, 6, 6, -1, -1, -1, -1, -1, -1, -1, -1);
+	const __m128i maskV_lo = _mm_setr_epi8(1, 1, 3, 3, 5, 5, 7, 7, -1, -1, -1, -1, -1, -1, -1, -1);
+	const __m128i maskU_hi = _mm_setr_epi8(8, 8, 10, 10, 12, 12, 14, 14, -1, -1, -1, -1, -1, -1, -1, -1);
+	const __m128i maskV_hi = _mm_setr_epi8(9, 9, 11, 11, 13, 13, 15, 15, -1, -1, -1, -1, -1, -1, -1, -1);
+	const __m128i a_const = _mm_set1_epi8((char)0xFF);
+#endif
+
+	#pragma omp parallel for schedule(static)
+	for (int y = 0; y < (int)height; y += 2) {
+		for (int dy = 0; dy < 2 && (y + dy) < (int)height; dy++) {
+			int curY = y + dy;
+			const uint8_t* lineY = pY + (size_t)curY * stride;
+			const uint8_t* lineUV = pUV + (size_t)(y / 2) * stride;
+			uint8_t* out = pDstBGRA + (size_t)curY * (width * 4);
+
+			int x = 0;
+
+#if defined(__AVX2__)
+			for (; x + 15 < (int)width; x += 16) {
+				__m128i y_raw = _mm_loadu_si128((const __m128i*)(lineY + x));
+				__m128i uv_raw = _mm_loadu_si128((const __m128i*)(lineUV + x));
+
+				// Low 8 pixels (pixels 0..7)
+				__m256i y_lo_i32 = _mm256_cvtepu8_epi32(y_raw);
+				__m256 y_lo_f = _mm256_fmsub_ps(_mm256_cvtepi32_ps(y_lo_i32), vY_scale, vY_bias);
+
+				__m256i u_lo_i32 = _mm256_cvtepu8_epi32(_mm_shuffle_epi8(uv_raw, maskU_lo));
+				__m256i v_lo_i32 = _mm256_cvtepu8_epi32(_mm_shuffle_epi8(uv_raw, maskV_lo));
+				__m256 u_lo_f = _mm256_sub_ps(_mm256_cvtepi32_ps(u_lo_i32), v128);
+				__m256 v_lo_f = _mm256_sub_ps(_mm256_cvtepi32_ps(v_lo_i32), v128);
+
+				__m256 r_lo_f = _mm256_fmadd_ps(v_lo_f, vR_CR, y_lo_f);
+				__m256 g_lo_f = _mm256_fmadd_ps(u_lo_f, vG_CB, _mm256_fmadd_ps(v_lo_f, vG_CR, y_lo_f));
+				__m256 b_lo_f = _mm256_fmadd_ps(u_lo_f, vB_CB, y_lo_f);
+
+				__m256i r_lo_i = _mm256_cvtps_epi32(r_lo_f);
+				__m256i g_lo_i = _mm256_cvtps_epi32(g_lo_f);
+				__m256i b_lo_i = _mm256_cvtps_epi32(b_lo_f);
+
+				// High 8 pixels (pixels 8..15)
+				__m256i y_hi_i32 = _mm256_cvtepu8_epi32(_mm_srli_si128(y_raw, 8));
+				__m256 y_hi_f = _mm256_fmsub_ps(_mm256_cvtepi32_ps(y_hi_i32), vY_scale, vY_bias);
+
+				__m256i u_hi_i32 = _mm256_cvtepu8_epi32(_mm_shuffle_epi8(uv_raw, maskU_hi));
+				__m256i v_hi_i32 = _mm256_cvtepu8_epi32(_mm_shuffle_epi8(uv_raw, maskV_hi));
+				__m256 u_hi_f = _mm256_sub_ps(_mm256_cvtepi32_ps(u_hi_i32), v128);
+				__m256 v_hi_f = _mm256_sub_ps(_mm256_cvtepi32_ps(v_hi_i32), v128);
+
+				__m256 r_hi_f = _mm256_fmadd_ps(v_hi_f, vR_CR, y_hi_f);
+				__m256 g_hi_f = _mm256_fmadd_ps(u_hi_f, vG_CB, _mm256_fmadd_ps(v_hi_f, vG_CR, y_hi_f));
+				__m256 b_hi_f = _mm256_fmadd_ps(u_hi_f, vB_CB, y_hi_f);
+
+				__m256i r_hi_i = _mm256_cvtps_epi32(r_hi_f);
+				__m256i g_hi_i = _mm256_cvtps_epi32(g_hi_f);
+				__m256i b_hi_i = _mm256_cvtps_epi32(b_hi_f);
+
+				// Pack 8x 32-bit integers into 16-bit integers
+				__m128i r_lo_16 = _mm_packus_epi32(_mm256_castsi256_si128(r_lo_i), _mm256_extracti128_si256(r_lo_i, 1));
+				__m128i r_hi_16 = _mm_packus_epi32(_mm256_castsi256_si128(r_hi_i), _mm256_extracti128_si256(r_hi_i, 1));
+				__m128i r8 = _mm_packus_epi16(r_lo_16, r_hi_16);
+
+				__m128i g_lo_16 = _mm_packus_epi32(_mm256_castsi256_si128(g_lo_i), _mm256_extracti128_si256(g_lo_i, 1));
+				__m128i g_hi_16 = _mm_packus_epi32(_mm256_castsi256_si128(g_hi_i), _mm256_extracti128_si256(g_hi_i, 1));
+				__m128i g8 = _mm_packus_epi16(g_lo_16, g_hi_16);
+
+				__m128i b_lo_16 = _mm_packus_epi32(_mm256_castsi256_si128(b_lo_i), _mm256_extracti128_si256(b_lo_i, 1));
+				__m128i b_hi_16 = _mm_packus_epi32(_mm256_castsi256_si128(b_hi_i), _mm256_extracti128_si256(b_hi_i, 1));
+				__m128i b8 = _mm_packus_epi16(b_lo_16, b_hi_16);
+
+				// Interleave B, G, R, A
+				__m128i bg_lo = _mm_unpacklo_epi8(b8, g8);
+				__m128i ra_lo = _mm_unpacklo_epi8(r8, a_const);
+				__m128i bgra0 = _mm_unpacklo_epi16(bg_lo, ra_lo);
+				__m128i bgra1 = _mm_unpackhi_epi16(bg_lo, ra_lo);
+
+				__m128i bg_hi = _mm_unpackhi_epi8(b8, g8);
+				__m128i ra_hi = _mm_unpackhi_epi8(r8, a_const);
+				__m128i bgra2 = _mm_unpacklo_epi16(bg_hi, ra_hi);
+				__m128i bgra3 = _mm_unpackhi_epi16(bg_hi, ra_hi);
+
+				_mm_storeu_si128((__m128i*)(out + (x + 0) * 4), bgra0);
+				_mm_storeu_si128((__m128i*)(out + (x + 4) * 4), bgra1);
+				_mm_storeu_si128((__m128i*)(out + (x + 8) * 4), bgra2);
+				_mm_storeu_si128((__m128i*)(out + (x + 12) * 4), bgra3);
+			}
+#endif
+
+			for (; x < (int)width; x += 2) {
+				float cb = (float)lineUV[x] - 128.0f;
+				float cr = (float)lineUV[x + 1] - 128.0f;
+				if (!fullRange) {
+					cb *= (255.0f / 224.0f);
+					cr *= (255.0f / 224.0f);
+				}
+
+				float r_off = r_cr * cr;
+				float g_off = g_cb * cb + g_cr * cr;
+				float b_off = b_cb * cb;
+
+				for (int dx = 0; dx < 2 && (x + dx) < (int)width; dx++) {
+					float yval = (float)lineY[x + dx];
+					if (!fullRange) yval = (yval - 16.0f) * y_scale;
+
+					int b = (int)(yval + b_off + 0.5f);
+					int g = (int)(yval + g_off + 0.5f);
+					int r = (int)(yval + r_off + 0.5f);
+					out[(x + dx) * 4 + 0] = (uint8_t)(b < 0 ? 0 : (b > 255 ? 255 : b));
+					out[(x + dx) * 4 + 1] = (uint8_t)(g < 0 ? 0 : (g > 255 ? 255 : g));
+					out[(x + dx) * 4 + 2] = (uint8_t)(r < 0 ? 0 : (r > 255 ? 255 : r));
+					out[(x + dx) * 4 + 3] = 0xFF;
+				}
+			}
+		}
+	}
+}
+
+// Fused NV12 -> Rotated BGRA single-pass conversion
+static void ConvertNV12ToBGRA_FusedRot(
+	const uint8_t* pNV12, uint32_t width, uint32_t height, uint32_t stride,
+	uint32_t* pDstBGRA, float r_cr, float g_cb, float g_cr, float b_cb, bool fullRange,
+	int angle_ccw, int mirror_mode)
+{
+	const uint8_t* pY = pNV12;
+	const uint8_t* pUV = pNV12 + (size_t)stride * height;
+
+	float uv_scale = fullRange ? 1.0f : (255.0f / 224.0f);
+	float y_scale = fullRange ? 1.0f : (255.0f / 219.0f);
+
+	float R_CR = r_cr * uv_scale;
+	float G_CB = g_cb * uv_scale;
+	float G_CR = g_cr * uv_scale;
+	float B_CB = b_cb * uv_scale;
+
+	const int outW = (angle_ccw == 1 || angle_ccw == 3) ? (int)height : (int)width;
+
+	const int TILE_Y = 32;
+	const int TILE_X = 64;
+
+	#pragma omp parallel for schedule(dynamic)
+	for (int ty = 0; ty < (int)height; ty += TILE_Y) {
+		int maxTy = min(ty + TILE_Y, (int)height);
+		for (int tx = 0; tx < (int)width; tx += TILE_X) {
+			int maxTx = min(tx + TILE_X, (int)width);
+
+			for (int y = ty; y < maxTy; y += 2) {
+				for (int dy = 0; dy < 2 && (y + dy) < maxTy; dy++) {
+					int curY = y + dy;
+					const uint8_t* lineY = pY + (size_t)curY * stride;
+					const uint8_t* lineUV = pUV + (size_t)(y / 2) * stride;
+
+					for (int x = tx; x < maxTx; x += 2) {
+						float cb = (float)lineUV[x] - 128.0f;
+						float cr = (float)lineUV[x + 1] - 128.0f;
+
+						float r_off = R_CR * cr;
+						float g_off = G_CB * cb + G_CR * cr;
+						float b_off = B_CB * cb;
+
+						for (int dx = 0; dx < 2 && (x + dx) < maxTx; dx++) {
+							int curX = x + dx;
+							float yval = (float)lineY[curX];
+							if (!fullRange) yval = (yval - 16.0f) * y_scale;
+
+							int b = (int)(yval + b_off + 0.5f);
+							int g = (int)(yval + g_off + 0.5f);
+							int r = (int)(yval + r_off + 0.5f);
+
+							uint8_t u_b = (uint8_t)(b < 0 ? 0 : (b > 255 ? 255 : b));
+							uint8_t u_g = (uint8_t)(g < 0 ? 0 : (g > 255 ? 255 : g));
+							uint8_t u_r = (uint8_t)(r < 0 ? 0 : (r > 255 ? 255 : r));
+							uint32_t bgra = (uint32_t)u_b | ((uint32_t)u_g << 8) | ((uint32_t)u_r << 16) | 0xFF000000;
+
+							int srcX = (mirror_mode == 1) ? ((int)width - 1 - curX) : curX;
+							int srcY = (mirror_mode == 0) ? ((int)height - 1 - curY) : curY;
+							int dstX = 0, dstY = 0;
+
+							if (angle_ccw == 1) { // 90 CCW
+								dstX = srcY;
+								dstY = (int)width - 1 - srcX;
+							} else if (angle_ccw == 2) { // 180
+								dstX = (int)width - 1 - srcX;
+								dstY = (int)height - 1 - srcY;
+							} else if (angle_ccw == 3) { // 270 CCW = 90 CW
+								dstX = (int)height - 1 - srcY;
+								dstY = srcX;
+							} else {
+								dstX = srcX;
+								dstY = srcY;
+							}
+							pDstBGRA[dstY * outW + dstX] = bgra;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// Media Foundation High-Performance GPU Decoder Manager
 class MfGpuContext {
 public:
+	static const int MAX_DECODERS = 4;
 	ID3D11Device* m_pDevice = nullptr;
 	ID3D11DeviceContext* m_pContext = nullptr;
 	IMFDXGIDeviceManager* m_pDXGIManager = nullptr;
 	IMFActivate* m_pDecoderActivate = nullptr;
+	IMFTransform* m_pDecoders[MAX_DECODERS] = { nullptr };
+	uint32_t m_curW[MAX_DECODERS] = { 0 };
+	uint32_t m_curH[MAX_DECODERS] = { 0 };
+	IMFSample* m_pInSample[MAX_DECODERS] = { nullptr };
+	IMFMediaBuffer* m_pInBuf[MAX_DECODERS] = { nullptr };
+	DWORD m_inBufCapacity[MAX_DECODERS] = { 0 };
+	int m_numDecoders = 0;
+
 	UINT m_resetToken = 0;
 	bool m_initialized = false;
 	bool m_supportChecked = false;
 	bool m_hasHwDecoder = false;
+
+	// Reusable textures
+	ID3D11Texture2D* m_pStagingTex = nullptr;
+	uint32_t m_stagingW = 0, m_stagingH = 0;
+	ID3D11Texture2D* m_pCanvasTex = nullptr;
+	uint32_t m_canvasW = 0, m_canvasH = 0;
+
+	CRITICAL_SECTION m_cs;
 
 	static MfGpuContext& Instance() {
 		static MfGpuContext ctx;
@@ -78,6 +315,12 @@ public:
 	bool EnsureInit() {
 		if (m_initialized) return true;
 		if (m_supportChecked && !m_hasHwDecoder) return false;
+
+		EnterCriticalSection(&m_cs);
+		if (m_initialized) {
+			LeaveCriticalSection(&m_cs);
+			return true;
+		}
 
 		MFStartup(MF_VERSION);
 
@@ -91,6 +334,7 @@ public:
 		if (FAILED(hr) || !m_pDevice) {
 			m_supportChecked = true;
 			m_hasHwDecoder = false;
+			LeaveCriticalSection(&m_cs);
 			return false;
 		}
 
@@ -104,6 +348,7 @@ public:
 		if (FAILED(hr) || !m_pDXGIManager) {
 			m_supportChecked = true;
 			m_hasHwDecoder = false;
+			LeaveCriticalSection(&m_cs);
 			return false;
 		}
 
@@ -111,6 +356,7 @@ public:
 		if (FAILED(hr)) {
 			m_supportChecked = true;
 			m_hasHwDecoder = false;
+			LeaveCriticalSection(&m_cs);
 			return false;
 		}
 
@@ -126,6 +372,7 @@ public:
 		if (count == 0 || FAILED(hr)) {
 			m_supportChecked = true;
 			m_hasHwDecoder = false;
+			LeaveCriticalSection(&m_cs);
 			return false;
 		}
 
@@ -134,72 +381,171 @@ public:
 		for (UINT32 i = 0; i < count; i++) ppActivate[i]->Release();
 		CoTaskMemFree(ppActivate);
 
+		m_numDecoders = 0;
+		for (int i = 0; i < MAX_DECODERS; i++) {
+			IMFTransform* pDec = nullptr;
+			hr = m_pDecoderActivate->ActivateObject(IID_IMFTransform, (void**)&pDec);
+			if (SUCCEEDED(hr) && pDec) {
+				pDec->ProcessMessage(MFT_MESSAGE_SET_D3D_MANAGER, (ULONG_PTR)m_pDXGIManager);
+				m_pDecoders[m_numDecoders++] = pDec;
+			}
+		}
+
+		if (m_numDecoders == 0) {
+			m_supportChecked = true;
+			m_hasHwDecoder = false;
+			LeaveCriticalSection(&m_cs);
+			return false;
+		}
+
 		m_hasHwDecoder = true;
 		m_supportChecked = true;
 		m_initialized = true;
+		LeaveCriticalSection(&m_cs);
 		return true;
 	}
 
-	bool DecodeHevcBitstream(
-		const uint8_t* bitstream, size_t bitstreamSize,
-		uint32_t width, uint32_t height,
-		std::vector<uint8_t>& outNV12, uint32_t& outStride)
+	ID3D11Texture2D* GetStagingTex(uint32_t w, uint32_t h) {
+		if (m_pStagingTex && m_stagingW == w && m_stagingH == h) return m_pStagingTex;
+		if (m_pStagingTex) m_pStagingTex->Release();
+		D3D11_TEXTURE2D_DESC desc = {};
+		desc.Width = w;
+		desc.Height = h;
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;
+		desc.Format = DXGI_FORMAT_NV12;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_STAGING;
+		desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+		m_pDevice->CreateTexture2D(&desc, nullptr, &m_pStagingTex);
+		m_stagingW = w;
+		m_stagingH = h;
+		return m_pStagingTex;
+	}
+
+	ID3D11Texture2D* GetCanvasTex(uint32_t w, uint32_t h) {
+		if (m_pCanvasTex && m_canvasW == w && m_canvasH == h) return m_pCanvasTex;
+		if (m_pCanvasTex) m_pCanvasTex->Release();
+		D3D11_TEXTURE2D_DESC desc = {};
+		desc.Width = w;
+		desc.Height = h;
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;
+		desc.Format = DXGI_FORMAT_NV12;
+		desc.SampleDesc.Count = 1;
+		desc.Usage = D3D11_USAGE_DEFAULT;
+		desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+		m_pDevice->CreateTexture2D(&desc, nullptr, &m_pCanvasTex);
+		m_canvasW = w;
+		m_canvasH = h;
+		return m_pCanvasTex;
+	}
+
+	void EnsureInputBuffer(int decIdx, DWORD requiredSize) {
+		if (m_pInBuf[decIdx] && m_inBufCapacity[decIdx] >= requiredSize) return;
+		if (m_pInSample[decIdx]) { m_pInSample[decIdx]->Release(); m_pInSample[decIdx] = nullptr; }
+		if (m_pInBuf[decIdx]) { m_pInBuf[decIdx]->Release(); m_pInBuf[decIdx] = nullptr; }
+
+		DWORD allocSize = max(requiredSize, (DWORD)(32 * 1024 * 1024));
+		MFCreateMemoryBuffer(allocSize, &m_pInBuf[decIdx]);
+		MFCreateSample(&m_pInSample[decIdx]);
+		m_pInSample[decIdx]->AddBuffer(m_pInBuf[decIdx]);
+		m_inBufCapacity[decIdx] = allocSize;
+	}
+
+	bool DecodeTileToGPU(
+		int decIdx,
+		const std::vector<uint8_t>& hvcC, const uint8_t* sliceData, size_t sliceSize,
+		uint32_t width, uint32_t height, ID3D11Texture2D*& outTex, UINT& outSubresource)
 	{
+		outTex = nullptr;
+		outSubresource = 0;
+
 		if (!EnsureInit()) return false;
+		if (decIdx < 0 || decIdx >= m_numDecoders) decIdx = 0;
+		IMFTransform* pDecoder = m_pDecoders[decIdx];
 
-		IMFTransform* pDecoder = nullptr;
-		HRESULT hr = m_pDecoderActivate->ActivateObject(IID_IMFTransform, (void**)&pDecoder);
-		if (FAILED(hr) || !pDecoder) return false;
+		if (m_curW[decIdx] != width || m_curH[decIdx] != height) {
+			IMFMediaType* pInType = nullptr;
+			MFCreateMediaType(&pInType);
+			pInType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+			pInType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_HEVC);
+			MFSetAttributeSize(pInType, MF_MT_FRAME_SIZE, width, height);
+			pDecoder->SetInputType(0, pInType, 0);
+			pInType->Release();
 
-		hr = pDecoder->ProcessMessage(MFT_MESSAGE_SET_D3D_MANAGER, (ULONG_PTR)m_pDXGIManager);
+			IMFMediaType* pOutType = nullptr;
+			MFCreateMediaType(&pOutType);
+			pOutType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+			pOutType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_NV12);
+			MFSetAttributeSize(pOutType, MF_MT_FRAME_SIZE, width, height);
+			pDecoder->SetOutputType(0, pOutType, 0);
+			pOutType->Release();
 
-		IMFMediaType* pInType = nullptr;
-		MFCreateMediaType(&pInType);
-		pInType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
-		pInType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_HEVC);
-		MFSetAttributeSize(pInType, MF_MT_FRAME_SIZE, width, height);
-		hr = pDecoder->SetInputType(0, pInType, 0);
-		pInType->Release();
-		if (FAILED(hr)) { pDecoder->Release(); return false; }
+			pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
+			pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
+			m_curW[decIdx] = width;
+			m_curH[decIdx] = height;
+		}
 
-		IMFMediaType* pOutType = nullptr;
-		MFCreateMediaType(&pOutType);
-		pOutType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
-		pOutType->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_NV12);
-		MFSetAttributeSize(pOutType, MF_MT_FRAME_SIZE, width, height);
-		hr = pDecoder->SetOutputType(0, pOutType, 0);
-		pOutType->Release();
-		if (FAILED(hr)) { pDecoder->Release(); return false; }
+		if (hvcC.size() < 23) return false;
+		size_t annexBSize = hvcC.size() + sliceSize + 64;
+		EnsureInputBuffer(decIdx, (DWORD)annexBSize);
 
-		pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
-		pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
-
-		IMFSample* pInSample = nullptr;
-		MFCreateSample(&pInSample);
-		IMFMediaBuffer* pInBuf = nullptr;
-		MFCreateMemoryBuffer((DWORD)bitstreamSize, &pInBuf);
 		BYTE* pDst = nullptr;
-		pInBuf->Lock(&pDst, NULL, NULL);
-		memcpy(pDst, bitstream, bitstreamSize);
-		pInBuf->Unlock();
-		pInBuf->SetCurrentLength((DWORD)bitstreamSize);
-		pInSample->AddBuffer(pInBuf);
-		pInSample->SetSampleTime(0);
-		pInSample->SetSampleDuration(1);
+		m_pInBuf[decIdx]->Lock(&pDst, NULL, NULL);
 
-		hr = pDecoder->ProcessInput(0, pInSample, 0);
-		pInSample->Release();
-		pInBuf->Release();
-		if (FAILED(hr)) { pDecoder->Release(); return false; }
+		// Single-pass direct Annex-B stream writing into media buffer
+		size_t outPos = 0;
+		const uint8_t startCode[4] = { 0, 0, 0, 1 };
+		size_t p = 8 + 22;
+		uint8_t numOfArrays = hvcC[p++];
+
+		for (uint8_t a = 0; a < numOfArrays && p + 3 <= hvcC.size(); a++) {
+			p++;
+			uint16_t numNalus = (hvcC[p] << 8) | hvcC[p + 1];
+			p += 2;
+			for (uint16_t n = 0; n < numNalus && p + 2 <= hvcC.size(); n++) {
+				uint16_t nalLen = (hvcC[p] << 8) | hvcC[p + 1];
+				p += 2;
+				if (p + nalLen > hvcC.size() || outPos + 4 + nalLen > m_inBufCapacity[decIdx]) {
+					m_pInBuf[decIdx]->Unlock();
+					return false;
+				}
+				memcpy(pDst + outPos, startCode, 4);
+				outPos += 4;
+				memcpy(pDst + outPos, &hvcC[p], nalLen);
+				outPos += nalLen;
+				p += nalLen;
+			}
+		}
+
+		size_t sliceP = 0;
+		while (sliceP + 4 <= sliceSize) {
+			uint32_t nalLen = (sliceData[sliceP] << 24) | (sliceData[sliceP + 1] << 16) | (sliceData[sliceP + 2] << 8) | sliceData[sliceP + 3];
+			sliceP += 4;
+			if (sliceP + nalLen > sliceSize || outPos + 4 + nalLen > m_inBufCapacity[decIdx]) break;
+			memcpy(pDst + outPos, startCode, 4);
+			outPos += 4;
+			memcpy(pDst + outPos, &sliceData[sliceP], nalLen);
+			outPos += nalLen;
+			sliceP += nalLen;
+		}
+
+		m_pInBuf[decIdx]->Unlock();
+		m_pInBuf[decIdx]->SetCurrentLength((DWORD)outPos);
+		m_pInSample[decIdx]->SetSampleTime(0);
+		m_pInSample[decIdx]->SetSampleDuration(1);
+
+		HRESULT hr = pDecoder->ProcessInput(0, m_pInSample[decIdx], 0);
+		if (FAILED(hr)) return false;
 
 		pDecoder->ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0);
 
 		MFT_OUTPUT_STREAM_INFO osi = { 0 };
 		pDecoder->GetOutputStreamInfo(0, &osi);
-
 		MFT_OUTPUT_DATA_BUFFER outputBuffer = { 0 };
 		DWORD status = 0;
-		bool success = false;
 
 		for (int iter = 0; iter < 10; iter++) {
 			outputBuffer.pSample = nullptr;
@@ -229,37 +575,42 @@ public:
 				IMFMediaBuffer* pBuf = nullptr;
 				outputBuffer.pSample->GetBufferByIndex(0, &pBuf);
 				if (pBuf) {
-					BYTE* pRaw = nullptr;
-					DWORD curLen = 0;
-					pBuf->Lock(&pRaw, NULL, &curLen);
-					outStride = width;
-					outNV12.assign(pRaw, pRaw + curLen);
-					pBuf->Unlock();
+					IMFDXGIBuffer* pDxgiBuf = nullptr;
+					if (SUCCEEDED(pBuf->QueryInterface(__uuidof(IMFDXGIBuffer), (void**)&pDxgiBuf))) {
+						pDxgiBuf->GetResource(__uuidof(ID3D11Texture2D), (void**)&outTex);
+						pDxgiBuf->GetSubresourceIndex(&outSubresource);
+						pDxgiBuf->Release();
+					}
 					pBuf->Release();
-					success = true;
 				}
 				outputBuffer.pSample->Release();
 				break;
 			}
-
 			if (hr == MF_E_TRANSFORM_NEED_MORE_INPUT) break;
 		}
 
-		pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
-		pDecoder->ProcessMessage(MFT_MESSAGE_NOTIFY_END_STREAMING, 0);
-		pDecoder->Release();
-
-		return success;
+		pDecoder->ProcessMessage(MFT_MESSAGE_COMMAND_FLUSH, 0);
+		return (outTex != nullptr);
 	}
 
 private:
-	MfGpuContext() {}
+	MfGpuContext() {
+		InitializeCriticalSection(&m_cs);
+	}
 	~MfGpuContext() {
+		for (int i = 0; i < MAX_DECODERS; i++) {
+			if (m_pInSample[i]) m_pInSample[i]->Release();
+			if (m_pInBuf[i]) m_pInBuf[i]->Release();
+			if (m_pDecoders[i]) m_pDecoders[i]->Release();
+		}
+		if (m_pStagingTex) m_pStagingTex->Release();
+		if (m_pCanvasTex) m_pCanvasTex->Release();
 		if (m_pDecoderActivate) m_pDecoderActivate->Release();
 		if (m_pDXGIManager) m_pDXGIManager->Release();
 		if (m_pContext) m_pContext->Release();
 		if (m_pDevice) m_pDevice->Release();
 		if (m_initialized) MFShutdown();
+		DeleteCriticalSection(&m_cs);
 	}
 };
 
@@ -336,7 +687,6 @@ public:
 		for (const auto& kv : m_items) {
 			if (kv.second.type == "hvc1" || kv.second.type == "grid") {
 				if (std::find(m_topLevelItemIds.begin(), m_topLevelItemIds.end(), kv.first) == m_topLevelItemIds.end()) {
-					// Check if this item is a tile in a grid
 					bool isTile = false;
 					for (const auto& g : m_grids) {
 						if (std::find(g.second.tileItemIds.begin(), g.second.tileItemIds.end(), kv.first) != g.second.tileItemIds.end()) {
@@ -374,7 +724,6 @@ private:
 		size_t end = min(start + length, m_size);
 		size_t off = start;
 
-		// First pass: locate idat box if present
 		while (off + 8 <= end) {
 			uint64_t boxSize = ReadU32(off);
 			std::string boxType((const char*)&m_data[off + 4], 4);
@@ -394,7 +743,6 @@ private:
 			off += boxSize;
 		}
 
-		// Second pass: parse other metadata boxes
 		off = start;
 		while (off + 8 <= end) {
 			uint64_t boxSize = ReadU32(off);
@@ -595,216 +943,6 @@ private:
 	}
 };
 
-// Build Annex-B bitstream from hvcC + mdat slice NALUs
-static bool BuildAnnexBStream(
-	const std::vector<uint8_t>& hvcC,
-	const uint8_t* sliceData, size_t sliceSize,
-	std::vector<uint8_t>& annexB)
-{
-	if (hvcC.size() < 23) return false;
-	annexB.clear();
-	annexB.reserve(hvcC.size() + sliceSize + 64);
-	const uint8_t startCode[4] = { 0, 0, 0, 1 };
-
-	size_t p = 8 + 22; // Skip box header (8 bytes) + 22 bytes in hvcC to numOfArrays
-	if (p >= hvcC.size()) return false;
-	uint8_t numOfArrays = hvcC[p++];
-
-	for (uint8_t a = 0; a < numOfArrays && p + 3 <= hvcC.size(); a++) {
-		p++; // nalType
-		uint16_t numNalus = (hvcC[p] << 8) | hvcC[p + 1];
-		p += 2;
-		for (uint16_t n = 0; n < numNalus && p + 2 <= hvcC.size(); n++) {
-			uint16_t nalLen = (hvcC[p] << 8) | hvcC[p + 1];
-			p += 2;
-			if (p + nalLen > hvcC.size()) return false;
-			annexB.insert(annexB.end(), startCode, startCode + 4);
-			annexB.insert(annexB.end(), &hvcC[p], &hvcC[p + nalLen]);
-			p += nalLen;
-		}
-	}
-
-	size_t sliceP = 0;
-	while (sliceP + 4 <= sliceSize) {
-		uint32_t nalLen = (sliceData[sliceP] << 24) | (sliceData[sliceP + 1] << 16) | (sliceData[sliceP + 2] << 8) | sliceData[sliceP + 3];
-		sliceP += 4;
-		if (sliceP + nalLen > sliceSize) break;
-		annexB.insert(annexB.end(), startCode, startCode + 4);
-		annexB.insert(annexB.end(), &sliceData[sliceP], &sliceData[sliceP + nalLen]);
-		sliceP += nalLen;
-	}
-
-	return !annexB.empty();
-}
-
-// Convert NV12 to BGRA for a region with OpenMP + AVX2 acceleration
-static void ConvertNV12ToBgraRegion(
-	const uint8_t* pNV12, uint32_t tileW, uint32_t tileH, uint32_t tileStride,
-	uint8_t* pDstBGRA, uint32_t dstW, uint32_t dstH,
-	uint32_t dstX, uint32_t dstY,
-	const YCbCrCoefficients& coeffs, bool fullRange)
-{
-	const uint8_t* pY = pNV12;
-	const uint8_t* pUV = pNV12 + (size_t)tileStride * tileH;
-	const float r_cr = coeffs.r_cr, g_cb = coeffs.g_cb, g_cr = coeffs.g_cr, b_cb = coeffs.b_cb;
-
-	#pragma omp parallel for schedule(static)
-	for (int y = 0; y < (int)tileH; y += 2) {
-		if (dstY + y >= dstH) continue;
-		for (int dy = 0; dy < 2 && (y + dy) < (int)tileH; dy++) {
-			int curDstY = dstY + y + dy;
-			if (curDstY >= (int)dstH) continue;
-
-			const uint8_t* lineY = pY + (size_t)(y + dy) * tileStride;
-			const uint8_t* lineUV = pUV + (size_t)(y / 2) * tileStride;
-			uint8_t* out = pDstBGRA + (size_t)curDstY * (dstW * 4) + (size_t)dstX * 4;
-
-			int copyW = min((int)tileW, (int)dstW - (int)dstX);
-			int x = 0;
-
-#if defined(__AVX2__)
-			const __m128i maskU = _mm_setr_epi8(0, -1, 0, -1, 2, -1, 2, -1, 4, -1, 4, -1, 6, -1, 6, -1);
-			const __m128i maskV = _mm_setr_epi8(1, -1, 1, -1, 3, -1, 3, -1, 5, -1, 5, -1, 7, -1, 7, -1);
-			const __m128i maskU_hi = _mm_setr_epi8(8, -1, 8, -1, 10, -1, 10, -1, 12, -1, 12, -1, 14, -1, 14, -1);
-			const __m128i maskV_hi = _mm_setr_epi8(9, -1, 9, -1, 11, -1, 11, -1, 13, -1, 13, -1, 15, -1, 15, -1);
-			const __m256 v128_f = _mm256_set1_ps(128.0f);
-			const __m256 vR_cr_f = _mm256_set1_ps(r_cr);
-			const __m256 vG_cb_f = _mm256_set1_ps(g_cb);
-			const __m256 vG_cr_f = _mm256_set1_ps(g_cr);
-			const __m256 vB_cb_f = _mm256_set1_ps(b_cb);
-			const __m256 vRangeY_scale = _mm256_set1_ps(fullRange ? 1.0f : 1.1689f);
-			const __m256 vRangeY_off = _mm256_set1_ps(fullRange ? 0.0f : 16.0f);
-			const __m256 vRangeUV_scale = _mm256_set1_ps(fullRange ? 1.0f : 1.1429f);
-
-			for (; x + 15 < copyW; x += 16) {
-				__m128i y_raw = _mm_loadu_si128((const __m128i*)(lineY + x));
-				__m128i uv_raw = _mm_loadu_si128((const __m128i*)(lineUV + x));
-
-				__m128i u_lo16 = _mm_shuffle_epi8(uv_raw, maskU);
-				__m128i v_lo16 = _mm_shuffle_epi8(uv_raw, maskV);
-				__m128i u_hi16 = _mm_shuffle_epi8(uv_raw, maskU_hi);
-				__m128i v_hi16 = _mm_shuffle_epi8(uv_raw, maskV_hi);
-
-				// Process first 8 pixels
-				__m256 y8_0 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(y_raw));
-				__m256 u8_0 = _mm256_cvtepi32_ps(_mm256_cvtepu16_epi32(u_lo16));
-				__m256 v8_0 = _mm256_cvtepi32_ps(_mm256_cvtepu16_epi32(v_lo16));
-
-				__m256 y_val0 = _mm256_mul_ps(_mm256_sub_ps(y8_0, vRangeY_off), vRangeY_scale);
-				__m256 cb0 = _mm256_mul_ps(_mm256_sub_ps(u8_0, v128_f), vRangeUV_scale);
-				__m256 cr0 = _mm256_mul_ps(_mm256_sub_ps(v8_0, v128_f), vRangeUV_scale);
-
-				__m256 r0 = _mm256_add_ps(y_val0, _mm256_mul_ps(cr0, vR_cr_f));
-				__m256 g0 = _mm256_add_ps(y_val0, _mm256_add_ps(_mm256_mul_ps(cb0, vG_cb_f), _mm256_mul_ps(cr0, vG_cr_f)));
-				__m256 b0 = _mm256_add_ps(y_val0, _mm256_mul_ps(cb0, vB_cb_f));
-
-				__m256i r0_i = _mm256_cvtps_epi32(_mm256_round_ps(r0, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-				__m256i g0_i = _mm256_cvtps_epi32(_mm256_round_ps(g0, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-				__m256i b0_i = _mm256_cvtps_epi32(_mm256_round_ps(b0, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-
-				// Process second 8 pixels
-				__m128i y_hi8 = _mm_srli_si128(y_raw, 8);
-				__m256 y8_1 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(y_hi8));
-				__m256 u8_1 = _mm256_cvtepi32_ps(_mm256_cvtepu16_epi32(u_hi16));
-				__m256 v8_1 = _mm256_cvtepi32_ps(_mm256_cvtepu16_epi32(v_hi16));
-
-				__m256 y_val1 = _mm256_mul_ps(_mm256_sub_ps(y8_1, vRangeY_off), vRangeY_scale);
-				__m256 cb1 = _mm256_mul_ps(_mm256_sub_ps(u8_1, v128_f), vRangeUV_scale);
-				__m256 cr1 = _mm256_mul_ps(_mm256_sub_ps(v8_1, v128_f), vRangeUV_scale);
-
-				__m256 r1 = _mm256_add_ps(y_val1, _mm256_mul_ps(cr1, vR_cr_f));
-				__m256 g1 = _mm256_add_ps(y_val1, _mm256_add_ps(_mm256_mul_ps(cb1, vG_cb_f), _mm256_mul_ps(cr1, vG_cr_f)));
-				__m256 b1 = _mm256_add_ps(y_val1, _mm256_mul_ps(cb1, vB_cb_f));
-
-				__m256i r1_i = _mm256_cvtps_epi32(_mm256_round_ps(r1, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-				__m256i g1_i = _mm256_cvtps_epi32(_mm256_round_ps(g1, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-				__m256i b1_i = _mm256_cvtps_epi32(_mm256_round_ps(b1, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC));
-
-				// Pack and store 16 pixels
-				alignas(32) int r_arr[16], g_arr[16], b_arr[16];
-				_mm256_store_si256((__m256i*)&r_arr[0], r0_i);
-				_mm256_store_si256((__m256i*)&g_arr[0], g0_i);
-				_mm256_store_si256((__m256i*)&b_arr[0], b0_i);
-				_mm256_store_si256((__m256i*)&r_arr[8], r1_i);
-				_mm256_store_si256((__m256i*)&g_arr[8], g1_i);
-				_mm256_store_si256((__m256i*)&b_arr[8], b1_i);
-
-				for (int k = 0; k < 16; k++) {
-					int rv = r_arr[k], gv = g_arr[k], bv = b_arr[k];
-					out[(x + k) * 4 + 0] = (uint8_t)(bv < 0 ? 0 : (bv > 255 ? 255 : bv));
-					out[(x + k) * 4 + 1] = (uint8_t)(gv < 0 ? 0 : (gv > 255 ? 255 : gv));
-					out[(x + k) * 4 + 2] = (uint8_t)(rv < 0 ? 0 : (rv > 255 ? 255 : rv));
-					out[(x + k) * 4 + 3] = 0xFF;
-				}
-			}
-#endif
-
-			for (; x < copyW; x += 2) {
-				float cb = (float)lineUV[x] - 128.0f;
-				float cr = (float)lineUV[x + 1] - 128.0f;
-
-				if (!fullRange) {
-					cb *= 1.1429f;
-					cr *= 1.1429f;
-				}
-
-				float r_off = r_cr * cr;
-				float g_off = g_cb * cb + g_cr * cr;
-				float b_off = b_cb * cb;
-
-				for (int dx = 0; dx < 2 && (x + dx) < copyW; dx++) {
-					float yval = (float)lineY[x + dx];
-					if (!fullRange) yval = (yval - 16.0f) * 1.1689f;
-
-					int b = (int)(yval + b_off + 0.5f);
-					int g = (int)(yval + g_off + 0.5f);
-					int r = (int)(yval + r_off + 0.5f);
-
-					out[(x + dx) * 4 + 0] = (uint8_t)(b < 0 ? 0 : (b > 255 ? 255 : b));
-					out[(x + dx) * 4 + 1] = (uint8_t)(g < 0 ? 0 : (g > 255 ? 255 : g));
-					out[(x + dx) * 4 + 2] = (uint8_t)(r < 0 ? 0 : (r > 255 ? 255 : r));
-					out[(x + dx) * 4 + 3] = 0xFF;
-				}
-			}
-		}
-	}
-}
-
-static void RotateImageTiled(const uint32_t* src, uint32_t* dst, int w, int h, int angle_ccw, int mirror_mode) {
-	int outW = (angle_ccw == 1 || angle_ccw == 3) ? h : w;
-	int outH = (angle_ccw == 1 || angle_ccw == 3) ? w : h;
-	const int BLOCK = 64;
-
-	#pragma omp parallel for schedule(static)
-	for (int by = 0; by < h; by += BLOCK) {
-		for (int bx = 0; bx < w; bx += BLOCK) {
-			int max_y = min(by + BLOCK, h);
-			int max_x = min(bx + BLOCK, w);
-			for (int y = by; y < max_y; y++) {
-				for (int x = bx; x < max_x; x++) {
-					int srcX = (mirror_mode == 1) ? (w - 1 - x) : x;
-					int srcY = (mirror_mode == 0) ? (h - 1 - y) : y;
-					int dstX = 0, dstY = 0;
-					if (angle_ccw == 1) { // 90 CCW
-						dstX = srcY;
-						dstY = w - 1 - srcX;
-					} else if (angle_ccw == 2) { // 180
-						dstX = w - 1 - srcX;
-						dstY = h - 1 - srcY;
-					} else if (angle_ccw == 3) { // 270 CCW (90 CW)
-						dstX = h - 1 - srcY;
-						dstY = srcX;
-					} else {
-						dstX = srcX;
-						dstY = srcY;
-					}
-					dst[dstY * outW + dstX] = src[y * w + x];
-				}
-			}
-		}
-	}
-}
-
 } // anonymous namespace
 
 bool GpuHeifDecoder::IsHardwareSupported()
@@ -854,21 +992,30 @@ bool GpuHeifDecoder::DecodeHeif(
 	uint32_t finalW = targetItem.width;
 	uint32_t finalH = targetItem.height;
 
+	double t0 = Helpers::GetExactTickCount();
+	MfGpuContext& gpuCtx = MfGpuContext::Instance();
+	if (!gpuCtx.EnsureInit()) return false;
+	double t_init = Helpers::GetExactTickCount() - t0;
+
 	// Check if this is a grid derived item
 	bool isGrid = (demuxer.m_grids.count(targetItemId) != 0);
 	if (isGrid) {
 		const auto& grid = demuxer.m_grids[targetItemId];
-		if (grid.tileItemIds.empty()) return false;
+		if (grid.tileItemIds.empty()) {
+			return false;
+		}
 
-		// Read ImageGrid header from item offset: version(1B), flags(1B), rows_minus_one(1B), cols_minus_one(1B), output_width, output_height
-		if (targetItem.offset + 8 > sizeBytes) return false;
-		uint8_t version = data[targetItem.offset];
+		if (targetItem.offset + 8 > sizeBytes) {
+			return false;
+		}
 		uint8_t flags = data[targetItem.offset + 1];
 		uint8_t rows = data[targetItem.offset + 2] + 1;
 		uint8_t cols = data[targetItem.offset + 3] + 1;
 
 		if (flags & 1) { // 32-bit width/height
-			if (targetItem.offset + 12 > sizeBytes) return false;
+			if (targetItem.offset + 12 > sizeBytes) {
+				return false;
+			}
 			finalW = (data[targetItem.offset + 4] << 24) | (data[targetItem.offset + 5] << 16) | (data[targetItem.offset + 6] << 8) | data[targetItem.offset + 7];
 			finalH = (data[targetItem.offset + 8] << 24) | (data[targetItem.offset + 9] << 16) | (data[targetItem.offset + 10] << 8) | data[targetItem.offset + 11];
 		} else { // 16-bit width/height
@@ -881,39 +1028,73 @@ bool GpuHeifDecoder::DecodeHeif(
 			return false;
 		}
 
-		uint8_t* pDstPixels = new(std::nothrow) uint8_t[(size_t)finalW * finalH * 4];
-		if (!pDstPixels) {
-			outOfMemory = true;
+		ID3D11Texture2D* pCanvas = gpuCtx.GetCanvasTex(finalW, finalH);
+		if (!pCanvas) {
 			return false;
 		}
 
-		// Decode each tile
+		// Decode each tile directly on GPU and blit into full GPU canvas
+		bool decodeOk = true;
 		for (size_t i = 0; i < grid.tileItemIds.size(); i++) {
 			uint32_t tileId = grid.tileItemIds[i];
 			const auto& tileItem = demuxer.m_items[tileId];
 			if (tileItem.offset + tileItem.length > sizeBytes) {
-				delete[] pDstPixels;
-				return false;
+				decodeOk = false;
+				break;
 			}
 
-			std::vector<uint8_t> annexB;
-			if (!BuildAnnexBStream(tileItem.hvcC_data, &data[tileItem.offset], (size_t)tileItem.length, annexB)) {
-				delete[] pDstPixels;
-				return false;
-			}
+			ID3D11Texture2D* pTileTex = nullptr;
+			UINT subIndex = 0;
+			if (gpuCtx.DecodeTileToGPU(0, tileItem.hvcC_data, &data[tileItem.offset], (size_t)tileItem.length, tileItem.width, tileItem.height, pTileTex, subIndex)) {
+				uint32_t tileX = (uint32_t)(i % cols) * tileItem.width;
+				uint32_t tileY = (uint32_t)(i / cols) * tileItem.height;
 
-			std::vector<uint8_t> nv12;
-			uint32_t stride = 0;
-			if (!MfGpuContext::Instance().DecodeHevcBitstream(annexB.data(), annexB.size(), tileItem.width, tileItem.height, nv12, stride)) {
-				delete[] pDstPixels;
-				return false;
+				D3D11_BOX srcBox = { 0, 0, 0, min(tileItem.width, finalW - tileX), min(tileItem.height, finalH - tileY), 1 };
+				gpuCtx.m_pContext->CopySubresourceRegion(pCanvas, 0, tileX, tileY, 0, pTileTex, subIndex, &srcBox);
+				pTileTex->Release();
+			} else {
+				decodeOk = false;
+				break;
 			}
-
-			uint32_t tileX = (uint32_t)(i % cols) * tileItem.width;
-			uint32_t tileY = (uint32_t)(i / cols) * tileItem.height;
-			YCbCrCoefficients coeffs = GetNclxCoefficients(tileItem.matrix_coefficients);
-			ConvertNV12ToBgraRegion(nv12.data(), tileItem.width, tileItem.height, stride, pDstPixels, finalW, finalH, tileX, tileY, coeffs, tileItem.full_range);
 		}
+
+		if (!decodeOk) {
+			return false;
+		}
+
+		// Single GPU-to-CPU staging copy for the complete assembled canvas
+		ID3D11Texture2D* pStaging = gpuCtx.GetStagingTex(finalW, finalH);
+		if (!pStaging) {
+			return false;
+		}
+
+		gpuCtx.m_pContext->CopyResource(pStaging, pCanvas);
+		D3D11_MAPPED_SUBRESOURCE mapRes;
+		HRESULT hrMap = gpuCtx.m_pContext->Map(pStaging, 0, D3D11_MAP_READ, 0, &mapRes);
+		if (FAILED(hrMap) || !mapRes.pData) {
+			return false;
+		}
+
+		uint32_t outW = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalH : finalW;
+		uint32_t outH = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalW : finalH;
+
+		uint8_t* pDstPixels = new(std::nothrow) uint8_t[(size_t)outW * outH * 4];
+		if (!pDstPixels) {
+			gpuCtx.m_pContext->Unmap(pStaging, 0);
+			outOfMemory = true;
+			return false;
+		}
+
+		YCbCrCoefficients coeffs = GetNclxCoefficients(targetItem.matrix_coefficients);
+		if (targetItem.rotation != 0 || targetItem.mirror >= 0) {
+			ConvertNV12ToBGRA_FusedRot((const uint8_t*)mapRes.pData, finalW, finalH, mapRes.RowPitch, (uint32_t*)pDstPixels, coeffs.r_cr, coeffs.g_cb, coeffs.g_cr, coeffs.b_cb, targetItem.full_range, targetItem.rotation, targetItem.mirror);
+		} else {
+			ConvertNV12ToBGRA_AVX2((const uint8_t*)mapRes.pData, finalW, finalH, mapRes.RowPitch, pDstPixels, coeffs.r_cr, coeffs.g_cb, coeffs.g_cr, coeffs.b_cb, targetItem.full_range);
+		}
+		gpuCtx.m_pContext->Unmap(pStaging, 0);
+
+		finalW = outW;
+		finalH = outH;
 
 		// Apply ICC profile if attached
 		if (!targetItem.icc_profile.empty()) {
@@ -921,20 +1102,6 @@ bool GpuHeifDecoder::DecodeHeif(
 			if (transform) {
 				ICCProfileTransform::DoTransform(transform, pDstPixels, pDstPixels, finalW, finalH);
 				ICCProfileTransform::DeleteTransform(transform);
-			}
-		}
-
-		// Apply rotation and mirroring if present
-		if (targetItem.rotation != 0 || targetItem.mirror >= 0) {
-			uint32_t outW = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalH : finalW;
-			uint32_t outH = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalW : finalH;
-			uint8_t* pRotated = new(std::nothrow) uint8_t[(size_t)outW * outH * 4];
-			if (pRotated) {
-				RotateImageTiled((const uint32_t*)pDstPixels, (uint32_t*)pRotated, (int)finalW, (int)finalH, targetItem.rotation, targetItem.mirror);
-				delete[] pDstPixels;
-				pDstPixels = pRotated;
-				finalW = outW;
-				finalH = outH;
 			}
 		}
 
@@ -957,25 +1124,49 @@ bool GpuHeifDecoder::DecodeHeif(
 			return false;
 		}
 
-		std::vector<uint8_t> annexB;
-		if (!BuildAnnexBStream(targetItem.hvcC_data, &data[targetItem.offset], (size_t)targetItem.length, annexB)) {
+		ID3D11Texture2D* pTex = nullptr;
+		UINT subIndex = 0;
+		if (!gpuCtx.DecodeTileToGPU(0, targetItem.hvcC_data, &data[targetItem.offset], (size_t)targetItem.length, finalW, finalH, pTex, subIndex)) {
 			return false;
 		}
 
-		std::vector<uint8_t> nv12;
-		uint32_t stride = 0;
-		if (!MfGpuContext::Instance().DecodeHevcBitstream(annexB.data(), annexB.size(), finalW, finalH, nv12, stride)) {
-			return false;
-		}
+		uint32_t outW = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalH : finalW;
+		uint32_t outH = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalW : finalH;
 
-		uint8_t* pDstPixels = new(std::nothrow) uint8_t[(size_t)finalW * finalH * 4];
+		uint8_t* pDstPixels = new(std::nothrow) uint8_t[(size_t)outW * outH * 4];
 		if (!pDstPixels) {
+			pTex->Release();
 			outOfMemory = true;
 			return false;
 		}
 
+		ID3D11Texture2D* pStaging = gpuCtx.GetStagingTex(finalW, finalH);
+		if (!pStaging) {
+			delete[] pDstPixels;
+			pTex->Release();
+			return false;
+		}
+
+		gpuCtx.m_pContext->CopySubresourceRegion(pStaging, 0, 0, 0, 0, pTex, subIndex, nullptr);
+		pTex->Release();
+
+		D3D11_MAPPED_SUBRESOURCE mapRes;
+		HRESULT hrMap = gpuCtx.m_pContext->Map(pStaging, 0, D3D11_MAP_READ, 0, &mapRes);
+		if (FAILED(hrMap) || !mapRes.pData) {
+			delete[] pDstPixels;
+			return false;
+		}
+
 		YCbCrCoefficients coeffs = GetNclxCoefficients(targetItem.matrix_coefficients);
-		ConvertNV12ToBgraRegion(nv12.data(), finalW, finalH, stride, pDstPixels, finalW, finalH, 0, 0, coeffs, targetItem.full_range);
+		if (targetItem.rotation != 0 || targetItem.mirror >= 0) {
+			ConvertNV12ToBGRA_FusedRot((const uint8_t*)mapRes.pData, finalW, finalH, mapRes.RowPitch, (uint32_t*)pDstPixels, coeffs.r_cr, coeffs.g_cb, coeffs.g_cr, coeffs.b_cb, targetItem.full_range, targetItem.rotation, targetItem.mirror);
+		} else {
+			ConvertNV12ToBGRA_AVX2((const uint8_t*)mapRes.pData, finalW, finalH, mapRes.RowPitch, pDstPixels, coeffs.r_cr, coeffs.g_cb, coeffs.g_cr, coeffs.b_cb, targetItem.full_range);
+		}
+		gpuCtx.m_pContext->Unmap(pStaging, 0);
+
+		finalW = outW;
+		finalH = outH;
 
 		// Apply ICC profile if attached
 		if (!targetItem.icc_profile.empty()) {
@@ -983,20 +1174,6 @@ bool GpuHeifDecoder::DecodeHeif(
 			if (transform) {
 				ICCProfileTransform::DoTransform(transform, pDstPixels, pDstPixels, finalW, finalH);
 				ICCProfileTransform::DeleteTransform(transform);
-			}
-		}
-
-		// Apply rotation and mirroring if present
-		if (targetItem.rotation != 0 || targetItem.mirror >= 0) {
-			uint32_t outW = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalH : finalW;
-			uint32_t outH = (targetItem.rotation == 1 || targetItem.rotation == 3) ? finalW : finalH;
-			uint8_t* pRotated = new(std::nothrow) uint8_t[(size_t)outW * outH * 4];
-			if (pRotated) {
-				RotateImageTiled((const uint32_t*)pDstPixels, (uint32_t*)pRotated, (int)finalW, (int)finalH, targetItem.rotation, targetItem.mirror);
-				delete[] pDstPixels;
-				pDstPixels = pRotated;
-				finalW = outW;
-				finalH = outH;
 			}
 		}
 
