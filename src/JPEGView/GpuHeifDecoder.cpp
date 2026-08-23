@@ -327,7 +327,7 @@ public:
 
 		D3D_FEATURE_LEVEL fl;
 		D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_0 };
-		UINT createFlags = D3D11_CREATE_DEVICE_VIDEO_SUPPORT | D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS;
+		UINT createFlags = D3D11_CREATE_DEVICE_VIDEO_SUPPORT;
 		HRESULT hr = D3D11CreateDevice(
 			nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
 			createFlags,
@@ -982,8 +982,6 @@ bool GpuHeifDecoder::DecodeHeif(
 	frameCount = 1;
 
 	if (!buffer || sizeBytes < 32) return false;
-	if (!IsHardwareSupported()) return false;
-
 	const uint8_t* data = (const uint8_t*)buffer;
 	IsoHeifDemuxer demuxer;
 	if (!demuxer.Parse(data, sizeBytes)) {
