@@ -1,23 +1,63 @@
-[![Documentation](https://img.shields.io/badge/Docs-Outdated-yellowgreen)](https://htmlpreview.github.io/?https://github.com/sylikc/jpegview/blob/master/src/JPEGView/Config/readme.html) [![Localization Progress](https://img.shields.io/badge/Localized-91%25-blueviolet)](#Localization) [![Build x64](https://github.com/sylikc/jpegview/actions/workflows/build-release-x64.yml/badge.svg?branch=master)](https://github.com/sylikc/jpegview/actions/workflows/build-release-x64.yml) [![OS Support](https://img.shields.io/badge/Windows-XP%20%7C%207%20%7C%208%20%7C%2010%20%7C%2011-blue)](#) [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue)](https://github.com/sylikc/jpegview/blob/master/LICENSE.txt)
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue)](https://github.com/Prit36/jpegview/blob/master/LICENSE.txt)
+[![OS Support](https://img.shields.io/badge/Windows-10%20%7C%2011%20x64-blue)](#system-requirements)
 
-[![Latest GitHub Release](https://img.shields.io/github/v/release/sylikc/jpegview?label=GitHub&style=social)](https://github.com/sylikc/jpegview/releases)[![Downloads](https://badgen.net/github/assets-dl/sylikc/jpegview?cache=3600&color=grey&label=)](#) [![WinGet](https://repology.org/badge/version-for-repo/winget/jpegview.svg?allow_ignored=1&header=WinGet)](https://winstall.app/apps/sylikc.JPEGView) [![PortableApps](https://img.shields.io/badge/PortableApps-Current-green)](https://portableapps.com/apps/graphics_pictures/jpegview_portable) [![Scoop](https://repology.org/badge/version-for-repo/scoop/jpegview-fork.svg?header=Scoop)](https://scoop.sh/#/apps?q=%22jpegview-fork%22) [![Chocolatey](https://img.shields.io/chocolatey/v/jpegview)](https://community.chocolatey.org/packages/jpegview) [![Npackd](https://repology.org/badge/version-for-repo/npackd_stable/jpegview.svg?allow_ignored=1&header=Npackd)](https://www.npackd.org/p/jpegview)
+# JPEGView (Prit Prajapati fork) - Ultra-Fast Image Viewer and Editor
 
-# JPEGView - Image Viewer and Editor
-
-This is the official re-release of JPEGView.
-
-## Description
+A performance-focused, modernized fork of [sylikc/jpegview](https://github.com/sylikc/jpegview), which itself continues the legacy of the excellent [JPEGView by David Kleiner](https://sourceforge.net/projects/jpegview/).
 
 JPEGView is a lean, fast and highly configurable image viewer/editor with a minimal GUI.
 
-### Formats Supported
+## The Journey - What This Fork Changed
+
+This fork started from sylikc's `master` (post v1.3.46) and went through a full
+modernization and ground-up performance overhaul (43 commits, August 2026).
+Nothing was version-tracked along the way; **v2.1.0** is the first tagged milestone.
+See [CHANGELOG.txt](CHANGELOG.txt) for the complete detailed history. Highlights:
+
+### Modernization
+* Visual Studio 2026 toolchain, C++23, CMake 4.x-compatible build (plus vcpkg manifest)
+* Legacy support removed: 32-bit/x86 builds and Windows XP/Vista/7/8 code paths are gone
+  - now targets **64-bit Windows 11 / 10 / Server 2025 only**
+* Direct2D 1.3 rendering path with HDR support
+* Modern file associations via the Windows 10/11 Default Apps experience
+* All third-party codecs bumped to current releases (libjpeg-turbo 3.2.0, libwebp 1.6.0,
+  LibRaw 0.22.2, libheif 1.23.1, libjxl 0.12.0, libavif 1.4.2, ...)
+
+### Performance (the big one)
+* **Parallel multi-threaded baseline JPEG decoding** - speculative entropy walk +
+  per-band rendering on the proven libjpeg-turbo SIMD path, verified pixel-exact on a
+  521-photo corpus
+* **GPU hardware-accelerated HEIF/HEIC decoding** via Media Foundation + Direct3D 11,
+  with a native zero-copy ISOBMFF parser (grid tiles, irot/imir transforms):
+  >7x faster on 45MP HEICs (~2100ms -> ~296ms)
+* **Time-to-first-paint on 45MP photos cut from ~171ms to ~80-90ms**: memory-mapped
+  zero-copy JPEG input, delay-loaded DLLs, lazy directory scan, pipelined band decode
+  with hidden resample, deferred EXIF rotation past first paint
+* Parallel SIMD resampling across all cores (legacy 4-core cap removed), AVX2 kernels
+  throughout, fused OpenMP color conversion for HEIF
+* Whole-program optimization (/GL /LTCG /Ox /Ob3 /fp:fast /Qpar) with AVX2 codegen
+
+### Bug fixes
+* Shutdown race condition, GDI+ shutdown crash, PNG use-after-free
+* JPEG marker-segment stride bug in the parallel walker (0xFF prefix handling),
+  DRI restart-interval extraction
+* Magic-byte-first image format detection (no more misdetection by extension)
+* Startup window flash fixed
+* HEIF: idat offset resolution, ImageGrid header parsing, out-of-bounds chroma clamp,
+  missing CPU-fallback color conversion, irot/imir application
+
+### Tooling
+* New systematic benchmark suite in [`benchmarks/`](benchmarks/) with honest telemetry
+  (via the app's own `/benchmark` self-exit mechanism), multi-run statistics, dataset
+  download tooling, and an IFEO page-heap guard so measurements can't be silently skewed
+
+## Formats Supported
 
 JPEGView has built-in support the following formats:
 
 * Popular: JPEG, GIF
 * Lossless: BMP, PNG, TIFF, PSD
 * Web: WEBP, JXL, HEIF/HEIC, AVIF
-* Legacy: TGA, WDP, HDP, JXR
 * Camera RAW formats:
   * Adobe (DNG), Canon (CRW, CR2, CR3), Nikon (NEF, NRW), Sony (ARW, SR2)
   * Olympus (ORF), Panasonic (RW2), Fujifilm (RAF)
@@ -39,82 +79,32 @@ Basic on-the-fly image processing is provided - allowing adjusting typical param
 
 ### Other Features
 
-* Small and fast, uses AVX2/SSE2 and up to 4 CPU cores
+* Small and fast, uses AVX2/SSE2 and all available CPU cores
 * High quality resampling filter, preserving sharpness of images
 * Basic image processing tools can be applied realtime during viewing
 * Movie/Slideshow mode - to play folder of JPEGs as movie
 
-# Installation
+# Building
 
-## Official Releases
-
-Official releases will be made to [sylikc's GitHub Releases](https://github.com/sylikc/jpegview/releases) page.  Each release includes:
-
-* **Archive Zip/7z** - Portable
-* **Windows Installer MSI** - For Installs
-* **Source code** - Build it yourself
-
-## Portable
-
-JPEGView _does not require installation_ to run.  Just **unzip, and run** either the 64-bit version, or the 32-bit version depending on which platform you're on.  It can save the settings to the extracted folder and run entirely portable.
-
-## MSI Installer
-
-For those who prefer to have JPEGView installed for All Users, a 32-bit/64-bit installer is available to download starting with v1.0.40.
-
-(Unfortunately, I don't own a code signing certificate yet, so the MSI release is not signed.  Please verify checksums!)
-
-### WinGet
-
-If you're on Windows 11, or Windows 10 (build 1709 or later), you can also download it directly from the official [Microsoft WinGet tool](https://docs.microsoft.com/en-us/windows/package-manager/winget/) repository.  This downloads the latest MSI installer directly from GitHub for installation.
-
-Example Usage:
-
-C:\> `winget search jpegview`
-```
-Name     Id              Version  Source
------------------------------------------
-JPEGView sylikc.JPEGView 1.1.43  winget
-```
-
-C:\> `winget install jpegview`
-```
-Found JPEGView [sylikc.JPEGView] Version 1.1.43
-This application is licensed to you by its owner.
-Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
-Downloading https://github.com/sylikc/jpegview/releases/download/v1.1.43/JPEGView64_en-us_1.1.43.msi
-  ██████████████████████████████  4.23 MB / 4.23 MB
-Successfully verified installer hash
-Starting package install...
-Successfully installed
-```
-
-## PortableApps
-
-Another option is to use the official [JPEGView on PortableApps](https://portableapps.com/apps/graphics_pictures/jpegview_portable) package.  The PortableApps launcher preserves user settings in a separate directory from the extracted application directory.  This release is signed.
-
-## Scoop
-
-[Scoop](https://scoop.sh/) is a Windows command-line installer and manager for portable applications.
-
-To install with Scoop, run the following commands:
+Build with Visual Studio 2026 (`src\JPEGView.sln`) or CMake:
 
 ```shell
-scoop bucket add extras
-scoop install extras/jpegview-fork
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
 ```
 
-After installation, the configuration file is located at `%UserProfile%\scoop\persist\JPEGView-fork\JPEGView.ini`.
+Third-party dependencies live under `extras/third_party`; see `extras/scripts`.
 
-## System Requirements
+# System Requirements
 
 * 64-bit Windows 11, Windows 10, or Windows Server 2025 (x64 / AMD64)
+* AVX2-capable CPU recommended
 * Visual Studio 2026 / C++23 runtime
 
-## What's New
+# What's New
 
-* See what has changed in the [latest releases](https://github.com/sylikc/jpegview/releases)
-* Or Check the [CHANGELOG.txt](https://github.com/sylikc/jpegview/blob/master/CHANGELOG.txt) to review new features in detail.
+* See [CHANGELOG.txt](CHANGELOG.txt) to review everything in detail, starting with the
+  **[2.1.0]** fork release notes at the top.
 
 # Localization
 
@@ -153,32 +143,27 @@ JPEGView is currently translated/localized to 28 languages:
 | zh-tw | Chinese, Traditional (繁體中文) |
 | zh | Chinese, Simplified (简体中文) |
 
-See the [Localization wiki page](https://github.com/sylikc/jpegview/wiki/Localization#localization-status) for translation status for each language.
-
 # Help / Documentation
 
-The JPEGView documentation is a little out of the date at the moment, but should still give a good summary of the features.
-
-This [readme.html](https://htmlpreview.github.io/?https://github.com/sylikc/jpegview/blob/master/src/JPEGView/Config/readme.html) is part of the JPEGView package.
+The bundled documentation ([readme.html](src/JPEGView/Config/readme.html)) ships inside the package and covers usage, INI settings and keyboard shortcuts.
 
 # Brief History
 
-This GitHub repo continues the legacy (is a "fork") of the excellent project [JPEGView by David Kleiner](https://sourceforge.net/projects/jpegview/).  Unfortunately, starting in 2020, the SourceForge project has essentially been abandoned, with the last update being [2018-02-24 (1.0.37)](https://sourceforge.net/projects/jpegview/files/jpegview/).  It's an excellent lightweight image viewer that I use almost daily!
+JPEGView was created by [David Kleiner](https://sourceforge.net/projects/jpegview/) (2006-2018).
+[Kevin M (sylikc)](https://github.com/sylikc/jpegview) revived it on GitHub in 2020, adding new codecs and keeping it alive through v1.3.46 (2023).
 
-The starting point for this repo was a direct clone from SourceForge SVN to GitHub Git.  By continuing this way, it retains all previous commits and all original author comments.
-
-I'm hoping with this project, some devs might help me keep the project alive!  It's been awhile, and could use some new features or updates.  Looking forward to the community making suggestions, and devs will help with some do pull requests as some of the image code is quite a learning curve for me to pick it up. -sylikc
+Since August 2026 this repository is maintained by **Prit Prajapati**, focusing on modernizing the toolchain, dropping legacy platforms, and squeezing every millisecond out of image loading and display.
 
 ## Special Thanks
 
-Special thanks to [qbnu](https://github.com/qbnu) for adding additional codec support!
-* Animated WebP
-* Animated PNG
-* JPEG XL with animation support
-* HEIF/HEIC/AVIF support
-* QOI support
-* ICC Profile support for WebP, JPEG XL, HEIF/HEIC, AVIF
-* LibRaw support (all updated RAW formats, such as CR3)
-* Photoshop PSD support
-
-Thanks to all the _translators_ which keep JPEGView strings up-to-date in different languages!  See [CHANGELOG.txt](https://github.com/sylikc/jpegview/blob/master/CHANGELOG.txt) to find credits for translators at each release!
+* David Kleiner - for creating JPEGView
+* Kevin M (sylikc) - for reviving and maintaining the upstream fork
+* [qbnu](https://github.com/qbnu) - for adding additional codec support:
+  * Animated WebP / Animated PNG
+  * JPEG XL with animation support
+  * HEIF/HEIC/AVIF support
+  * QOI support
+  * ICC Profile support for WebP, JPEG XL, HEIF/HEIC, AVIF
+  * LibRaw support (all updated RAW formats, such as CR3)
+  * Photoshop PSD support
+* All the _translators_ which keep JPEGView strings up-to-date in different languages!

@@ -1,6 +1,7 @@
-JPEGView <https://github.com/sylikc/jpegview/> 
+JPEGView <https://github.com/Prit36/jpegview/> 
 Lean and fast image viewer with minimal GUI
 
+Copyright (C) 2026 Prit Prajapati <https://github.com/Prit36>
 Copyright (C) 2020-2023 Kevin M (sylikc) <https://github.com/sylikc>
 Copyright (C) 2006-2018 David Kleiner (dkleiner) <https://sourceforge.net/u/dkleiner/profile/>
 
