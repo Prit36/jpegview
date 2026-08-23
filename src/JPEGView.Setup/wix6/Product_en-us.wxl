@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" Codepage="1252" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+	<String Id="Language" Value="1033" />
+	<!-- Supported language and codepage codes can be found here: http://www.tramontana.co.hu/wix/lesson2.php#2.4 -->
+
+	<String Id="ApplicationName" Value="JPEGView" />
+	<String Id="ManufacturerName" Value="Prit Prajapati" />
+	<String Id="ManufacturerFullName" Value="Prit Prajapati" />
+	<String Id="ProductDescription" Value="Ultra-fast, modern, lightweight Image Viewer" />
+	<String Id="Comments" Value="Installs JPEGView" />
+
+	<String Id="LicenseRtf" Overridable="yes" Value="Eula-en.rtf" />
+
+	<!--
+	<String Id="OS2Old" Value="This product requires at least Windows Vista / Server 2008." />
+	-->
+	<String Id="NewerInstalled" Value="The same or a newer version of this product is already installed." />
+	<String Id="x64VersionRequired" Value="You should install the 64-bit version of this product on 64-bit Windows." />
+	<String Id="x86VersionRequired" Value="You should install the 32-bit version of this product on 32-bit Windows." />
+
+	<String Id="FeatureCompleteDescription" Value="The complete package." />
+	<String Id="FeatureMainProgramDescription" Value="The main version including all dependencies." />
+	<String Id="FeatureMainProgramTitle" Value="Main program" />
+
+	<String Id="DescREG" Value="JPEGView Associated File" />
+	<String Id="ExplorerMenuEditREG" Value="Edit with JPEGView" />
+	<String Id="ExplorerMenuOpenREG" Value="Open with JPEGView" />
+
+</WixLocalization>
