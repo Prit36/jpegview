@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.31...4.0)
 
 project(JPEGView
-    VERSION 2.1.0
+    VERSION 2.1.1
     LANGUAGES C CXX
     DESCRIPTION "Ultra-fast, modern, lightweight image viewer and editor for Windows"
 )
