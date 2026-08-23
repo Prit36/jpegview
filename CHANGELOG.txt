@@ -1,6 +1,11 @@
 JPEGView Changelog
 ******************
 
+[2.1.1] 2026-08-23
+- Fixed the About dialog: the copyright/maintainer names were clipped by a too-narrow
+  and too-short static control. Widened the dialog and reformatted the credit lines so
+  all names (David Kleiner, Kevin M / sylikc, Prit Prajapati) are now visible.
+
 [2.1.0] 2026-08-23  (Prit Prajapati fork - modernization & performance release)
 This is the first tracked release of the Prit Prajapati (Prit36) fork, which started
 from sylikc/jpegview master after v1.3.46 and went through a full modernization and
