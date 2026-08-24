@@ -1,6 +1,13 @@
 JPEGView Changelog
 ******************
 
+[2.3.0] 2026-08-24
+- chore(png): remove libpng and zlib vendoring; PNG decoding is now handled
+  entirely by the internal FastPng decoder (libdeflate + SIMD unfilter) with
+  GDI+ as fallback for exotic types. APNG animation now renders as a static
+  image via GDI+ (previously animated via libpng) - file a follow-up if
+  animation is needed.
+
 [2.2.0] 2026-08-24
 - perf(png): new accelerated decode path for still 8-bit PNGs (FastPng.cpp + vendored
   libdeflate). libdeflate inflates ~3x faster than zlib, the scanline unfilter runs
