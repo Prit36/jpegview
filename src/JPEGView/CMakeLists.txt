@@ -55,6 +55,7 @@ set(JPEGVIEW_SOURCES
     ParameterDB.cpp
     ParallelJPEG.cpp
     PNGWrapper.cpp
+    FastPng.cpp
     PrintDlg.cpp
     PrintImage.cpp
     ProcessingThreadPool.cpp
@@ -96,6 +97,7 @@ target_include_directories(JPEGView PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/libjpeg-turbo/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../extras/third_party/libjpeg-turbo/src
     ${CMAKE_CURRENT_SOURCE_DIR}/libpng-apng/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/libdeflate/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libjxl/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libheif/include
     ${CMAKE_CURRENT_SOURCE_DIR}/libwebp/include
@@ -113,6 +115,7 @@ endif()
 target_link_directories(JPEGView PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/libjpeg-turbo/${LIB_ARCH_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/libpng-apng/${LIB_ARCH_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/libdeflate/${LIB_ARCH_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/libjxl/${LIB_ARCH_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/libheif/${LIB_ARCH_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/libwebp/${LIB_ARCH_DIR}
@@ -127,6 +130,7 @@ target_link_libraries(JPEGView PRIVATE
     turbojpeg-static
     libpng16
     zlib
+    libdeflate
     jxl_dec
     jxl_threads
     heif
