@@ -61,3 +61,11 @@ __pycache__/
 
 dist/
 JPEGView-Optimized/
+
+# Large PNG benchmark input (see benchmarks/large_png/README.md)
+benchmarks/large_png/*.png
+
+# pngbench generated files
+benchmarks/pngbench/PNGWrapper_*_local.cpp
+benchmarks/pngbench/*.bin
+benchmarks/pngbench/*.csv
