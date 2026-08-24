@@ -1,6 +1,17 @@
 JPEGView Changelog
 ******************
 
+[2.2.0] 2026-08-24
+- perf(png): new accelerated decode path for still 8-bit PNGs (FastPng.cpp + vendored
+  libdeflate). libdeflate inflates ~3x faster than zlib, the scanline unfilter runs
+  with SSE/AVX2 intrinsics (register-carried predictor, Paeth evaluated in 16-bit
+  lanes per spec), and pixels are written straight into the final BGRA buffer,
+  eliminating ~300 MB of transient buffers and two full-image memcpys on 5760x3240.
+  Measured on BlackMarble_2016_1200m_africa_s_labeled.png (18.7 MP): ReadImage
+  320 -> 117 ms (2.7x), app first paint 331 -> 173 ms, peak working set 260 -> 189 MB.
+  Output is byte-identical to libpng; palette / gray / 16-bit / interlaced / tRNS /
+  APNG images keep using the existing libpng decoder unchanged.
+
 [2.1.1] 2026-08-23
 - Fixed the About dialog: the copyright/maintainer names were clipped by a too-narrow
   and too-short static control. Widened the dialog and reformatted the credit lines so
