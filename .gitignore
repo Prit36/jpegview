@@ -69,3 +69,6 @@ benchmarks/large_png/*.png
 benchmarks/pngbench/PNGWrapper_*_local.cpp
 benchmarks/pngbench/*.bin
 benchmarks/pngbench/*.csv
+
+# Release packaging output
+release_out/
