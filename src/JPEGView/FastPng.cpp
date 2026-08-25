@@ -11,9 +11,10 @@
 //     buffers and two extra full-image memcpys for a 5760x3240 image).
 //
 // Only the common "photo" subset of PNG is handled here; anything else returns
-// -1 and the caller falls back to libpng:
-//   - 8-bit depth, non-interlaced, color types 0/2/4/6
-//   - no tRNS (transparency key), no acTL (animation), no interlace
+// -1 and the caller falls back to GDI+:
+//   - 8-bit depth, non-interlaced, color types 0/2/4/6 and 3 (palette 8-bit)
+//   - no acTL (animation), no tRNS for non-palette (transparency key)
+//   - palette tRNS (per-entry alpha) is handled
 #include "FastPng.h"
 
 #include <libdeflate.h>
@@ -25,9 +26,6 @@
 namespace {
 
 inline int PaethScalar(int a, int b, int c) {
-	// Branchless: filtered data is effectively random, so the naive 2-level
-	// branch here mispredicted ~20 cycles/byte (measured). Arithmetic select
-	// lets the compiler emit conditional moves instead.
 	int p = a + b - c;
 	int da = p - a; int pa = da < 0 ? -da : da;
 	int db = p - b; int pb = db < 0 ? -db : db;
@@ -37,12 +35,6 @@ inline int PaethScalar(int a, int b, int c) {
 	return useA * a + useB * b + (1 - useA - useB) * c;
 }
 
-// Paeth predictor computed in 16-bit lanes.
-// IMPORTANT: the PNG spec evaluates p = a+b-c and the |p-x| distances with
-// plain signed integer arithmetic (p may be negative, values are NOT reduced
-// mod 256). Byte-lane math wraps mod 256 and silently selects the wrong
-// predictor whenever the true |p-x| exceeds 127 - verified against libpng -
-// hence the 16-bit expansion here.
 inline __m128i PaethPixel16(__m128i a, __m128i b, __m128i c) {
 	const __m128i zero = _mm_setzero_si128();
 	const __m128i ones = _mm_set1_epi16(-1);
@@ -62,72 +54,144 @@ inline __m128i PaethPixel16(__m128i a, __m128i b, __m128i c) {
 
 inline __m128i Load4(const void* p) { int t; memcpy(&t, p, 4); return _mm_cvtsi32_si128(t); }
 inline void Store4(void* p, __m128i v) { int t = _mm_cvtsi128_si32(v); memcpy(p, &t, 4); }
-inline __m128i Load3(const void* p) { int t = 0; memcpy(&t, p, 3); return _mm_cvtsi32_si128(t); }
-inline void Store3(void* p, __m128i v) { int t = _mm_cvtsi128_si32(v); memcpy(p, &t, 3); }
 
-// Unfilters one scanline in place. 'prev' is the already-reconstructed row
-// above (nullptr on the first row). For Sub/Paeth the left neighbour is the
-// *reconstructed* previous pixel, so it is carried register-to-register
-// (one pixel per SIMD op, bpp bytes wide).
-void UnfilterRow(unsigned char* row, const unsigned char* prev, size_t stride, int bpp, unsigned char ft,
-                 unsigned char* rout = nullptr, int xmode = 0) {
-	// xmode: 0 = no colour transform emitted, 6 = RGBA->BGRA (swap R/B),
-	//        2 = RGB->BGRA (+ opaque alpha). When rout != nullptr the
-	//        transformed pixels are emitted here while unfiltering, which
-	// avoids a second pass over the image.
+inline void UnfilterRowNone4_AVX2(unsigned char* row, size_t stride, unsigned char* rout) {
+	if (rout) {
+		const __m256i shuf = _mm256_setr_epi8(
+			2,1,0,3, 6,5,4,7, 10,9,8,11, 14,13,12,15,
+			2,1,0,3, 6,5,4,7, 10,9,8,11, 14,13,12,15);
+		size_t i = 0;
+		for (; i + 32 <= stride; i += 32) {
+			__m256i r = _mm256_loadu_si256((__m256i*)(row + i));
+			__m256i out = _mm256_shuffle_epi8(r, shuf);
+			_mm256_storeu_si256((__m256i*)(rout + i), out);
+		}
+		for (; i + 4 <= stride; i += 4) {
+			__m128i r = Load4(row + i);
+			const __m128i swapRB = _mm_setr_epi8(2,1,0,3,6,5,4,7,10,9,8,11,14,13,12,15);
+			Store4(rout + i, _mm_shuffle_epi8(r, swapRB));
+		}
+	}
+}
+
+inline void UnfilterRowUp4_AVX2(unsigned char* row, const unsigned char* prev, size_t stride, unsigned char* rout) {
+	const __m256i shuf = _mm256_setr_epi8(
+		2,1,0,3, 6,5,4,7, 10,9,8,11, 14,13,12,15,
+		2,1,0,3, 6,5,4,7, 10,9,8,11, 14,13,12,15);
+	size_t i = 0;
+	if (rout) {
+		for (; i + 32 <= stride; i += 32) {
+			__m256i d = _mm256_loadu_si256((__m256i*)(row + i));
+			__m256i b = _mm256_loadu_si256((__m256i*)(prev + i));
+			__m256i r = _mm256_add_epi8(d, b);
+			_mm256_storeu_si256((__m256i*)(row + i), r);
+			__m256i out = _mm256_shuffle_epi8(r, shuf);
+			_mm256_storeu_si256((__m256i*)(rout + i), out);
+		}
+	} else {
+		for (; i + 32 <= stride; i += 32) {
+			__m256i d = _mm256_loadu_si256((__m256i*)(row + i));
+			__m256i b = _mm256_loadu_si256((__m256i*)(prev + i));
+			__m256i r = _mm256_add_epi8(d, b);
+			_mm256_storeu_si256((__m256i*)(row + i), r);
+		}
+	}
+	for (; i < stride; i++) {
+		int b = prev ? prev[i] : 0;
+		row[i] = (unsigned char)(row[i] + b);
+		if (rout && i+4 <= stride) {
+			// emit remaining pixels scalar after recon
+			size_t remaining = stride - i;
+			size_t pix = remaining / 4;
+			for (size_t p=0;p<pix;p++) {
+				size_t off = i + p*4;
+				unsigned char r0=row[off], g0=row[off+1], b0=row[off+2], a0=row[off+3];
+				rout[off]=b0; rout[off+1]=g0; rout[off+2]=r0; rout[off+3]=a0;
+			}
+			break;
+		}
+	}
+}
+
+inline void UnfilterRowGeneric4(unsigned char* row, const unsigned char* prev, size_t stride, unsigned char ft, unsigned char* rout, int xmode) {
 	const __m128i zero = _mm_setzero_si128();
 	const __m128i swapRB = _mm_setr_epi8(2, 1, 0, 3, 6, 5, 4, 7, 10, 9, 8, 11, 14, 13, 12, 15);
 	const __m128i rgbToBgraMask = _mm_setr_epi8(2, 1, 0, (char)-1, 6, 5, 4, (char)-1, 10, 9, 8, (char)-1, 14, 13, 12, (char)-1);
 	const __m128i alphaFF = _mm_setr_epi8(0, 0, 0, (char)-1, 0, 0, 0, (char)-1, 0, 0, 0, (char)-1, 0, 0, 0, (char)-1);
+	size_t i = 0;
+	__m128i carry = zero;
+	while (i + 4 <= stride) {
+		__m128i d = Load4(row + i);
+		__m128i a = carry;
+		__m128i b = prev ? Load4(prev + i) : zero;
+		__m128i c = (prev && i >= 4) ? Load4(prev + i - 4) : zero;
+		__m128i r;
+		if (ft == 0) r = d;
+		else if (ft == 1) r = _mm_add_epi8(d, a);
+		else if (ft == 2) r = _mm_add_epi8(d, b);
+		else if (ft == 3) {
+			__m128i avg = _mm_avg_epu8(a, b);
+			__m128i odd = _mm_and_si128(_mm_xor_si128(a, b), _mm_set1_epi8(1));
+			r = _mm_add_epi8(d, _mm_sub_epi8(avg, odd));
+		} else r = _mm_add_epi8(d, PaethPixel16(a, b, c));
+		Store4(row + i, r);
+		if (rout) {
+			if (xmode == 6) Store4(rout + i, _mm_shuffle_epi8(r, swapRB));
+			else Store4(rout + i, _mm_add_epi8(_mm_shuffle_epi8(r, rgbToBgraMask), alphaFF));
+		}
+		carry = r;
+		i += 4;
+	}
+	for (; i < stride; i++) {
+		int a = (i >= 4) ? row[i - 4] : 0;
+		int b = prev ? prev[i] : 0;
+		int c = (prev && i >= 4) ? prev[i - 4] : 0;
+		if (ft == 1) row[i] = (unsigned char)(row[i] + a);
+		else if (ft == 2) row[i] = (unsigned char)(row[i] + b);
+		else if (ft == 3) row[i] = (unsigned char)(row[i] + (unsigned char)((a + b) / 2));
+		else if (ft == 4) row[i] = (unsigned char)(row[i] + PaethScalar(a, b, c));
+	}
+}
 
+void UnfilterRow(unsigned char* row, const unsigned char* prev, size_t stride, int bpp, unsigned char ft,
+                 unsigned char* rout, int xmode) {
 	if (bpp == 4) {
-		// SIMD path: one pixel per op with the reconstructed left neighbour
-		// carried register-to-register. 4 bytes/pixel amortizes the Paeth
-		// pipeline well; measured much faster than scalar.
-		size_t i = 0;
-		size_t ro = 0;
-		__m128i carry = zero;
-		while (i + 4 <= stride) {
-			__m128i d = Load4(row + i);
-			__m128i a = carry;
-			__m128i b = prev ? Load4(prev + i) : zero;
-			__m128i c = (prev && i >= 4) ? Load4(prev + i - 4) : zero;
-			__m128i r;
-			if (ft == 0) r = d;
-			else if (ft == 1) r = _mm_add_epi8(d, a);
-			else if (ft == 2) r = _mm_add_epi8(d, b);
-			else if (ft == 3) {
-				__m128i avg = _mm_avg_epu8(a, b);
-				__m128i odd = _mm_and_si128(_mm_xor_si128(a, b), _mm_set1_epi8(1));
-				r = _mm_add_epi8(d, _mm_sub_epi8(avg, odd)); // exact floor((a+b)/2)
-			}
-			else r = _mm_add_epi8(d, PaethPixel16(a, b, c));
-			Store4(row + i, r);
-			if (rout) {
-				if (xmode == 6) Store4(rout + ro, _mm_shuffle_epi8(r, swapRB));
-				else           Store4(rout + ro, _mm_add_epi8(_mm_shuffle_epi8(r, rgbToBgraMask), alphaFF));
-			}
-			carry = r;
-			i += 4;
-			ro += 4;
-		}
-		for (; i < stride; i++) {
-			int a = (i >= bpp) ? row[i - bpp] : 0;
-			int b = prev ? prev[i] : 0;
-			int c = (prev && i >= bpp) ? prev[i - bpp] : 0;
-			if (ft == 1) row[i] = (unsigned char)(row[i] + a);
-			else if (ft == 2) row[i] = (unsigned char)(row[i] + b);
-			else if (ft == 3) row[i] = (unsigned char)(row[i] + (unsigned char)((a + b) / 2));
-			else row[i] = (unsigned char)(row[i] + PaethScalar(a, b, c));
-		}
+		if (ft == 0) { if (rout) UnfilterRowNone4_AVX2(row, stride, rout); return; }
+		if (ft == 2 && prev) { UnfilterRowUp4_AVX2(row, prev, stride, rout); return; }
+		if (ft == 2 && !prev) { if (rout) UnfilterRowNone4_AVX2(row, stride, rout); return; }
+		UnfilterRowGeneric4(row, prev, stride, ft, rout, xmode);
 		return;
 	}
-
 	if (bpp == 3 && rout != nullptr) {
-		// Scalar byte loop for RGB with fused BGRA emit. The 16-bit Paeth
-		// SIMD pipeline costs more than it saves at only 3 bytes/pixel
-		// (measured ~2.5x slower than this plain loop), so keep it simple -
-		// the win for RGB comes from libdeflate inflate + the fused emit.
+		if (ft == 0) {
+			size_t ro = 0;
+			for (size_t i = 0; i + 3 <= stride; i += 3, ro += 4) {
+				rout[ro]=row[i+2]; rout[ro+1]=row[i+1]; rout[ro+2]=row[i]; rout[ro+3]=255;
+			}
+			return;
+		}
+		if (ft == 2 && prev) {
+			size_t i = 0;
+			for (; i + 32 <= stride; i += 32) {
+				__m256i d = _mm256_loadu_si256((__m256i*)(row + i));
+				__m256i b = _mm256_loadu_si256((__m256i*)(prev + i));
+				__m256i r = _mm256_add_epi8(d, b);
+				_mm256_storeu_si256((__m256i*)(row + i), r);
+			}
+			for (; i < stride; i++) row[i] = (unsigned char)(row[i] + prev[i]);
+			size_t ro = 0;
+			for (size_t j = 0; j + 3 <= stride; j += 3, ro += 4) {
+				rout[ro]=row[j+2]; rout[ro+1]=row[j+1]; rout[ro+2]=row[j]; rout[ro+3]=255;
+			}
+			return;
+		}
+		if (ft == 2 && !prev) {
+			size_t ro = 0;
+			for (size_t i = 0; i + 3 <= stride; i += 3, ro += 4) {
+				rout[ro]=row[i+2]; rout[ro+1]=row[i+1]; rout[ro+2]=row[i]; rout[ro+3]=255;
+			}
+			return;
+		}
 		size_t ro = 0;
 		for (size_t i = 0; i + 3 <= stride; i += 3, ro += 4) {
 			for (int k = 0; k < 3; k++) {
@@ -141,16 +205,24 @@ void UnfilterRow(unsigned char* row, const unsigned char* prev, size_t stride, i
 				else p = PaethScalar(a, b, c);
 				row[i + k] = (unsigned char)(row[i + k] + p);
 			}
-			rout[ro]     = row[i + 2]; // B
-			rout[ro + 1] = row[i + 1]; // G
-			rout[ro + 2] = row[i];     // R
-			rout[ro + 3] = 255;
+			rout[ro]=row[i+2]; rout[ro+1]=row[i+1]; rout[ro+2]=row[i]; rout[ro+3]=255;
 		}
 		return;
 	}
-
 	if (bpp == 3) {
-		// no emit requested: plain scalar loop
+		if (ft == 0) return;
+		if (ft == 2 && prev) {
+			size_t i = 0;
+			for (; i + 32 <= stride; i += 32) {
+				__m256i d = _mm256_loadu_si256((__m256i*)(row + i));
+				__m256i b = _mm256_loadu_si256((__m256i*)(prev + i));
+				__m256i r = _mm256_add_epi8(d, b);
+				_mm256_storeu_si256((__m256i*)(row + i), r);
+			}
+			for (; i < stride; i++) row[i] = (unsigned char)(row[i] + prev[i]);
+			return;
+		}
+		if (ft == 2 && !prev) return;
 		for (size_t i = 0; i + 3 <= stride; i += 3) {
 			for (int k = 0; k < 3; k++) {
 				int a = (i + k >= 3) ? row[i + k - 3] : 0;
@@ -166,12 +238,11 @@ void UnfilterRow(unsigned char* row, const unsigned char* prev, size_t stride, i
 		}
 		return;
 	}
-
-	// scalar fallback (bpp 1/2: grayscale variants, rare for photos)
-	if (ft == 1) { for (size_t i = bpp; i < stride; i++) row[i] = (unsigned char)(row[i] + row[i - bpp]); }
+	if (ft == 0) return;
+	if (ft == 1) { for (size_t i = (size_t)bpp; i < stride; i++) row[i] = (unsigned char)(row[i] + row[i - bpp]); }
 	else if (ft == 2) { for (size_t i = 0; i < stride; i++) row[i] = (unsigned char)(row[i] + (prev ? prev[i] : 0)); }
-	else if (ft == 3) { for (size_t i = 0; i < stride; i++) { int a = prev ? prev[i] : 0; int b = (i >= bpp) ? row[i - bpp] : 0; row[i] = (unsigned char)(row[i] + (unsigned char)((a + b) / 2)); } }
-	else if (ft == 4) { for (size_t i = 0; i < stride; i++) { int a = (i >= bpp) ? row[i - bpp] : 0; int b = prev ? prev[i] : 0; int c = (prev && i >= bpp) ? prev[i - bpp] : 0; row[i] = (unsigned char)(row[i] + PaethScalar(a, b, c)); } }
+	else if (ft == 3) { for (size_t i = 0; i < stride; i++) { int a = prev ? prev[i] : 0; int b = (i >= (size_t)bpp) ? row[i - bpp] : 0; row[i] = (unsigned char)(row[i] + (unsigned char)((a + b) / 2)); } }
+	else if (ft == 4) { for (size_t i = 0; i < stride; i++) { int a = (i >= (size_t)bpp) ? row[i - bpp] : 0; int b = prev ? prev[i] : 0; int c = (prev && i >= (size_t)bpp) ? prev[i - bpp] : 0; row[i] = (unsigned char)(row[i] + PaethScalar(a, b, c)); } }
 }
 
 } // namespace
@@ -182,79 +253,146 @@ int FastPngDecode(const unsigned char* file, size_t size, FastPngImage& out) {
 
 	unsigned int w = 0, h = 0;
 	int bitDepth = 0, colorType = 0, interlace = 0;
-	bool haveIHDR = false, hasTRNS = false, hasACTL = false;
-	std::vector<unsigned char> idat;
+	bool haveIHDR = false, hasACTL = false, hasTRNSNonPalette = false;
 	const unsigned char* exif_data = nullptr;
 	unsigned int exif_len = 0;
+	unsigned char palBGRA[256*4];
+	int palEntries = 0;
+	bool hasPLTE = false;
+	// Default palette: opaque black (will be overwritten)
+	for (int i=0;i<256;i++){ palBGRA[i*4+0]=0; palBGRA[i*4+1]=0; palBGRA[i*4+2]=0; palBGRA[i*4+3]=255; }
 
-	size_t off = 8;
-	// pre-count IDAT payload so the vector allocates exactly once
-	for (size_t s = 8; s + 8 <= size; ) {
-		unsigned int l = _byteswap_ulong(*(const unsigned int*)(file + s));
-		if (memcmp(file + s + 4, "IDAT", 4) == 0) idat.reserve(idat.size() + l);
-		if (memcmp(file + s + 4, "IEND", 4) == 0) break;
-		s += 12 + (size_t)l;
-	}
-	while (off + 8 <= size) {
-		unsigned int len = _byteswap_ulong(*(const unsigned int*)(file + off));
-		const char* type = (const char*)(file + off + 4);
+	size_t totalIdat = 0;
+	size_t offScan = 8;
+	while (offScan + 8 <= size) {
+		unsigned int len = _byteswap_ulong(*(const unsigned int*)(file + offScan));
+		if (offScan + 12 + (size_t)len > size) break;
+		const char* type = (const char*)(file + offScan + 4);
 		if (memcmp(type, "IHDR", 4) == 0) {
-			w = _byteswap_ulong(*(const unsigned int*)(file + off + 8));
-			h = _byteswap_ulong(*(const unsigned int*)(file + off + 12));
-			bitDepth = file[off + 16];
-			colorType = file[off + 17];
-			interlace = file[off + 19];
+			w = _byteswap_ulong(*(const unsigned int*)(file + offScan + 8));
+			h = _byteswap_ulong(*(const unsigned int*)(file + offScan + 12));
+			bitDepth = file[offScan + 16];
+			colorType = file[offScan + 17];
+			interlace = file[offScan + 19];
 			haveIHDR = true;
 		} else if (memcmp(type, "acTL", 4) == 0) { hasACTL = true; break; }
-		else if (memcmp(type, "tRNS", 4) == 0) { hasTRNS = true; }
+		else if (memcmp(type, "PLTE", 4) == 0) {
+			if (len % 3 == 0 && len <= 768) {
+				palEntries = (int)(len / 3);
+				hasPLTE = true;
+				for (int i=0;i<palEntries;i++){
+					unsigned char r = file[offScan+8 + i*3 + 0];
+					unsigned char g = file[offScan+8 + i*3 + 1];
+					unsigned char b = file[offScan+8 + i*3 + 2];
+					palBGRA[i*4+0]=b; palBGRA[i*4+1]=g; palBGRA[i*4+2]=r; palBGRA[i*4+3]=255;
+				}
+			}
+		} else if (memcmp(type, "tRNS", 4) == 0) {
+			// For palette, tRNS is per-entry alpha; for others it's transparency key (reject)
+			// We need colorType to decide, but IHDR already parsed at this point for well-formed files (PLTE after IHDR)
+			if (haveIHDR && colorType == 3) {
+				int n = (int)len;
+				if (n > palEntries) n = palEntries;
+				for (int i=0;i<n;i++) palBGRA[i*4+3]= file[offScan+8 + i];
+			} else {
+				hasTRNSNonPalette = true;
+			}
+		} else if (memcmp(type, "IDAT", 4) == 0) { totalIdat += len; }
 		else if (memcmp(type, "eXIf", 4) == 0) {
-			if (off + 12 + (size_t)len <= size && len > 0 && len < 65528) { exif_data = file + off + 8; exif_len = len; }
-		} else if (memcmp(type, "IDAT", 4) == 0) {
-			if (off + 12 + (size_t)len > size) break;
-			idat.insert(idat.end(), file + off + 8, file + off + 8 + len);
+			if (len > 0 && len < 65528) { exif_data = file + offScan + 8; exif_len = len; }
+		} else if (memcmp(type, "IEND", 4) == 0) { break; }
+		offScan += 12 + (size_t)len;
+	}
+	if (!haveIHDR || totalIdat == 0) return -1;
+	if (interlace != 0) return -1;
+	if (hasACTL) return -1;
+	if (hasTRNSNonPalette) return -1;
+	// Palette handling
+	bool isPalette = (colorType == 3);
+	if (isPalette) {
+		if (!hasPLTE) return -1;
+		if (bitDepth != 8 && bitDepth != 4 && bitDepth != 2 && bitDepth != 1) return -1;
+		// For this fast path we only handle 8-bit palette (covers most icons/photos). Fallback for 1/2/4.
+		if (bitDepth != 8) return -1;
+	} else {
+		if (bitDepth != 8) return -1;
+	}
+	int compIn;
+	if (isPalette) compIn = 1;
+	else compIn = (colorType == 0) ? 1 : (colorType == 2) ? 3 : (colorType == 4) ? 2 : (colorType == 6) ? 4 : -1;
+	if (compIn < 0) return -1;
+
+	// Allocate IDAT buffer exactly once and copy with memcpy
+	std::vector<unsigned char> idat;
+	idat.resize(totalIdat);
+	unsigned char* idatDst = idat.data();
+	size_t off = 8;
+	while (off + 8 <= size) {
+		unsigned int len = _byteswap_ulong(*(const unsigned int*)(file + off));
+		if (off + 12 + (size_t)len > size) break;
+		const char* type = (const char*)(file + off + 4);
+		if (memcmp(type, "IDAT", 4) == 0) {
+			memcpy(idatDst, file + off + 8, len);
+			idatDst += len;
 		} else if (memcmp(type, "IEND", 4) == 0) { break; }
 		off += 12 + (size_t)len;
 	}
-	if (!haveIHDR || idat.empty()) return -1;
-	if (bitDepth != 8 || interlace != 0) return -1;      // only 8-bit, no ADAM7
-	if (hasACTL || hasTRNS) return -1;                   // animation / transparency key -> libpng
-	int compIn = (colorType == 0) ? 1 : (colorType == 2) ? 3 : (colorType == 4) ? 2 : (colorType == 6) ? 4 : -1;
-	if (compIn < 0) return -1;                           // palette & exotic -> libpng
 
-	size_t stride = (size_t)w * compIn;
+	size_t stride = isPalette ? (size_t)w : (size_t)w * compIn;
 	size_t rawSize = (size_t)h * (1 + stride);
 	unsigned char* raw = (unsigned char*)malloc(rawSize);
 	if (!raw) return -1;
 
-	struct libdeflate_decompressor* dec = libdeflate_alloc_decompressor();
+	thread_local libdeflate_decompressor* t_dec = nullptr;
+	if (!t_dec) t_dec = libdeflate_alloc_decompressor();
+	if (!t_dec) { free(raw); return -1; }
 	size_t outN = 0;
-	enum libdeflate_result r = libdeflate_zlib_decompress(dec, idat.data(), idat.size(), raw, rawSize, &outN);
-	libdeflate_free_decompressor(dec);
+	enum libdeflate_result r = libdeflate_zlib_decompress(t_dec, idat.data(), idat.size(), raw, rawSize, &outN);
 	if (r != LIBDEFLATE_SUCCESS || outN != rawSize) { free(raw); return -1; }
 
 	unsigned char* pixels = (unsigned char*)malloc((size_t)w * h * 4);
 	if (!pixels) { free(raw); return -1; }
 
+	int hist[5]={0};
 	const unsigned char* prev = nullptr;
-	// ct6/ct2 emit BGRA directly from the unfilter loop (fused, no second pass)
-	int xmode = (colorType == 6 || colorType == 2) ? colorType : 0;
-	bool needPostTransform = (xmode == 0);
-	for (unsigned int y = 0; y < h; y++) {
-		unsigned char* rin = raw + y * (1 + stride) + 1;
-		unsigned char* rout = pixels + (size_t)y * 4 * w;
-		unsigned char ft = raw[y * (1 + stride)];
-		UnfilterRow(rin, prev, stride, compIn, ft, needPostTransform ? nullptr : rout, xmode);
-		if (needPostTransform) {
-			// gray variants (rare): expand in place
-			if (colorType == 0) {
-				for (unsigned int x = 0; x < w; x++) { unsigned char g = rin[x]; rout[x*4]=g; rout[x*4+1]=g; rout[x*4+2]=g; rout[x*4+3]=255; }
-			} else { // colorType == 4
-				for (unsigned int x = 0; x < w; x++) { unsigned char g = rin[x*2], a = rin[x*2+1]; rout[x*4]=g; rout[x*4+1]=g; rout[x*4+2]=g; rout[x*4+3]=a; }
+	if (isPalette) {
+		for (unsigned int y = 0; y < h; y++) {
+			unsigned char* rin = raw + y * (1 + stride) + 1;
+			unsigned char* rout = pixels + (size_t)y * 4 * w;
+			unsigned char ft = raw[y * (1 + stride)];
+			if (ft > 4) { free(raw); free(pixels); return -1; }
+			hist[ft]++;
+			UnfilterRow(rin, prev, stride, 1, ft, nullptr, 0);
+			// expand via palette LUT (scalar - palette images are typically small)
+			for (unsigned int x = 0; x < w; x++) {
+				unsigned char idx = rin[x];
+				if ((int)idx >= palEntries) idx = 0;
+				((uint32_t*)rout)[x] = ((uint32_t*)palBGRA)[idx];
 			}
+			prev = rin;
 		}
-		prev = rin;
+	} else {
+		int xmode = (colorType == 6 || colorType == 2) ? colorType : 0;
+		bool needPostTransform = (xmode == 0);
+		for (unsigned int y = 0; y < h; y++) {
+			unsigned char* rin = raw + y * (1 + stride) + 1;
+			unsigned char* rout = pixels + (size_t)y * 4 * w;
+			unsigned char ft = raw[y * (1 + stride)];
+			if (ft > 4) { free(raw); free(pixels); return -1; }
+			hist[ft]++;
+			UnfilterRow(rin, prev, stride, compIn, ft, needPostTransform ? nullptr : rout, xmode);
+			if (needPostTransform) {
+				if (colorType == 0) {
+					for (unsigned int x = 0; x < w; x++) { unsigned char g = rin[x]; rout[x*4]=g; rout[x*4+1]=g; rout[x*4+2]=g; rout[x*4+3]=255; }
+				} else {
+					for (unsigned int x = 0; x < w; x++) { unsigned char g = rin[x*2], a = rin[x*2+1]; rout[x*4]=g; rout[x*4+1]=g; rout[x*4+2]=g; rout[x*4+3]=a; }
+				}
+			}
+			prev = rin;
+		}
 	}
 	free(raw);
+	// print to stderr so pngbench captures
 
 	out.width = (int)w;
 	out.height = (int)h;
