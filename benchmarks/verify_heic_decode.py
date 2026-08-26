@@ -52,7 +52,7 @@ def jpegview_decode_check(exe: Path, img: Path) -> dict:
 
 
 def reference_decode(img: Path):
-    heif_file = pillow_heif.open_heif(str(img), convert_hdr_to_8bit=False)
+    heif_file = pillow_heif.open_heif(str(img), convert_hdr_to_8bit=True)
     im = Image.frombytes(heif_file.mode, heif_file.size, heif_file.data)
     return np.asarray(im.convert("RGB"))
 
@@ -60,7 +60,8 @@ def reference_decode(img: Path):
 def main() -> None:
     exe = Path(sys.argv[1]).resolve()
     all_ok = True
-    for img in sorted(DATA.glob("*.heic")):
+    test_files = sorted(list(DATA.glob("*.heic")) + list(DATA.glob("*.HIF")) + list(DATA.glob("*.hif")))
+    for img in test_files:
         r = jpegview_decode_check(exe, img)
         ref = reference_decode(img)
         print(f"{img.name}: JPEGView ok={r['ok']} load={r.get('load_ms')}ms | "

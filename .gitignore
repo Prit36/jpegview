@@ -72,3 +72,6 @@ benchmarks/pngbench/*.csv
 
 # Release packaging output
 release_out/
+
+# Scratch directory
+scratch/
