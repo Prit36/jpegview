@@ -104,10 +104,12 @@ static void ConvertYCbCr420ToBGRA(const uint8_t* pY, int yStride,
 	uint8_t* pDst,
 	int width, int height,
 	bool hasAlpha, const uint8_t* pAlphaPlane, int alphaStride,
-	const YCbCrCoeffs& coeffs, bool fullRange)
+	const YCbCrCoeffs& coeffs, bool fullRange, int bitDepth = 8)
 {
 	const float r_cr = coeffs.r_cr, g_cb = coeffs.g_cb, g_cr = coeffs.g_cr, b_cb = coeffs.b_cb;
 	const int cw = (width + 1) / 2;
+	const float norm = (bitDepth == 8) ? 1.0f : (255.0f / (float)((1 << bitDepth) - 1));
+	const float c_center = (bitDepth == 8) ? 128.0f : (float)(1 << (bitDepth - 1));
 
 	#pragma omp parallel for schedule(static)
 	for (int row2 = 0; row2 < height; row2 += 2) {
@@ -117,6 +119,7 @@ static void ConvertYCbCr420ToBGRA(const uint8_t* pY, int yStride,
 		for (int dy = 0; dy < 2 && (row2 + dy) < height; dy++) {
 			int row = row2 + dy;
 			const uint8_t* lineY = pY + (size_t)row * yStride;
+			const uint16_t* lineY16 = (const uint16_t*)lineY;
 			const uint8_t* lineA = hasAlpha ? (pAlphaPlane + (size_t)row * alphaStride) : NULL;
 			uint8_t* out = pDst + (size_t)row * (width * 4);
 
@@ -131,13 +134,31 @@ static void ConvertYCbCr420ToBGRA(const uint8_t* pY, int yStride,
 					int cyNext = (cy + 1 < chromaRows) ? (cy + 1) : cy;
 					const uint8_t* cbBot = pCb + (size_t)cyNext * cbStride;
 					const uint8_t* crBot = pCr + (size_t)cyNext * crStride;
-					UpsampleChromaRowPairBilinear(cbTop, cbBot, crTop, crBot, cw,
-						cbUp0.data(), cbUp1.data(), crUp0.data(), crUp1.data());
+
+					if (bitDepth > 8) {
+						std::vector<uint8_t> cbTop8(cw), cbBot8(cw), crTop8(cw), crBot8(cw);
+						const uint16_t* cbT16 = (const uint16_t*)cbTop;
+						const uint16_t* cbB16 = (const uint16_t*)cbBot;
+						const uint16_t* crT16 = (const uint16_t*)crTop;
+						const uint16_t* crB16 = (const uint16_t*)crBot;
+						int shift = bitDepth - 8;
+						for (int x = 0; x < cw; x++) {
+							cbTop8[x] = (uint8_t)(cbT16[x] >> shift);
+							cbBot8[x] = (uint8_t)(cbB16[x] >> shift);
+							crTop8[x] = (uint8_t)(crT16[x] >> shift);
+							crBot8[x] = (uint8_t)(crB16[x] >> shift);
+						}
+						UpsampleChromaRowPairBilinear(cbTop8.data(), cbBot8.data(), crTop8.data(), crBot8.data(), cw,
+							cbUp0.data(), cbUp1.data(), crUp0.data(), crUp1.data());
+					} else {
+						UpsampleChromaRowPairBilinear(cbTop, cbBot, crTop, crBot, cw,
+							cbUp0.data(), cbUp1.data(), crUp0.data(), crUp1.data());
+					}
 				}
 			}
 
 			for (int col = 0; col < width; col++) {
-				float yv = (float)lineY[col];
+				float yv = (bitDepth > 8) ? ((float)lineY16[col] * norm) : (float)lineY[col];
 				float cb = (float)cbUp[col] - 128.0f;
 				float cr = (float)crUp[col] - 128.0f;
 				if (!fullRange) {
@@ -221,11 +242,12 @@ void * HeifReader::ReadImage(int &width,
 	uint8_t* planeY = NULL; int strideY = 0;
 	uint8_t* planeCb = NULL; int strideCb = 0;
 	uint8_t* planeCr = NULL; int strideCr = 0;
+	int bppY = image.get_bits_per_pixel(heif_channel_Y);
 
 	if (image.get_chroma_format() == heif_chroma_420 &&
-		image.get_bits_per_pixel(heif_channel_Y) == 8 &&
-		image.get_bits_per_pixel(heif_channel_Cb) == 8 &&
-		image.get_bits_per_pixel(heif_channel_Cr) == 8) {
+		(bppY == 8 || bppY == 10 || bppY == 12) &&
+		image.get_bits_per_pixel(heif_channel_Cb) == bppY &&
+		image.get_bits_per_pixel(heif_channel_Cr) == bppY) {
 		planeY = image.get_plane(heif_channel_Y, &strideY);
 		planeCb = image.get_plane(heif_channel_Cb, &strideCb);
 		planeCr = image.get_plane(heif_channel_Cr, &strideCr);
@@ -266,7 +288,7 @@ void * HeifReader::ReadImage(int &width,
 		}
 
 		int chromaRows = image.get_height(heif_channel_Cb);
-		ConvertYCbCr420ToBGRA(planeY, strideY, planeCb, strideCb, planeCr, strideCr, chromaRows, pPixelData, width, height, has_alpha, NULL, 0, coeffs, fullRange);
+		ConvertYCbCr420ToBGRA(planeY, strideY, planeCb, strideCb, planeCr, strideCr, chromaRows, pPixelData, width, height, has_alpha, NULL, 0, coeffs, fullRange, bppY);
 
 		// An embedded ICC profile overrides the NCLX-derived color interpretation.
 		std::vector<uint8_t> iccp = image.get_raw_color_profile();
