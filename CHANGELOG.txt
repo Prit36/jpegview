@@ -1,6 +1,13 @@
 JPEGView Changelog
 ******************
 
+[2.5.0] 2026-08-26
+- feat(heif): full hardware GPU acceleration & AVX2 color conversion for 10-bit HEVC / HIF (Sony Alpha, Canon, Apple, Samsung)
+  * Supports 10-bit 4:2:2 (Y210) and 10-bit 4:2:0 (P010) hardware GPU decoding via Media Foundation MFT
+  * High-performance AVX2 FMA color matrix conversion with fused 8x8 SIMD rotation transposition and NCLX/ICC profile support
+  * Concurrent multi-tile grid decoding across 4 hardware GPU decoder instances
+  * 60-Megapixel Sony .HIF load time accelerated from ~2,400 ms down to ~125 ms (18x+ speedup) with 100% bitwise verified color parity
+
 [2.4.0] 2026-08-26
 - perf(png): AVX2 Up/None unfilter, palette fast-path, thread-local libdeflate inflator and mmap + AVX2 alpha blend for still 8-bit PNGs (further ~2x on top of 2.2.0)
 - fix(heif): 10-bit HEVC Main10 (Sony .HIF, pixi 10-bit) now decodes with correct colors via libheif HDR-to-8bit fallback; GPU NV12 path previously rendered P010 as green-tinted NV12. No regression for 8-bit HEIC (still ~235-250 ms GPU path).
