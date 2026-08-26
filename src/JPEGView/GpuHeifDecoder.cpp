@@ -639,6 +639,7 @@ struct IsoItem {
 	bool has_nclx = false;
 	uint8_t rotation = 0; // 0 = 0 deg, 1 = 90 CCW, 2 = 180, 3 = 270 CCW
 	int8_t mirror = -1;  // -1 = none, 0 = vertical, 1 = horizontal
+	uint8_t bit_depth = 8; // from pixi; 8 = 8-bit, 10 = 10-bit Main10 etc.
 };
 
 struct IsoGrid {
@@ -896,6 +897,13 @@ private:
 								m_items[itemId].height = (prop.second[16] << 24) | (prop.second[17] << 16) | (prop.second[18] << 8) | prop.second[19];
 							} else if (prop.first == "hvcC") {
 								m_items[itemId].hvcC_data = prop.second;
+								// Infer 10-bit from hvcC general_profile (Main10 = 0x04) when pixi is absent or not yet parsed
+								if (prop.second.size() > 9 && m_items[itemId].bit_depth == 8) {
+									uint8_t general_profile = prop.second[9];
+									if (general_profile == 0x04) {
+										m_items[itemId].bit_depth = 10;
+									}
+								}
 							} else if (prop.first == "colr" && prop.second.size() >= 12) {
 								std::string colrType((const char*)&prop.second[8], 4);
 								if (colrType == "nclx" && prop.second.size() >= 19) {
@@ -909,6 +917,16 @@ private:
 								m_items[itemId].rotation = prop.second[8] & 0x03;
 							} else if (prop.first == "imir" && prop.second.size() >= 9) {
 								m_items[itemId].mirror = prop.second[8] & 0x01;
+							} else if (prop.first == "pixi" && prop.second.size() >= 13) {
+								uint8_t numChannels = prop.second[12];
+								uint8_t maxDepth = 0;
+								for (uint8_t c = 0; c < numChannels && (size_t)(13 + c) < prop.second.size(); c++) {
+									uint8_t d = prop.second[13 + c];
+									if (d > maxDepth) maxDepth = d;
+								}
+								if (maxDepth != 0) {
+									m_items[itemId].bit_depth = maxDepth;
+								}
 							}
 						}
 					}
@@ -997,6 +1015,13 @@ bool GpuHeifDecoder::DecodeHeif(
 	uint32_t targetItemId = demuxer.m_topLevelItemIds[frameIndex];
 	const auto& targetItem = demuxer.m_items[targetItemId];
 
+	// Reject 10-bit / HDR content for GPU path - Media Foundation NV12 forced path
+	// produces a green-tinted image for Main10 (pixi 10-bit, hvcC general_profile 0x04).
+	// Let libheif's HDR-to-8bit software path handle it correctly (tonemapped).
+	if (targetItem.bit_depth > 8) {
+		return false;
+	}
+
 	uint32_t finalW = targetItem.width;
 	uint32_t finalH = targetItem.height;
 
@@ -1034,6 +1059,14 @@ bool GpuHeifDecoder::DecodeHeif(
 		if (finalW > MAX_IMAGE_DIMENSION || finalH > MAX_IMAGE_DIMENSION || (double)finalW * finalH > MAX_IMAGE_PIXELS || finalW < 1 || finalH < 1) {
 			outOfMemory = true;
 			return false;
+		}
+
+		// Grid tiles may be 10-bit even if the grid item itself has no pixi; reject whole grid.
+		for (uint32_t tid : grid.tileItemIds) {
+			auto it = demuxer.m_items.find(tid);
+			if (it != demuxer.m_items.end() && it->second.bit_depth > 8) {
+				return false;
+			}
 		}
 
 		ID3D11Texture2D* pCanvas = gpuCtx.GetCanvasTex(finalW, finalH);
