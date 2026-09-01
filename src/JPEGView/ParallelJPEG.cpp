@@ -100,7 +100,11 @@ static bool findSegments(const unsigned char* buf, long sz, long* sosEnd, long* 
 			if (m >= 0xD0 && m <= 0xD7) { i += 2; continue; }
 			if (m == 0x00) { i += 2; continue; }
 			if (m == 0xFF) { i++; continue; }
-			if (m == 0xDA) return false; // Multi-scan unsupported
+			if (m == 0xDA) {
+				if (!*progressive) return false; // Multi-scan unsupported for baseline
+				i += 2;
+				continue;
+			}
 			i += 2;
 			continue;
 		}
@@ -125,9 +129,11 @@ static bool findSegments(const unsigned char* buf, long sz, long* sosEnd, long* 
 		if (len < 2 || i + 2 + len > sz) return false;
 
 		if (m == 0xDA) { // SOS
-			*sosEnd = i + 2 + len;
+			if (*sosEnd == 0) {
+				*sosEnd = i + 2 + len;
+			}
 			inScan = true;
-			i = *sosEnd;
+			i = i + 2 + len;
 			continue;
 		}
 
@@ -141,7 +147,7 @@ static bool findSegments(const unsigned char* buf, long sz, long* sosEnd, long* 
 
 		if (m >= 0xC0 && m <= 0xCF && m != 0xC4 && m != 0xC8 && m != 0xCC) { // SOF
 			*progressive = (m == 0xC2);
-			if (m != 0xC0) return false; // Only baseline SOF0 supported
+			if (m != 0xC0 && m != 0xC2) return false; // Baseline SOF0 and Progressive SOF2 supported
 			if (len < 8) return false;
 			*precision = buf[i + 4];
 			*height = (static_cast<int>(buf[i + 5]) << 8) | buf[i + 6];
@@ -809,6 +815,417 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices) {
 	return (availCount >= 2);
 }
 
+// Build a standalone 1-component progressive JPEG stream for component target_comp_id
+static std::vector<unsigned char> buildCompProgressiveStream(const unsigned char* buf, size_t sz, int target_comp_id, int& comp_w, int& comp_h) {
+	std::vector<unsigned char> out;
+	out.reserve(sz);
+	out.push_back(0xFF);
+	out.push_back(0xD8);
+
+	size_t i = 2;
+	int full_w = 0, full_h = 0, max_h = 1, max_v = 1;
+	int target_h = 1, target_v = 1, qtable = 0, precision = 8;
+
+	// Scan for SOF2 geometry
+	while (i < sz - 1) {
+		if (buf[i] != 0xFF) { i++; continue; }
+		unsigned char m = buf[i + 1];
+		if (m == 0xD8 || (m >= 0xD0 && m <= 0xD7) || m == 0x01) { i += 2; continue; }
+		if (m == 0xD9) break;
+		size_t len = (static_cast<size_t>(buf[i + 2]) << 8) | buf[i + 3];
+		if (m == 0xC2) { // SOF2
+			precision = buf[i + 4];
+			full_h = (static_cast<int>(buf[i + 5]) << 8) | buf[i + 6];
+			full_w = (static_cast<int>(buf[i + 7]) << 8) | buf[i + 8];
+			int num_comps = buf[i + 9];
+			for (int c = 0; c < num_comps; c++) {
+				int cid = buf[i + 10 + c * 3];
+				int hs = buf[i + 10 + c * 3 + 1] >> 4;
+				int vs = buf[i + 10 + c * 3 + 1] & 0x0F;
+				if (hs > max_h) max_h = hs;
+				if (vs > max_v) max_v = vs;
+				if (cid == target_comp_id) {
+					target_h = hs;
+					target_v = vs;
+					qtable = buf[i + 10 + c * 3 + 2];
+				}
+			}
+			break;
+		}
+		i += 2 + len;
+	}
+
+	comp_w = (full_w * target_h + max_h - 1) / max_h;
+	comp_h = (full_h * target_v + max_v - 1) / max_v;
+
+	// Extract table and scan payload for target component
+	i = 2;
+	while (i < sz - 1) {
+		if (buf[i] != 0xFF) { i++; continue; }
+		unsigned char m = buf[i + 1];
+		if (m == 0xD8 || (m >= 0xD0 && m <= 0xD7) || m == 0x01) { i += 2; continue; }
+		if (m == 0xD9) break;
+
+		size_t len = (static_cast<size_t>(buf[i + 2]) << 8) | buf[i + 3];
+		size_t seg_total = 2 + len;
+
+		if (m == 0xDB || m == 0xDD) { // DQT / DRI
+			out.insert(out.end(), buf + i, buf + i + seg_total);
+		} else if (m == 0xC2) { // SOF2
+			out.push_back(0xFF);
+			out.push_back(0xC2);
+			out.push_back(0x00);
+			out.push_back(0x0B); // length 11
+			out.push_back(static_cast<unsigned char>(precision));
+			out.push_back(static_cast<unsigned char>(comp_h >> 8));
+			out.push_back(static_cast<unsigned char>(comp_h & 0xFF));
+			out.push_back(static_cast<unsigned char>(comp_w >> 8));
+			out.push_back(static_cast<unsigned char>(comp_w & 0xFF));
+			out.push_back(1); // 1 component
+			out.push_back(1); // component ID 1
+			out.push_back(0x11); // 1x1 sampling
+			out.push_back(static_cast<unsigned char>(qtable));
+		} else if (m == 0xC4) { // DHT
+			out.insert(out.end(), buf + i, buf + i + seg_total);
+		} else if (m == 0xDA) { // SOS
+			int num_comps = buf[i + 4];
+			bool match = false;
+			int dc_tbl = 0, ac_tbl = 0;
+			for (int c = 0; c < num_comps; c++) {
+				int cid = buf[i + 5 + c * 2];
+				if (cid == target_comp_id) {
+					match = true;
+					dc_tbl = buf[i + 5 + c * 2 + 1] >> 4;
+					ac_tbl = buf[i + 5 + c * 2 + 1] & 0x0F;
+					break;
+				}
+			}
+
+			size_t d_off = i + seg_total;
+			size_t next_m = d_off;
+			while (next_m < sz - 1) {
+				if (buf[next_m] == 0xFF && buf[next_m + 1] != 0x00 && !(buf[next_m + 1] >= 0xD0 && buf[next_m + 1] <= 0xD7)) {
+					break;
+				}
+				next_m++;
+			}
+
+			if (match) {
+				out.push_back(0xFF);
+				out.push_back(0xDA);
+				out.push_back(0x00);
+				out.push_back(0x08);
+				out.push_back(1);
+				out.push_back(1);
+				out.push_back(static_cast<unsigned char>((dc_tbl << 4) | ac_tbl));
+				out.push_back(buf[i + 5 + num_comps * 2]);
+				out.push_back(buf[i + 5 + num_comps * 2 + 1]);
+				out.push_back(buf[i + 5 + num_comps * 2 + 2]);
+				out.insert(out.end(), buf + d_off, buf + next_m);
+			}
+			i = next_m;
+			continue;
+		}
+		i += seg_total;
+	}
+
+	out.push_back(0xFF);
+	out.push_back(0xD9);
+	return out;
+}
+
+// Decode single grayscale plane
+static bool decodePlane(const unsigned char* stream, size_t stream_sz, int width, int height, unsigned char* plane) {
+	jpeg_decompress_struct cinfo;
+	ErrMgr err;
+	cinfo.err = jpeg_std_error(&err.pub);
+	err.pub.error_exit = error_exit;
+	err.pub.emit_message = output_message;
+	if (setjmp(err.jmp)) {
+		jpeg_destroy_decompress(&cinfo);
+		return false;
+	}
+
+	jpeg_create_decompress(&cinfo);
+	jpeg_mem_src(&cinfo, stream, stream_sz);
+	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
+		jpeg_destroy_decompress(&cinfo);
+		return false;
+	}
+
+	cinfo.out_color_space = JCS_GRAYSCALE;
+	cinfo.dct_method = JDCT_IFAST;
+	cinfo.do_fancy_upsampling = FALSE;
+	cinfo.dither_mode = JDITHER_NONE;
+
+	jpeg_start_decompress(&cinfo);
+
+	const int CHUNK = 128;
+	JSAMPROW row_ptrs[CHUNK];
+	while (cinfo.output_scanline < cinfo.output_height) {
+		int start = cinfo.output_scanline;
+		int lines = min(CHUNK, static_cast<int>(cinfo.output_height - cinfo.output_scanline));
+		for (int r = 0; r < lines; r++) {
+			row_ptrs[r] = plane + static_cast<size_t>(start + r) * width;
+		}
+		jpeg_read_scanlines(&cinfo, row_ptrs, lines);
+	}
+
+	jpeg_finish_decompress(&cinfo);
+	jpeg_destroy_decompress(&cinfo);
+	return true;
+}
+
+// Parallel Progressive JPEG Decoder
+static unsigned char* DecodeProgressive(const unsigned char* buf, size_t sz, int& width, int& height, int& subsampling,
+	ProgressFn progress, void* user) {
+	if (buf == nullptr || sz < 64 || buf[0] != 0xFF || buf[1] != 0xD8) return nullptr;
+
+	// Scan markers to inspect SOF2 and SOS layout
+	size_t i = 2;
+	int full_w = 0, full_h = 0, comps = 0, precision = 8;
+	int h_samp[3] = { 1, 1, 1 }, v_samp[3] = { 1, 1, 1 }, comp_id[3] = { 1, 2, 3 };
+	int max_h = 1, max_v = 1;
+	bool has_interleaved_sos = false;
+	int sos_count = 0;
+
+	while (i < sz - 1) {
+		if (buf[i] != 0xFF) { i++; continue; }
+		unsigned char m = buf[i + 1];
+		if (m == 0xD8 || (m >= 0xD0 && m <= 0xD7) || m == 0x01) { i += 2; continue; }
+		if (m == 0xD9) break;
+
+		size_t len = (static_cast<size_t>(buf[i + 2]) << 8) | buf[i + 3];
+		if (len < 2 || i + 2 + len > sz) return nullptr;
+
+		if (m == 0xC2) { // SOF2
+			precision = buf[i + 4];
+			full_h = (static_cast<int>(buf[i + 5]) << 8) | buf[i + 6];
+			full_w = (static_cast<int>(buf[i + 7]) << 8) | buf[i + 8];
+			comps = buf[i + 9];
+			if (precision != 8 || (comps != 3 && comps != 1)) return nullptr;
+			for (int c = 0; c < comps; c++) {
+				comp_id[c] = buf[i + 10 + c * 3];
+				h_samp[c] = buf[i + 10 + c * 3 + 1] >> 4;
+				v_samp[c] = buf[i + 10 + c * 3 + 1] & 0x0F;
+				if (h_samp[c] > max_h) max_h = h_samp[c];
+				if (v_samp[c] > max_v) max_v = v_samp[c];
+			}
+		} else if (m == 0xDA) { // SOS
+			sos_count++;
+			int num_comps = buf[i + 4];
+			if (num_comps > 1) {
+				has_interleaved_sos = true;
+			}
+			// Skip entropy data
+			size_t d_off = i + 2 + len;
+			size_t next_m = d_off;
+			while (next_m < sz - 1) {
+				if (buf[next_m] == 0xFF && buf[next_m + 1] != 0x00 && !(buf[next_m + 1] >= 0xD0 && buf[next_m + 1] <= 0xD7)) {
+					break;
+				}
+				next_m++;
+			}
+			i = next_m;
+			continue;
+		}
+		i += 2 + len;
+	}
+
+	if (full_w <= 0 || full_h <= 0 || sos_count == 0) return nullptr;
+
+	width = full_w;
+	height = full_h;
+
+	// Determine subsampling
+	if (comps == 1) {
+		subsampling = 3; // GRAY
+	} else {
+		if (h_samp[1] == max_h && v_samp[1] == max_v) subsampling = 0;             // 444
+		else if (h_samp[1] * 2 == max_h && v_samp[1] * 2 == max_v) subsampling = 2; // 420
+		else if (h_samp[1] * 2 == max_h && v_samp[1] == max_v) subsampling = 1;     // 422
+		else if (h_samp[1] == max_h && v_samp[1] * 2 == max_v) subsampling = 4;     // 440
+		else subsampling = 0;
+	}
+
+	int pitch = (width * 3 + 3) & ~3;
+	unsigned char* out = new (std::nothrow) unsigned char[static_cast<size_t>(pitch) * height];
+	if (out == nullptr) return nullptr;
+
+	// Fast multi-stream path for non-interleaved 3-component scans
+	if (comps == 3 && !has_interleaved_sos) {
+		int w0 = 0, h0 = 0, w1 = 0, h1 = 0, w2 = 0, h2 = 0;
+		std::vector<unsigned char> s0 = buildCompProgressiveStream(buf, sz, comp_id[0], w0, h0);
+		std::vector<unsigned char> s1 = buildCompProgressiveStream(buf, sz, comp_id[1], w1, h1);
+		std::vector<unsigned char> s2 = buildCompProgressiveStream(buf, sz, comp_id[2], w2, h2);
+
+		if (w0 > 0 && h0 > 0 && w1 > 0 && h1 > 0 && w2 > 0 && h2 > 0) {
+			std::vector<unsigned char> p0(static_cast<size_t>(w0) * h0);
+			std::vector<unsigned char> p1(static_cast<size_t>(w1) * h1);
+			std::vector<unsigned char> p2(static_cast<size_t>(w2) * h2);
+
+			std::atomic<bool> ok(true);
+			std::thread th0([&]() { if (!decodePlane(s0.data(), s0.size(), w0, h0, p0.data())) ok = false; });
+			std::thread th1([&]() { if (!decodePlane(s1.data(), s1.size(), w1, h1, p1.data())) ok = false; });
+			std::thread th2([&]() { if (!decodePlane(s2.data(), s2.size(), w2, h2, p2.data())) ok = false; });
+
+			th0.join();
+			th1.join();
+			th2.join();
+
+			if (ok.load()) {
+				int nthreads = static_cast<int>(std::thread::hardware_concurrency());
+				if (nthreads < 4) nthreads = 4;
+				if (nthreads > 16) nthreads = 16;
+				std::vector<std::thread> conv_threads;
+				int rows_per_th = (height + nthreads - 1) / nthreads;
+
+				for (int t = 0; t < nthreads; t++) {
+					int y0 = t * rows_per_th;
+					int y1 = min(height, y0 + rows_per_th);
+					conv_threads.emplace_back([&, y0, y1]() {
+						if (subsampling == 0) { // 4:4:4
+							for (int y = y0; y < y1; y++) {
+								const unsigned char* pY = p0.data() + static_cast<size_t>(y) * w0;
+								const unsigned char* pCb = p1.data() + static_cast<size_t>(y) * w1;
+								const unsigned char* pCr = p2.data() + static_cast<size_t>(y) * w2;
+								unsigned char* pDst = out + static_cast<size_t>(y) * pitch;
+								for (int x = 0; x < width; x++) {
+									int y_val = pY[x];
+									int cb_val = pCb[x] - 128;
+									int cr_val = pCr[x] - 128;
+
+									int r = y_val + ((91881 * cr_val + 32768) >> 16);
+									int g = y_val - ((22554 * cb_val + 46802 * cr_val + 32768) >> 16);
+									int b = y_val + ((116130 * cb_val + 32768) >> 16);
+
+									pDst[x * 3 + 0] = static_cast<unsigned char>(max(0, min(255, b)));
+									pDst[x * 3 + 1] = static_cast<unsigned char>(max(0, min(255, g)));
+									pDst[x * 3 + 2] = static_cast<unsigned char>(max(0, min(255, r)));
+								}
+							}
+						} else if (subsampling == 2) { // 4:2:0
+							for (int y = y0; y < y1; y++) {
+								size_t y_c = static_cast<size_t>(y >> 1);
+								const unsigned char* pY = p0.data() + static_cast<size_t>(y) * w0;
+								const unsigned char* pCb = p1.data() + y_c * w1;
+								const unsigned char* pCr = p2.data() + y_c * w2;
+								unsigned char* pDst = out + static_cast<size_t>(y) * pitch;
+								for (int x = 0; x < width; x++) {
+									int x_c = x >> 1;
+									int y_val = pY[x];
+									int cb_val = pCb[x_c] - 128;
+									int cr_val = pCr[x_c] - 128;
+
+									int r = y_val + ((91881 * cr_val + 32768) >> 16);
+									int g = y_val - ((22554 * cb_val + 46802 * cr_val + 32768) >> 16);
+									int b = y_val + ((116130 * cb_val + 32768) >> 16);
+
+									pDst[x * 3 + 0] = static_cast<unsigned char>(max(0, min(255, b)));
+									pDst[x * 3 + 1] = static_cast<unsigned char>(max(0, min(255, g)));
+									pDst[x * 3 + 2] = static_cast<unsigned char>(max(0, min(255, r)));
+								}
+							}
+						} else if (subsampling == 1) { // 4:2:2
+							for (int y = y0; y < y1; y++) {
+								const unsigned char* pY = p0.data() + static_cast<size_t>(y) * w0;
+								const unsigned char* pCb = p1.data() + static_cast<size_t>(y) * w1;
+								const unsigned char* pCr = p2.data() + static_cast<size_t>(y) * w2;
+								unsigned char* pDst = out + static_cast<size_t>(y) * pitch;
+								for (int x = 0; x < width; x++) {
+									int x_c = x >> 1;
+									int y_val = pY[x];
+									int cb_val = pCb[x_c] - 128;
+									int cr_val = pCr[x_c] - 128;
+
+									int r = y_val + ((91881 * cr_val + 32768) >> 16);
+									int g = y_val - ((22554 * cb_val + 46802 * cr_val + 32768) >> 16);
+									int b = y_val + ((116130 * cb_val + 32768) >> 16);
+
+									pDst[x * 3 + 0] = static_cast<unsigned char>(max(0, min(255, b)));
+									pDst[x * 3 + 1] = static_cast<unsigned char>(max(0, min(255, g)));
+									pDst[x * 3 + 2] = static_cast<unsigned char>(max(0, min(255, r)));
+								}
+							}
+						} else { // 4:4:0 or fallback
+							for (int y = y0; y < y1; y++) {
+								size_t y_c = static_cast<size_t>(y >> 1);
+								const unsigned char* pY = p0.data() + static_cast<size_t>(y) * w0;
+								const unsigned char* pCb = p1.data() + y_c * w1;
+								const unsigned char* pCr = p2.data() + y_c * w2;
+								unsigned char* pDst = out + static_cast<size_t>(y) * pitch;
+								for (int x = 0; x < width; x++) {
+									int y_val = pY[x];
+									int cb_val = pCb[x] - 128;
+									int cr_val = pCr[x] - 128;
+
+									int r = y_val + ((91881 * cr_val + 32768) >> 16);
+									int g = y_val - ((22554 * cb_val + 46802 * cr_val + 32768) >> 16);
+									int b = y_val + ((116130 * cb_val + 32768) >> 16);
+
+									pDst[x * 3 + 0] = static_cast<unsigned char>(max(0, min(255, b)));
+									pDst[x * 3 + 1] = static_cast<unsigned char>(max(0, min(255, g)));
+									pDst[x * 3 + 2] = static_cast<unsigned char>(max(0, min(255, r)));
+								}
+							}
+						}
+					});
+				}
+				for (auto& th : conv_threads) th.join();
+
+				if (progress != nullptr) {
+					progress(user, out, width, height);
+				}
+				return out;
+			}
+		}
+	}
+
+	// Fallback single-instance decode for grayscale or interleaved scans
+	jpeg_decompress_struct cinfo;
+	ErrMgr err;
+	cinfo.err = jpeg_std_error(&err.pub);
+	err.pub.error_exit = error_exit;
+	err.pub.emit_message = output_message;
+	if (setjmp(err.jmp)) {
+		jpeg_destroy_decompress(&cinfo);
+		delete[] out;
+		return nullptr;
+	}
+
+	jpeg_create_decompress(&cinfo);
+	jpeg_mem_src(&cinfo, buf, sz);
+	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
+		jpeg_destroy_decompress(&cinfo);
+		delete[] out;
+		return nullptr;
+	}
+
+	cinfo.out_color_space = JCS_EXT_BGR;
+	cinfo.dct_method = JDCT_IFAST;
+	cinfo.do_fancy_upsampling = FALSE;
+	cinfo.dither_mode = JDITHER_NONE;
+	jpeg_start_decompress(&cinfo);
+
+	const int CHUNK = 128;
+	JSAMPROW row_ptrs[CHUNK];
+	while (cinfo.output_scanline < cinfo.output_height) {
+		int start = cinfo.output_scanline;
+		int lines = min(CHUNK, static_cast<int>(cinfo.output_height - cinfo.output_scanline));
+		for (int r = 0; r < lines; r++) {
+			row_ptrs[r] = out + static_cast<size_t>(start + r) * pitch;
+		}
+		jpeg_read_scanlines(&cinfo, row_ptrs, lines);
+	}
+	jpeg_finish_decompress(&cinfo);
+	jpeg_destroy_decompress(&cinfo);
+
+	if (progress != nullptr) {
+		progress(user, out, width, height);
+	}
+	return out;
+}
+
 // Public API
 bool IsParallelDecodable(const void* buffer, int sizebytes, int& width, int& height) {
 	const unsigned char* buf = static_cast<const unsigned char*>(buffer);
@@ -820,7 +1237,7 @@ bool IsParallelDecodable(const void* buffer, int sizebytes, int& width, int& hei
 	if (!findSegments(buf, sizebytes, &sosEnd, &eoiPos, &w, &h, &comps, &mcuW, &mcuH, &precision, &progressive, &restartInt)) {
 		return false;
 	}
-	if (progressive || precision != 8 || restartInt != 0 || comps != 3) {
+	if (precision != 8 || restartInt != 0 || (comps != 3 && comps != 1)) {
 		return false;
 	}
 	width = w;
@@ -835,6 +1252,15 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 	const unsigned char* buf = static_cast<const unsigned char*>(buffer);
 	long sz = sizebytes;
 	if (buf == nullptr || sz < 64 || buf[0] != 0xFF || buf[1] != 0xD8) return nullptr;
+
+	long sosEnd = 0, eoiPos = 0, restartInt = 0;
+	bool progressive = false;
+	int precision = 0, w = 0, h = 0, comps = 0, mcuW = 0, mcuH = 0;
+	if (findSegments(buf, sz, &sosEnd, &eoiPos, &w, &h, &comps, &mcuW, &mcuH, &precision, &progressive, &restartInt)) {
+		if (progressive && precision == 8) {
+			return DecodeProgressive(buf, static_cast<size_t>(sz), width, height, subsampling, progress, user);
+		}
+	}
 
 	ScanInfo si;
 	PrescanCtx ctx;
