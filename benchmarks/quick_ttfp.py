@@ -11,9 +11,9 @@ from harness.process_runner import ProcessRunner
 
 def main():
     exe = Path(sys.argv[1]) if len(sys.argv) > 1 else BENCHMARKS_DIR.parent / "src" / "JPEGView" / "bin" / "x64" / "Release" / "JPEGView.exe"
-    img = BENCHMARKS_DIR / "actual_test_data" / "RAW15538.JPG"
-    iters = int(sys.argv[2]) if len(sys.argv) > 2 else 5
-    warmups = int(sys.argv[3]) if len(sys.argv) > 3 else 2
+    img = Path(sys.argv[2]) if len(sys.argv) > 2 and not sys.argv[2].isdigit() else BENCHMARKS_DIR / "actual_test_data" / "RAW15538.JPG"
+    iters = int(sys.argv[3]) if len(sys.argv) > 3 else (int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 5)
+    warmups = int(sys.argv[4]) if len(sys.argv) > 4 else 2
     exe = Path(exe)
     assert exe.exists(), f"exe not found: {exe}"
 
