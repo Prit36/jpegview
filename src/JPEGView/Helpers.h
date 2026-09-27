@@ -21,6 +21,7 @@ namespace Helpers {
 	// Sorting order of image files
 	enum ESorting {
 		FS_Undefined = -1,
+		FS_Windows,
 		FS_LastModTime,
 		FS_CreationTime,
 		FS_FileName,

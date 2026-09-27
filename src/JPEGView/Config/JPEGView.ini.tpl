@@ -185,8 +185,8 @@ ScaleFactorNavPanel=1.0
 ; *****************************************************************************
 
 ; Sorting order of the files when displaying the image files in a folder
-; Can be LastModDate, CreationDate, FileName, FileSize or Random
-FileDisplayOrder=LastModDate
+; Can be Windows, LastModDate, CreationDate, FileName, FileSize or Random
+FileDisplayOrder=Windows
 
 ; Sort files ascending (increasing, e.g. A->Z, 0->9) or descending (decreasing, e.g. Z->A, 9->0)
 FileSortAscending=true

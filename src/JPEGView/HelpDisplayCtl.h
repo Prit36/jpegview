@@ -26,5 +26,5 @@ private:
 	void GenerateHelpDisplay();
 	CString _KeyDesc(int nCommandId);
 	CString _KeyDesc(int nCommandId1, int nCommandId2);
-	CString _KeyDesc(int nCommandId1, int nCommandId2, int nCommandId3, int nCommandId4);
+	CString _KeyDesc(int nCommandId1, int nCommandId2, int nCommandId3, int nCommandId4, int nCommandId5 = -1);
 };

@@ -7,7 +7,7 @@
 // if a define is to be included in the publicly-exposed definitions, start the comment with ":KeyMap:"
 // don't worry about the formatting, the script that auto-generates the definition will take care of it
 
-#define JPEGVIEW_VERSION "2, 6, 0, 0\0"
+#define JPEGVIEW_VERSION "2, 7, 0, 0\0"
 // title for main window and msgbox so it can be change via actions
 #define JPEGVIEW_TITLE "JPEGView"
 
@@ -167,6 +167,7 @@
 #define IDM_LOOP_FOLDER		6000		// :KeyMap: set navigation mode loop through folder
 #define IDM_LOOP_RECURSIVELY 6010		// :KeyMap: set navigation mode loop through folder and subfolders
 #define IDM_LOOP_SIBLINGS	6020		// :KeyMap: set navigation mode loop through folders on same level
+#define IDM_SORT_WINDOWS_ORDER 6990		// :KeyMap: sorting order according to Windows Explorer
 #define IDM_SORT_MOD_DATE	7000		// :KeyMap: sorting order by modification date
 #define IDM_SORT_CREATION_DATE 7010		// :KeyMap: sorting order by creation date
 #define IDM_SORT_NAME		7020		// :KeyMap: sorting order by name

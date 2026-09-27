@@ -417,7 +417,7 @@ void CSettingsProvider::ReadWriteableINISettings() {
 	else {
 		m_eNavigation = Helpers::NM_LoopDirectory;
 	}
-	CString sSorting = GetString(_T("FileDisplayOrder"), _T("LastModDate"));
+	CString sSorting = GetString(_T("FileDisplayOrder"), _T("Windows"));
 	if (sSorting.CompareNoCase(_T("CreationDate")) == 0) {
 		m_eSorting = Helpers::FS_CreationTime;
 	}
@@ -430,8 +430,11 @@ void CSettingsProvider::ReadWriteableINISettings() {
 	else if (sSorting.CompareNoCase(_T("FileSize")) == 0) {
 		m_eSorting = Helpers::FS_FileSize;
 	}
-	else {
+	else if (sSorting.CompareNoCase(_T("LastModDate")) == 0) {
 		m_eSorting = Helpers::FS_LastModTime;
+	}
+	else {
+		m_eSorting = Helpers::FS_Windows;
 	}
 	m_bIsSortedAscending = GetBool(_T("FileSortAscending"), true);
 	m_eAutoZoomMode = GetAutoZoomMode(_T("AutoZoomMode"), Helpers::ZM_FitToScreenNoZoom);
@@ -478,9 +481,11 @@ void CSettingsProvider::SaveSettings(const CImageProcessingParams& procParams,
 	}
 	WriteString(_T("FolderNavigation"), sNavigation);
 
-	LPCTSTR sSorting = _T("FileName");
+	LPCTSTR sSorting = _T("Windows");
 	if (eFileSorting == Helpers::FS_CreationTime) {
 		sSorting = _T("CreationDate");
+	} else if (eFileSorting == Helpers::FS_FileName) {
+		sSorting = _T("FileName");
 	} else if (eFileSorting == Helpers::FS_LastModTime) {
 		sSorting = _T("LastModDate");
 	} else if (eFileSorting == Helpers::FS_Random) {

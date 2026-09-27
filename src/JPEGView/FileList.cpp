@@ -6,13 +6,15 @@
 #include "Shlwapi.h"
 #include <unordered_set>
 #include <string>
+#include <vector>
+#include <algorithm>
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Helpers
 ///////////////////////////////////////////////////////////////////////////////////
 
 // static initializers
-Helpers::ESorting CFileDesc::sm_eSorting = Helpers::FS_LastModTime;
+Helpers::ESorting CFileDesc::sm_eSorting = Helpers::FS_Windows;
 bool CFileDesc::sm_bSortAscending = true;
 Helpers::ENavigationMode CFileList::sm_eMode = Helpers::NM_LoopDirectory;
 
@@ -68,47 +70,85 @@ static bool UseLogicalStringCompare() {
 	return s_bUseLogicalStringCompare;
 }
 
-///////////////////////////////////////////////////////////////////////////////////
-// CFileDesc
-///////////////////////////////////////////////////////////////////////////////////
-
 CFileDesc::CFileDesc(const CString & sName, const FILETIME* lastModTime, const FILETIME* creationTime, __int64 fileSize) {
 	m_sName = sName;
 	m_sTitle = (LPCTSTR)m_sName + sName.ReverseFind(_T('\\')) + 1;
-	memcpy(&m_lastModTime, lastModTime, sizeof(FILETIME));
-	memcpy(&m_creationTime, creationTime, sizeof(FILETIME));
+	if (lastModTime) {
+		memcpy(&m_lastModTime, lastModTime, sizeof(FILETIME));
+	} else {
+		memset(&m_lastModTime, 0, sizeof(FILETIME));
+	}
+	if (creationTime) {
+		memcpy(&m_creationTime, creationTime, sizeof(FILETIME));
+	} else {
+		memset(&m_creationTime, 0, sizeof(FILETIME));
+	}
 	m_nRandomOrderNumber = rand();
 	m_fileSize = fileSize;
 }
 
 bool CFileDesc::SortAscending(const CFileDesc& other) const {
-	if (sm_eSorting == Helpers::FS_CreationTime || sm_eSorting == Helpers::FS_LastModTime) {
+	if (sm_eSorting == Helpers::FS_Windows || sm_eSorting == Helpers::FS_FileName) {
+		if (UseLogicalStringCompare()) {
+			int cmp = StrCmpLogicalW(m_sTitle, other.m_sTitle);
+			if (cmp != 0) return cmp < 0;
+		} else {
+			int cmp = _tcsicoll(m_sTitle, other.m_sTitle);
+			if (cmp != 0) return cmp < 0;
+		}
+		return _tcsicmp(m_sName, other.m_sName) < 0;
+	} else if (sm_eSorting == Helpers::FS_CreationTime || sm_eSorting == Helpers::FS_LastModTime) {
 		const FILETIME* pTime = (sm_eSorting == Helpers::FS_LastModTime) ? &m_lastModTime : &m_creationTime;
 		const FILETIME* pTimeOther = (sm_eSorting == Helpers::FS_LastModTime) ? &(other.m_lastModTime) : &(other.m_creationTime);
 		if (pTime->dwHighDateTime < pTimeOther->dwHighDateTime) {
 			return true;
 		} else if (pTime->dwHighDateTime > pTimeOther->dwHighDateTime) {
 			return false;
-		} else {
+		} else if (pTime->dwLowDateTime != pTimeOther->dwLowDateTime) {
 			return pTime->dwLowDateTime < pTimeOther->dwLowDateTime;
 		}
-	} else if (sm_eSorting == Helpers::FS_Random) {
-		return m_nRandomOrderNumber < other.m_nRandomOrderNumber;
-	} else if (sm_eSorting == Helpers::FS_FileSize) {
-		return m_fileSize < other.m_fileSize;
-	} else {
+		// Tie-breaker: sort by file name if timestamps match
 		if (UseLogicalStringCompare()) {
-			// If the filename contains numbers, we want to sort the files
-			// according to the numbers to place 'File9' before 'File10'
-			return StrCmpLogicalW(m_sTitle, other.m_sTitle) < 0;
+			int cmp = StrCmpLogicalW(m_sTitle, other.m_sTitle);
+			if (cmp != 0) return cmp < 0;
 		} else {
-			return _tcsicoll(m_sTitle, other.m_sTitle) < 0;
+			int cmp = _tcsicoll(m_sTitle, other.m_sTitle);
+			if (cmp != 0) return cmp < 0;
 		}
+		return _tcsicmp(m_sName, other.m_sName) < 0;
+	} else if (sm_eSorting == Helpers::FS_Random) {
+		if (m_nRandomOrderNumber != other.m_nRandomOrderNumber) {
+			return m_nRandomOrderNumber < other.m_nRandomOrderNumber;
+		}
+		return _tcsicmp(m_sName, other.m_sName) < 0;
+	} else if (sm_eSorting == Helpers::FS_FileSize) {
+		if (m_fileSize != other.m_fileSize) {
+			return m_fileSize < other.m_fileSize;
+		}
+		// Tie-breaker: sort by file name if file sizes match
+		if (UseLogicalStringCompare()) {
+			int cmp = StrCmpLogicalW(m_sTitle, other.m_sTitle);
+			if (cmp != 0) return cmp < 0;
+		} else {
+			int cmp = _tcsicoll(m_sTitle, other.m_sTitle);
+			if (cmp != 0) return cmp < 0;
+		}
+		return _tcsicmp(m_sName, other.m_sName) < 0;
+	} else {
+		// Helpers::FS_FileName
+		if (UseLogicalStringCompare()) {
+			int cmp = StrCmpLogicalW(m_sTitle, other.m_sTitle);
+			if (cmp != 0) return cmp < 0;
+		} else {
+			int cmp = _tcsicoll(m_sTitle, other.m_sTitle);
+			if (cmp != 0) return cmp < 0;
+		}
+		return _tcsicmp(m_sName, other.m_sName) < 0;
 	}
 }
 
 bool CFileDesc::operator < (const CFileDesc& other) const {
-	return SortAscending(other) ^ (!sm_bSortAscending);
+	return sm_bSortAscending ? SortAscending(other) : other.SortAscending(*this);
 }
 
 
@@ -698,6 +738,21 @@ std::list<CFileDesc>::iterator CFileList::FindFile(const CString& sName) {
 	return m_fileList.begin(); // in case the file was not found
 }
 
+static void SortDirectoryList(std::list<CString>& dirList) {
+	if (dirList.empty()) return;
+
+	dirList.sort([](const CString& a, const CString& b) {
+		if (UseLogicalStringCompare()) {
+			int cmp = StrCmpLogicalW(a, b);
+			if (cmp != 0) return cmp < 0;
+		} else {
+			int cmp = _tcsicoll(a, b);
+			if (cmp != 0) return cmp < 0;
+		}
+		return a.CompareNoCase(b) < 0;
+	});
+}
+
 CFileList* CFileList::WrapToNextImage() {
 	if (m_next != NULL) {
 		assert(sm_eMode != Helpers::NM_LoopDirectory);
@@ -729,7 +784,7 @@ CFileList* CFileList::WrapToNextImage() {
 		if (dirList.size() == 0) {
 			return NULL; // no sibling folders
 		}
-		dirList.sort(); // sort is alphabetically
+		SortDirectoryList(dirList);
 
 		// now find the current folder and take the next in list
 		// to handle the wrap around, two iterations are needed (in case the current folder is the last in the list)
@@ -777,7 +832,7 @@ CFileList* CFileList::FindFileRecursively (const CString& sDirectory, const CStr
 	}
 
 	if (dirList.size() > 0) {
-		dirList.sort();
+		SortDirectoryList(dirList);
 
 		bool bStart = sFindAfter.GetLength() == 0;
 		std::list<CString>::iterator iter;
@@ -811,9 +866,51 @@ CFileList* CFileList::FindFileRecursively (const CString& sDirectory, const CStr
 }
 
 CFileList* CFileList::WrapToPrevImage() {
-	// This is much easier than going to next image as we never go back to new unknown folders
 	if (m_prev != NULL) {
 		return m_prev;
+	}
+	if (sm_eMode == Helpers::NM_LoopSameDirectoryLevel) {
+		int nPos = m_sDirectory.ReverseFind(_T('\\'));
+		if (nPos > 0) {
+			CString sNextDirRoot = m_sDirectory.Left(nPos);
+			CString sThisDirTitle = m_sDirectory.Right(m_sDirectory.GetLength() - nPos - 1);
+			CFindFile fileFind;
+			std::list<CString> dirList;
+			if (fileFind.FindFile(sNextDirRoot + "\\*")) {
+				if (fileFind.IsDirectory() && !fileFind.IsDots()) {
+					dirList.push_back(fileFind.GetFileName());
+				}
+				while (fileFind.FindNextFile()) {
+					if (fileFind.IsDirectory() && !fileFind.IsDots()) {
+						dirList.push_back(fileFind.GetFileName());
+					}
+				}
+			}
+			if (dirList.size() > 0) {
+				SortDirectoryList(dirList);
+				std::list<CString>::reverse_iterator riter;
+				bool bFound = false;
+				for (int nStep = 0; nStep < 2; nStep++) {
+					for (riter = dirList.rbegin(); riter != dirList.rend(); ++riter) {
+						if (riter->CompareNoCase(sThisDirTitle) == 0) {
+							bFound = true;
+						} else if (bFound) {
+							CString candidateDir = sNextDirRoot + _T('\\') + *riter;
+							if (candidateDir.CompareNoCase(m_sDirectory) == 0) continue;
+							CFileList* pNewList = new CFileList(candidateDir + _T('\\'), m_directoryWatcher, CFileDesc::GetSorting(), CFileDesc::IsSortedAscending(), m_bWrapAroundFolder, 0);
+							if (pNewList->m_fileList.size() > 0) {
+								pNewList->m_next = this;
+								this->m_prev = pNewList;
+								pNewList->Last();
+								return pNewList;
+							} else {
+								delete pNewList;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	return this;
 }

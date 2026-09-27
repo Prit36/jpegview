@@ -309,13 +309,15 @@ namespace HelpersGUI {
 		}
 		sText += _T("\n");
 		sText += CNLS::GetString(_T("Order files by")); sText += _T(": ");
-		if (eFileSorting == Helpers::FS_CreationTime) {
+		if (eFileSorting == Helpers::FS_Windows) {
+			sText += CNLS::GetString(_T("Windows Explorer order"));
+		} else if (eFileSorting == Helpers::FS_CreationTime) {
 			sText += CNLS::GetString(_T("Creation date/time"));
 		} else if (eFileSorting == Helpers::FS_LastModTime) {
 			sText += CNLS::GetString(_T("Last modification date/time"));
 		}  else if (eFileSorting == Helpers::FS_FileSize) {
 			sText += CNLS::GetString(_T("File size"));
-		}else if (eFileSorting == Helpers::FS_Random) {
+		} else if (eFileSorting == Helpers::FS_Random) {
 			sText += CNLS::GetString(_T("Random"));
 		} else {
 			sText += CNLS::GetString(_T("File name"));

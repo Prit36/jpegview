@@ -73,12 +73,13 @@ void CHelpDisplayCtl::GenerateHelpDisplay() {
 	m_pHelpDisplay->AddLine(_KeyDesc(IDM_SAVE_SCREEN), CNLS::GetString(_T("Save processed image to JPEG file (screen size)")));
 	_stprintf_s(buffMI, 256, CNLS::GetString(_T("Save (%s) / delete (%s) image processing parameters into/from parameter DB")), _KeyDesc(IDM_SAVE_PARAM_DB), _KeyDesc(IDM_CLEAR_PARAM_DB));
 	m_pHelpDisplay->AddLine(_KeyDesc(IDM_SAVE_PARAM_DB, IDM_CLEAR_PARAM_DB), buffMI);
-	m_pHelpDisplay->AddLineInfo(_KeyDesc(IDM_SORT_CREATION_DATE, IDM_SORT_MOD_DATE, IDM_SORT_NAME, IDM_SORT_RANDOM), 
+	m_pHelpDisplay->AddLineInfo(_KeyDesc(IDM_SORT_WINDOWS_ORDER, IDM_SORT_CREATION_DATE, IDM_SORT_MOD_DATE, IDM_SORT_NAME, IDM_SORT_RANDOM), 
+		(m_pMainDlg->GetFileList()->GetSorting() == Helpers::FS_Windows) ? _KeyDesc(IDM_SORT_WINDOWS_ORDER) :
 		(m_pMainDlg->GetFileList()->GetSorting() == Helpers::FS_LastModTime) ? _KeyDesc(IDM_SORT_MOD_DATE) :
 		(m_pMainDlg->GetFileList()->GetSorting() == Helpers::FS_FileName) ? _KeyDesc(IDM_SORT_NAME) : 
 		(m_pMainDlg->GetFileList()->GetSorting() == Helpers::FS_Random) ? _KeyDesc(IDM_SORT_RANDOM) : 
 		(m_pMainDlg->GetFileList()->GetSorting() == Helpers::FS_FileSize) ? _KeyDesc(IDM_SORT_SIZE) : _KeyDesc(IDM_SORT_CREATION_DATE), 
-		CNLS::GetString(_T("Sort images by creation date, resp. modification date, resp. file name")));
+		CNLS::GetString(_T("Sort images by Windows Explorer order, resp. creation date, resp. modification date, resp. file name")));
 	m_pHelpDisplay->AddLine(_KeyDesc(IDM_PREV), CNLS::GetString(_T("Goto previous image")));
 	m_pHelpDisplay->AddLine(_KeyDesc(IDM_NEXT), CNLS::GetString(_T("Goto next image")));
 	m_pHelpDisplay->AddLine(_KeyDesc(IDM_FIRST, IDM_LAST), CNLS::GetString(_T("Goto first/last image of current folder (using sort order as defined)")));
@@ -136,11 +137,12 @@ CString CHelpDisplayCtl::_KeyDesc(int nCommandId1, int nCommandId2) {
 	return keyDesc1 + _T("/") + keyDesc2;
 }
 
-CString CHelpDisplayCtl::_KeyDesc(int nCommandId1, int nCommandId2, int nCommandId3, int nCommandId4) {
+CString CHelpDisplayCtl::_KeyDesc(int nCommandId1, int nCommandId2, int nCommandId3, int nCommandId4, int nCommandId5) {
 	CString keyDesc1 = m_pMainDlg->GetKeyMap()->GetKeyStringForCommand(nCommandId1);
 	CString keyDesc2 = m_pMainDlg->GetKeyMap()->GetKeyStringForCommand(nCommandId2);
 	CString keyDesc3 = m_pMainDlg->GetKeyMap()->GetKeyStringForCommand(nCommandId3);
 	CString keyDesc4 = m_pMainDlg->GetKeyMap()->GetKeyStringForCommand(nCommandId4);
+	CString keyDesc5 = (nCommandId5 >= 0) ? m_pMainDlg->GetKeyMap()->GetKeyStringForCommand(nCommandId5) : CString(_T(""));
 	CString result = keyDesc1;
 	if (!keyDesc2.IsEmpty()) {
 		if (!result.IsEmpty()) result += _T("/");
@@ -153,6 +155,10 @@ CString CHelpDisplayCtl::_KeyDesc(int nCommandId1, int nCommandId2, int nCommand
 	if (!keyDesc4.IsEmpty()) {
 		if (!result.IsEmpty()) result += _T("/");
 		result += keyDesc4;
+	}
+	if (!keyDesc5.IsEmpty()) {
+		if (!result.IsEmpty()) result += _T("/");
+		result += keyDesc5;
 	}
 	return result.IsEmpty() ? CString(_T("n.a.")) : result;
 }

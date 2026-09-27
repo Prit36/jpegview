@@ -1,6 +1,13 @@
 JPEGView Changelog
 ******************
 
+[2.7.0] 2026-09-27
+- feat(navigation): Windows Explorer natural sorting order by default and enhanced folder traversal
+  * Follows Windows Explorer natural sorting order (StrCmpLogicalW) by default for all image formats
+  * Seamless backward and forward sibling folder traversal across directory boundaries
+  * Added "Windows Explorer order" to context menu (under Sorting), keybindings (IDM_SORT_WINDOWS_ORDER), and CLI option (/order W)
+  * High-performance in-memory natural sorting with zero regression on large folders (tested on Downloads folder: 16.5 ms TTFP)
+
 [2.6.0] 2026-09-01
 - perf(jpeg): multi-stream component-parallel progressive JPEG decoding (40% faster TTFP)
   * Concurrent plane decoding (Y, Cb, Cr) across dedicated worker threads

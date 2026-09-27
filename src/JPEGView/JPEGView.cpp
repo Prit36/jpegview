@@ -102,6 +102,7 @@ static Helpers::ESorting ParseCommandLineForSorting(LPCTSTR sCommandLine) {
 	LPCTSTR sSortingMode = sSorting + _tcslen(_T("/order"));
 	if (sSortingMode[0] != 0) {
 		return 
+			(_totupper(sSortingMode[1]) == _T('W')) ? Helpers::FS_Windows :
 			(_totupper(sSortingMode[1]) == _T('M')) ? Helpers::FS_LastModTime :
 			(_totupper(sSortingMode[1]) == _T('C')) ? Helpers::FS_CreationTime :
 			(_totupper(sSortingMode[1]) == _T('N')) ? Helpers::FS_FileName :

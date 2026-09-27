@@ -1295,6 +1295,7 @@ LRESULT CMainDlg::OnContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 	::CheckMenuItem(hMenuNavigation,  m_pFileList->GetNavigationMode()*10 + IDM_LOOP_FOLDER, MF_CHECKED);
 	HMENU hMenuOrdering = ::GetSubMenu(hMenuTrackPopup, SUBMENU_POS_DISPLAY_ORDER);
 	::CheckMenuItem(hMenuOrdering,  
+		(m_pFileList->GetSorting() == Helpers::FS_Windows) ? IDM_SORT_WINDOWS_ORDER :
 		(m_pFileList->GetSorting() == Helpers::FS_LastModTime) ? IDM_SORT_MOD_DATE :
 		(m_pFileList->GetSorting() == Helpers::FS_CreationTime) ? IDM_SORT_CREATION_DATE :
 		(m_pFileList->GetSorting() == Helpers::FS_FileName) ? IDM_SORT_NAME :
@@ -1637,12 +1638,14 @@ void CMainDlg::ExecuteCommand(int nCommand) {
 				(nCommand == IDM_LOOP_RECURSIVELY) ? Helpers::NM_LoopSubDirectories : 
 				Helpers::NM_LoopSameDirectoryLevel);
 			break;
+		case IDM_SORT_WINDOWS_ORDER:
 		case IDM_SORT_MOD_DATE:
 		case IDM_SORT_CREATION_DATE:
 		case IDM_SORT_NAME:
 		case IDM_SORT_RANDOM:
 		case IDM_SORT_SIZE:
 			m_pFileList->SetSorting(
+				(nCommand == IDM_SORT_WINDOWS_ORDER) ? Helpers::FS_Windows :
 				(nCommand == IDM_SORT_CREATION_DATE) ? Helpers::FS_CreationTime : 
 				(nCommand == IDM_SORT_MOD_DATE) ? Helpers::FS_LastModTime : 
 				(nCommand == IDM_SORT_RANDOM) ? Helpers::FS_Random : 
