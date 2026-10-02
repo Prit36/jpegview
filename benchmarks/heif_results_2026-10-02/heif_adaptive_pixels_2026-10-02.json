@@ -1,0 +1,938 @@
+[
+  {
+    "image": "20220831_001704_66A1ECB0.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "ec39b0a01f0b4fce16f65473562c53096683d9c9ce24280344561fbbab06aa8b",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "0c661c129d805a72d41ea2a0300181c6c858f16d35f76aa754bf0b1cc2e75240",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "ec39b0a01f0b4fce16f65473562c53096683d9c9ce24280344561fbbab06aa8b",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "0c661c129d805a72d41ea2a0300181c6c858f16d35f76aa754bf0b1cc2e75240",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "20220916_045305_FEA16BAD.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "52457bc21b9e8439cf8ccdf5eb1fac5b1401263bf345c3d165084b6d37eafb06",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "2e7237ccf664e81c8ff67a916bfebb819f39c879fa7c5587008d4903f7ef8937",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "52457bc21b9e8439cf8ccdf5eb1fac5b1401263bf345c3d165084b6d37eafb06",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "2e7237ccf664e81c8ff67a916bfebb819f39c879fa7c5587008d4903f7ef8937",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "20230224_142047_BE5A46AD.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "4b258bc4d0b776f41300445d1be1ea01bfa5b30620320ea86299ce2bb77d5397",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "b0d7735f514b2c0c104d364aa2847adaf9c418cbe7f63c92c204aba81de0dc41",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "4b258bc4d0b776f41300445d1be1ea01bfa5b30620320ea86299ce2bb77d5397",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "b0d7735f514b2c0c104d364aa2847adaf9c418cbe7f63c92c204aba81de0dc41",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "20230224_142445_EE655C90.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "aa16f7687c4c5cffd07a563adfdc41ea98d53c4bf8b88104b45ab0cf509a3924",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "6dfa6695cc49ba2e62ba29dc29aeed407314f936f2fda83810c834dee06fd1cf",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "aa16f7687c4c5cffd07a563adfdc41ea98d53c4bf8b88104b45ab0cf509a3924",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "6dfa6695cc49ba2e62ba29dc29aeed407314f936f2fda83810c834dee06fd1cf",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "20230224_142448_B0A19107.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "e9548e3950c6ad7addd583ea2d2a78b959730ffa114f5e089f690525fee7b6d4",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "89baf6f1c0dbc5d4044fbf94b5aeaaf2bcf08ce9b9dd3a75dc80bb3b18170d0e",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "e9548e3950c6ad7addd583ea2d2a78b959730ffa114f5e089f690525fee7b6d4",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "89baf6f1c0dbc5d4044fbf94b5aeaaf2bcf08ce9b9dd3a75dc80bb3b18170d0e",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "20230224_142452_E4051711.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "7126c74ae48cba8068a561494c27056101834c2f2c5da04a78ab66950cbd68ec",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "ba802176b6588b75d4349110f1033e58f8a3c7a95435f297aed063388e97b7a6",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "7126c74ae48cba8068a561494c27056101834c2f2c5da04a78ab66950cbd68ec",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "ba802176b6588b75d4349110f1033e58f8a3c7a95435f297aed063388e97b7a6",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "chef-with-trumpet.heic",
+    "probe": {
+      "old": "4032x3024 frames=1 channels=4 alpha=0 hardware_ready=0\n4032x3024 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "4032x3024 frames=1 channels=4 alpha=0 hardware_ready=0\n4032x3024 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 4032,
+        "height": 3024,
+        "sha256": "5aeb87e6875ead42e9b3fb55e6bb86ba8f6c304144e02c6af2594147376ff494",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 4032,
+        "height": 3024,
+        "sha256": "856435183f3f1492101a1aa3910531eeb7cbacc492b8019d746ff10c1c25e608",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 4032,
+        "height": 3024,
+        "sha256": "5aeb87e6875ead42e9b3fb55e6bb86ba8f6c304144e02c6af2594147376ff494",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 4032,
+        "height": 3024,
+        "sha256": "856435183f3f1492101a1aa3910531eeb7cbacc492b8019d746ff10c1c25e608",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "childrens-show-theater.heic",
+    "probe": {
+      "old": "4032x3024 frames=1 channels=4 alpha=0 hardware_ready=0\n4032x3024 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "4032x3024 frames=1 channels=4 alpha=0 hardware_ready=0\n4032x3024 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 4032,
+        "height": 3024,
+        "sha256": "3140ce9ab1a189a558d924f3981be6f4bbefdd3e8a76755f3fadef7cc2309df3",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 4032,
+        "height": 3024,
+        "sha256": "176901e9b82114276745d61f210356965191427fda69e4cacf3ca7d0dd61b13a",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 4032,
+        "height": 3024,
+        "sha256": "3140ce9ab1a189a558d924f3981be6f4bbefdd3e8a76755f3fadef7cc2309df3",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 4032,
+        "height": 3024,
+        "sha256": "176901e9b82114276745d61f210356965191427fda69e4cacf3ca7d0dd61b13a",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "classic-car.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "2ea8268cb01095dbb2597f13845a4149b649da4e535f24249eddc5412aa93875",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "fc26fcfefdf5dc9b67eb7de112c39138f95873f8299910a8d6f130b88a3b1697",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "2ea8268cb01095dbb2597f13845a4149b649da4e535f24249eddc5412aa93875",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "fc26fcfefdf5dc9b67eb7de112c39138f95873f8299910a8d6f130b88a3b1697",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "DSC01858.HIF",
+    "probe": {
+      "old": "9504x6336 frames=1 channels=4 alpha=0 hardware_ready=0\n9504x6336 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "9504x6336 frames=1 channels=4 alpha=0 hardware_ready=1\n9504x6336 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 9504,
+        "height": 6336,
+        "sha256": "9a2ec1e4e0dc2b1f6ef83291d62788cb067ecc17fb57ec3a6d9dfca368dc0ddc",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 9504,
+        "height": 6336,
+        "sha256": "5b0dd9f6e12704f80dfb496fff91e7d89f39bc75efa755a82ce277b43dbc0dc2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 9504,
+        "height": 6336,
+        "sha256": "5b0dd9f6e12704f80dfb496fff91e7d89f39bc75efa755a82ce277b43dbc0dc2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 9504,
+        "height": 6336,
+        "sha256": "5b0dd9f6e12704f80dfb496fff91e7d89f39bc75efa755a82ce277b43dbc0dc2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "warm",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "DSC01861.HIF",
+    "probe": {
+      "old": "6336x9504 frames=1 channels=4 alpha=0 hardware_ready=0\n6336x9504 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "6336x9504 frames=1 channels=4 alpha=0 hardware_ready=1\n6336x9504 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 6336,
+        "height": 9504,
+        "sha256": "35c8fb5f2a2811857753caaa1abf03c556893a9c7fb45a13a80e8b54ee3c8bd7",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 6336,
+        "height": 9504,
+        "sha256": "e41a73b78bcfe42c1c78ebd97b5b6c002ebc24c3a9b206d8abaf2b0a58608cdf",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 6336,
+        "height": 9504,
+        "sha256": "e41a73b78bcfe42c1c78ebd97b5b6c002ebc24c3a9b206d8abaf2b0a58608cdf",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 6336,
+        "height": 9504,
+        "sha256": "e41a73b78bcfe42c1c78ebd97b5b6c002ebc24c3a9b206d8abaf2b0a58608cdf",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "warm",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "DSC01869.HIF",
+    "probe": {
+      "old": "9504x6336 frames=1 channels=4 alpha=0 hardware_ready=0\n9504x6336 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "9504x6336 frames=1 channels=4 alpha=0 hardware_ready=1\n9504x6336 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 9504,
+        "height": 6336,
+        "sha256": "1269d366b48bf111f5acd923009c75c4000ff6867496f77319692d0346dcb65a",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 9504,
+        "height": 6336,
+        "sha256": "623f260167dbe45317647042a948a55ae98de777263d8f9523b7ff99d3bb3fd8",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 9504,
+        "height": 6336,
+        "sha256": "623f260167dbe45317647042a948a55ae98de777263d8f9523b7ff99d3bb3fd8",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 9504,
+        "height": 6336,
+        "sha256": "623f260167dbe45317647042a948a55ae98de777263d8f9523b7ff99d3bb3fd8",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "warm",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "greyhounds-looking-for-a-table.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "68f65448fbed2e01dd201c4eb0cb80ecba92ae0b5c4f8a306c2d69dad02da022",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "7e4fdfd4543fe5530e90cf61a3e43115ea9a96a249f65daf8276e9e2ba101bb3",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "68f65448fbed2e01dd201c4eb0cb80ecba92ae0b5c4f8a306c2d69dad02da022",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "7e4fdfd4543fe5530e90cf61a3e43115ea9a96a249f65daf8276e9e2ba101bb3",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "HeicWithKeywords.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "16870dcbd974596966851213f843aaafba61608a1096f20a73af50627769d02a",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "3235c724a0e1f097aca90738489fb23e1c07109aa1fa03e2a8707e1e653fd240",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "16870dcbd974596966851213f843aaafba61608a1096f20a73af50627769d02a",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "3235c724a0e1f097aca90738489fb23e1c07109aa1fa03e2a8707e1e653fd240",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "iphone_15_pro.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "f40b61740e091c07ad42070368872914d5a20aec7bdb3ab7e33a9a0dcfdc0b4f",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "cbbdf00a428b5e9bb3f20ffe482e319410dd62822f3648883c2c0821d0bff0fa",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "f40b61740e091c07ad42070368872914d5a20aec7bdb3ab7e33a9a0dcfdc0b4f",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "cbbdf00a428b5e9bb3f20ffe482e319410dd62822f3648883c2c0821d0bff0fa",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "old-safe-wall.heic",
+    "probe": {
+      "old": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "c7cdbbf7d55532fd86634e6f8375048c61671e616989ba58db5c2e999be1d03b",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "e3da3a3a29fdfd5c115cf44b83b5129561bfdc2f9d472e1cb88baaedec64737d",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "c7cdbbf7d55532fd86634e6f8375048c61671e616989ba58db5c2e999be1d03b",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3024,
+        "height": 4032,
+        "sha256": "e3da3a3a29fdfd5c115cf44b83b5129561bfdc2f9d472e1cb88baaedec64737d",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "sample1 (1).heic",
+    "probe": {
+      "old": "1440x960 frames=1 channels=4 alpha=0 hardware_ready=0\n1440x960 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "1440x960 frames=1 channels=4 alpha=0 hardware_ready=0\n1440x960 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "afb124558320675805ee6b6ca95cdc240edeca6e715cba2f2d9782c12d414387",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "a511b12065a3dc0c88b15abbf4603d376c4f766412e5e42173178a7048ec0db2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "afb124558320675805ee6b6ca95cdc240edeca6e715cba2f2d9782c12d414387",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "a511b12065a3dc0c88b15abbf4603d376c4f766412e5e42173178a7048ec0db2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "sample1 (2).heic",
+    "probe": {
+      "old": "1440x960 frames=1 channels=4 alpha=0 hardware_ready=0\n1440x960 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "1440x960 frames=1 channels=4 alpha=0 hardware_ready=0\n1440x960 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "afb124558320675805ee6b6ca95cdc240edeca6e715cba2f2d9782c12d414387",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "a511b12065a3dc0c88b15abbf4603d376c4f766412e5e42173178a7048ec0db2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "afb124558320675805ee6b6ca95cdc240edeca6e715cba2f2d9782c12d414387",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "a511b12065a3dc0c88b15abbf4603d376c4f766412e5e42173178a7048ec0db2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "sample1 (3).heic",
+    "probe": {
+      "old": "1440x960 frames=1 channels=4 alpha=0 hardware_ready=0\n1440x960 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "1440x960 frames=1 channels=4 alpha=0 hardware_ready=0\n1440x960 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "afb124558320675805ee6b6ca95cdc240edeca6e715cba2f2d9782c12d414387",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "a511b12065a3dc0c88b15abbf4603d376c4f766412e5e42173178a7048ec0db2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "afb124558320675805ee6b6ca95cdc240edeca6e715cba2f2d9782c12d414387",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "a511b12065a3dc0c88b15abbf4603d376c4f766412e5e42173178a7048ec0db2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "sample1.heic",
+    "probe": {
+      "old": "1440x960 frames=1 channels=4 alpha=0 hardware_ready=0\n1440x960 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "1440x960 frames=1 channels=4 alpha=0 hardware_ready=0\n1440x960 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "afb124558320675805ee6b6ca95cdc240edeca6e715cba2f2d9782c12d414387",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "a511b12065a3dc0c88b15abbf4603d376c4f766412e5e42173178a7048ec0db2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "afb124558320675805ee6b6ca95cdc240edeca6e715cba2f2d9782c12d414387",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 1440,
+        "height": 960,
+        "sha256": "a511b12065a3dc0c88b15abbf4603d376c4f766412e5e42173178a7048ec0db2",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "Screenshot 2024-10-31 at 08.19.26 Alpha.heic",
+    "probe": {
+      "old": "900x705 frames=1 channels=4 alpha=1 hardware_ready=0\n900x706 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "900x705 frames=1 channels=4 alpha=1 hardware_ready=0\n900x705 frames=1 channels=4 alpha=1 hardware_ready=0"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 900,
+        "height": 705,
+        "sha256": "77858defa564a668110cbceaea3b7cd630bb98cf7d5e0db98ab99d7d9a77ec26",
+        "alpha_min": 0,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 900,
+        "height": 706,
+        "sha256": "1f4111c3b8d7133c998054c030f3e715d3de8017a24c030c728cfaa34c0dfa36",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 900,
+        "height": 705,
+        "sha256": "77858defa564a668110cbceaea3b7cd630bb98cf7d5e0db98ab99d7d9a77ec26",
+        "alpha_min": 0,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 900,
+        "height": 705,
+        "sha256": "77858defa564a668110cbceaea3b7cd630bb98cf7d5e0db98ab99d7d9a77ec26",
+        "alpha_min": 0,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_cpu"
+  },
+  {
+    "image": "sewing-threads.heic",
+    "probe": {
+      "old": "4000x3000 frames=1 channels=4 alpha=0 hardware_ready=0\n4000x3000 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "4000x3000 frames=1 channels=4 alpha=0 hardware_ready=0\n4000x3000 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 4000,
+        "height": 3000,
+        "sha256": "6459850858d3d2bb5483bf30878753d33d037fd7755ed19f0f65c6f4b8382e2b",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 4000,
+        "height": 3000,
+        "sha256": "0136fc76dded968a0718e6d2cdcd9187517f7c7f3ba8c76c1b3cdca8b8641d10",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 4000,
+        "height": 3000,
+        "sha256": "6459850858d3d2bb5483bf30878753d33d037fd7755ed19f0f65c6f4b8382e2b",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 4000,
+        "height": 3000,
+        "sha256": "0136fc76dded968a0718e6d2cdcd9187517f7c7f3ba8c76c1b3cdca8b8641d10",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "shelf-christmas-decoration.heic",
+    "probe": {
+      "old": "4000x3000 frames=1 channels=4 alpha=0 hardware_ready=0\n4000x3000 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "4000x3000 frames=1 channels=4 alpha=0 hardware_ready=0\n4000x3000 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 4000,
+        "height": 3000,
+        "sha256": "72dbacc7e4d20e2adb9f065830b07fe677e6d59f24051740c6e606da07187e9f",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 4000,
+        "height": 3000,
+        "sha256": "c7b0b6a0b9289e569824dc5ce0859326e963fe005e874f3d8c0d6692fe608c3e",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 4000,
+        "height": 3000,
+        "sha256": "72dbacc7e4d20e2adb9f065830b07fe677e6d59f24051740c6e606da07187e9f",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 4000,
+        "height": 3000,
+        "sha256": "c7b0b6a0b9289e569824dc5ce0859326e963fe005e874f3d8c0d6692fe608c3e",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  },
+  {
+    "image": "soundboard.heic",
+    "probe": {
+      "old": "3000x4000 frames=1 channels=4 alpha=0 hardware_ready=0\n3000x4000 frames=1 channels=4 alpha=0 hardware_ready=1",
+      "new": "3000x4000 frames=1 channels=4 alpha=0 hardware_ready=0\n3000x4000 frames=1 channels=4 alpha=0 hardware_ready=1"
+    },
+    "buffers": {
+      "old_cpu": {
+        "width": 3000,
+        "height": 4000,
+        "sha256": "4b72550cf056e4c3dd630fa57df7d827d009ca8ddc684b097b879830d353168a",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "old_warm": {
+        "width": 3000,
+        "height": 4000,
+        "sha256": "bf8846195d591e2c2014224b8f3f43ff369b44399f46d7d1f179f4cc752ba6a1",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_cpu": {
+        "width": 3000,
+        "height": 4000,
+        "sha256": "4b72550cf056e4c3dd630fa57df7d827d009ca8ddc684b097b879830d353168a",
+        "alpha_min": 255,
+        "alpha_max": 255
+      },
+      "new_warm": {
+        "width": 3000,
+        "height": 4000,
+        "sha256": "bf8846195d591e2c2014224b8f3f43ff369b44399f46d7d1f179f4cc752ba6a1",
+        "alpha_min": 255,
+        "alpha_max": 255
+      }
+    },
+    "cold_matches_existing_path": "cpu",
+    "warm_matches": "old_warm"
+  }
+]

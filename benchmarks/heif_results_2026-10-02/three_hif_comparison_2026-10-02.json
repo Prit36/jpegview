@@ -1,0 +1,936 @@
+{
+  "iterations_per_file_per_build": 5,
+  "seed": 4202,
+  "cache": "warm OS file cache; fresh decoder/process per sample",
+  "executables": {
+    "baseline": {
+      "path": "C:\\Users\\My_Home\\Desktop\\projects\\jpegview\\benchmarks\\.cache\\bin\\baseline_heic_current_corpus\\JPEGView.exe",
+      "sha256": "553c8f3fb606ecbb5fedd62b6152d1d92dcdb5d576bdd2232d9d22ec54013681"
+    },
+    "candidate": {
+      "path": "C:\\Users\\My_Home\\Desktop\\projects\\jpegview\\benchmarks\\.cache\\bin\\baseline_heic_round2\\JPEGView.exe",
+      "sha256": "0a0af5d77f90de2f001a1e818f11c1906d73ea714fad4094221e640163b90b41"
+    }
+  },
+  "images": {
+    "DSC01858.HIF": {
+      "sha256": "6ccedc88ca32cd414e4e287aeead19f32f3c5922429fe502bbd1e7aed8564106",
+      "bytes": 17670144
+    },
+    "DSC01861.HIF": {
+      "sha256": "07ba4bbd08289d667803631dda6c74725be6e23b8054b6390820c47d3b69d249",
+      "bytes": 13426688
+    },
+    "DSC01869.HIF": {
+      "sha256": "8f594ae6cffb945ef6a63e985a999d04a8c37b3ed7c2747c61ae3fb1c8c14a18",
+      "bytes": 12677120
+    }
+  },
+  "samples": [
+    {
+      "iteration": 0,
+      "image": "DSC01861.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 359.488,
+      "init_ms": 358.098,
+      "first_image_load_ms": 323.993,
+      "first_image_last_op_ms": 16.733,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 652.92,
+      "working_set_mb": 605.48,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 359.488,
+      "avg_frame_time_ms": 359.488,
+      "fps": 2.78,
+      "frame_times_ms": [
+        359.488
+      ],
+      "process_lifetime_wall_ms": 500.74049999989256,
+      "lifetime_peak_working_set_mb": 652.91796875,
+      "lifetime_peak_pagefile_mb": 1081.515625
+    },
+    {
+      "iteration": 0,
+      "image": "DSC01861.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 3039.563,
+      "init_ms": 3037.898,
+      "first_image_load_ms": 3004.65,
+      "first_image_last_op_ms": 17.616,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 961.46,
+      "working_set_mb": 258.52,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 3039.563,
+      "avg_frame_time_ms": 3039.563,
+      "fps": 0.33,
+      "frame_times_ms": [
+        3039.563
+      ],
+      "process_lifetime_wall_ms": 3235.08599999991,
+      "lifetime_peak_working_set_mb": 961.45703125,
+      "lifetime_peak_pagefile_mb": 938.7109375
+    },
+    {
+      "iteration": 0,
+      "image": "DSC01858.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 2223.453,
+      "init_ms": 2221.165,
+      "first_image_load_ms": 2177.462,
+      "first_image_last_op_ms": 27.712,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 797.1,
+      "working_set_mb": 262.63,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 2223.453,
+      "avg_frame_time_ms": 2223.453,
+      "fps": 0.45,
+      "frame_times_ms": [
+        2223.453
+      ],
+      "process_lifetime_wall_ms": 2408.6909999998625,
+      "lifetime_peak_working_set_mb": 797.1015625,
+      "lifetime_peak_pagefile_mb": 770.8828125
+    },
+    {
+      "iteration": 0,
+      "image": "DSC01858.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 324.785,
+      "init_ms": 322.989,
+      "first_image_load_ms": 281.972,
+      "first_image_last_op_ms": 23.558,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 672.9,
+      "working_set_mb": 598.77,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 324.785,
+      "avg_frame_time_ms": 324.785,
+      "fps": 3.08,
+      "frame_times_ms": [
+        324.785
+      ],
+      "process_lifetime_wall_ms": 472.7278000000297,
+      "lifetime_peak_working_set_mb": 672.8984375,
+      "lifetime_peak_pagefile_mb": 1082.33203125
+    },
+    {
+      "iteration": 0,
+      "image": "DSC01869.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 302.944,
+      "init_ms": 301.057,
+      "first_image_load_ms": 260.271,
+      "first_image_last_op_ms": 23.737,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 671.84,
+      "working_set_mb": 598.29,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 302.944,
+      "avg_frame_time_ms": 302.944,
+      "fps": 3.3,
+      "frame_times_ms": [
+        302.944
+      ],
+      "process_lifetime_wall_ms": 430.99370000004456,
+      "lifetime_peak_working_set_mb": 671.84375,
+      "lifetime_peak_pagefile_mb": 1082.4453125
+    },
+    {
+      "iteration": 0,
+      "image": "DSC01869.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 2017.673,
+      "init_ms": 2015.726,
+      "first_image_load_ms": 1969.937,
+      "first_image_last_op_ms": 28.034,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 788.57,
+      "working_set_mb": 267.55,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 2017.673,
+      "avg_frame_time_ms": 2017.673,
+      "fps": 0.5,
+      "frame_times_ms": [
+        2017.673
+      ],
+      "process_lifetime_wall_ms": 2203.0873000001066,
+      "lifetime_peak_working_set_mb": 788.5703125,
+      "lifetime_peak_pagefile_mb": 767.18359375
+    },
+    {
+      "iteration": 1,
+      "image": "DSC01858.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 2229.55,
+      "init_ms": 2227.337,
+      "first_image_load_ms": 2183.77,
+      "first_image_last_op_ms": 27.08,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 796.92,
+      "working_set_mb": 263.32,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 2229.55,
+      "avg_frame_time_ms": 2229.55,
+      "fps": 0.45,
+      "frame_times_ms": [
+        2229.55
+      ],
+      "process_lifetime_wall_ms": 2417.9352999999537,
+      "lifetime_peak_working_set_mb": 796.921875,
+      "lifetime_peak_pagefile_mb": 769.84765625
+    },
+    {
+      "iteration": 1,
+      "image": "DSC01858.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 324.194,
+      "init_ms": 322.419,
+      "first_image_load_ms": 282.345,
+      "first_image_last_op_ms": 23.299,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 683.54,
+      "working_set_mb": 598.51,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 324.194,
+      "avg_frame_time_ms": 324.194,
+      "fps": 3.08,
+      "frame_times_ms": [
+        324.194
+      ],
+      "process_lifetime_wall_ms": 478.4262000000581,
+      "lifetime_peak_working_set_mb": 683.53515625,
+      "lifetime_peak_pagefile_mb": 1091.90625
+    },
+    {
+      "iteration": 1,
+      "image": "DSC01869.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 302.918,
+      "init_ms": 301.248,
+      "first_image_load_ms": 261.139,
+      "first_image_last_op_ms": 22.381,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 684.13,
+      "working_set_mb": 598.08,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 302.918,
+      "avg_frame_time_ms": 302.918,
+      "fps": 3.3,
+      "frame_times_ms": [
+        302.918
+      ],
+      "process_lifetime_wall_ms": 432.26610000010623,
+      "lifetime_peak_working_set_mb": 684.12890625,
+      "lifetime_peak_pagefile_mb": 1092.92578125
+    },
+    {
+      "iteration": 1,
+      "image": "DSC01869.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 1927.003,
+      "init_ms": 1925.292,
+      "first_image_load_ms": 1881.81,
+      "first_image_last_op_ms": 27.689,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 788.61,
+      "working_set_mb": 262.23,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 1927.003,
+      "avg_frame_time_ms": 1927.003,
+      "fps": 0.52,
+      "frame_times_ms": [
+        1927.003
+      ],
+      "process_lifetime_wall_ms": 2130.565999999817,
+      "lifetime_peak_working_set_mb": 788.60546875,
+      "lifetime_peak_pagefile_mb": 766.8203125
+    },
+    {
+      "iteration": 1,
+      "image": "DSC01861.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 3114.718,
+      "init_ms": 3113.482,
+      "first_image_load_ms": 3077.309,
+      "first_image_last_op_ms": 20.322,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 961.53,
+      "working_set_mb": 258.99,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 3114.718,
+      "avg_frame_time_ms": 3114.718,
+      "fps": 0.32,
+      "frame_times_ms": [
+        3114.718
+      ],
+      "process_lifetime_wall_ms": 3308.481099999881,
+      "lifetime_peak_working_set_mb": 961.52734375,
+      "lifetime_peak_pagefile_mb": 938.6328125
+    },
+    {
+      "iteration": 1,
+      "image": "DSC01861.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 362.702,
+      "init_ms": 361.316,
+      "first_image_load_ms": 326.34,
+      "first_image_last_op_ms": 17.474,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 647.79,
+      "working_set_mb": 605.05,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 362.702,
+      "avg_frame_time_ms": 362.702,
+      "fps": 2.76,
+      "frame_times_ms": [
+        362.702
+      ],
+      "process_lifetime_wall_ms": 503.9875000002212,
+      "lifetime_peak_working_set_mb": 649.375,
+      "lifetime_peak_pagefile_mb": 1084.37109375
+    },
+    {
+      "iteration": 2,
+      "image": "DSC01858.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 333.965,
+      "init_ms": 331.879,
+      "first_image_load_ms": 288.425,
+      "first_image_last_op_ms": 25.662,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 663.82,
+      "working_set_mb": 598.59,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 333.965,
+      "avg_frame_time_ms": 333.965,
+      "fps": 2.99,
+      "frame_times_ms": [
+        333.965
+      ],
+      "process_lifetime_wall_ms": 484.2537999998058,
+      "lifetime_peak_working_set_mb": 663.81640625,
+      "lifetime_peak_pagefile_mb": 1076.91796875
+    },
+    {
+      "iteration": 2,
+      "image": "DSC01858.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 2383.017,
+      "init_ms": 2380.912,
+      "first_image_load_ms": 2339.334,
+      "first_image_last_op_ms": 28.862,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 797.05,
+      "working_set_mb": 260.74,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 2383.017,
+      "avg_frame_time_ms": 2383.017,
+      "fps": 0.42,
+      "frame_times_ms": [
+        2383.017
+      ],
+      "process_lifetime_wall_ms": 2580.515099999957,
+      "lifetime_peak_working_set_mb": 797.05078125,
+      "lifetime_peak_pagefile_mb": 769.921875
+    },
+    {
+      "iteration": 2,
+      "image": "DSC01861.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 3170.872,
+      "init_ms": 3169.11,
+      "first_image_load_ms": 3138.193,
+      "first_image_last_op_ms": 20.11,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 961.65,
+      "working_set_mb": 256.56,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 3170.872,
+      "avg_frame_time_ms": 3170.872,
+      "fps": 0.32,
+      "frame_times_ms": [
+        3170.872
+      ],
+      "process_lifetime_wall_ms": 3375.331899999992,
+      "lifetime_peak_working_set_mb": 961.65234375,
+      "lifetime_peak_pagefile_mb": 938.734375
+    },
+    {
+      "iteration": 2,
+      "image": "DSC01861.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 358.108,
+      "init_ms": 356.912,
+      "first_image_load_ms": 324.064,
+      "first_image_last_op_ms": 16.311,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 655.38,
+      "working_set_mb": 605.29,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 358.108,
+      "avg_frame_time_ms": 358.108,
+      "fps": 2.79,
+      "frame_times_ms": [
+        358.108
+      ],
+      "process_lifetime_wall_ms": 496.7303000000811,
+      "lifetime_peak_working_set_mb": 655.3828125,
+      "lifetime_peak_pagefile_mb": 1084.03125
+    },
+    {
+      "iteration": 2,
+      "image": "DSC01869.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 305.696,
+      "init_ms": 303.767,
+      "first_image_load_ms": 264.755,
+      "first_image_last_op_ms": 22.671,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 682.84,
+      "working_set_mb": 598.09,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 305.696,
+      "avg_frame_time_ms": 305.696,
+      "fps": 3.27,
+      "frame_times_ms": [
+        305.696
+      ],
+      "process_lifetime_wall_ms": 431.5309999999499,
+      "lifetime_peak_working_set_mb": 682.8359375,
+      "lifetime_peak_pagefile_mb": 1094.015625
+    },
+    {
+      "iteration": 2,
+      "image": "DSC01869.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 2018.662,
+      "init_ms": 2017.047,
+      "first_image_load_ms": 1973.312,
+      "first_image_last_op_ms": 28.156,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 787.96,
+      "working_set_mb": 262.54,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 2018.662,
+      "avg_frame_time_ms": 2018.662,
+      "fps": 0.5,
+      "frame_times_ms": [
+        2018.662
+      ],
+      "process_lifetime_wall_ms": 2208.592299999964,
+      "lifetime_peak_working_set_mb": 787.96484375,
+      "lifetime_peak_pagefile_mb": 765.71484375
+    },
+    {
+      "iteration": 3,
+      "image": "DSC01858.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 2204.152,
+      "init_ms": 2202.379,
+      "first_image_load_ms": 2159.492,
+      "first_image_last_op_ms": 27.129,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 797.93,
+      "working_set_mb": 262.0,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 2204.152,
+      "avg_frame_time_ms": 2204.152,
+      "fps": 0.45,
+      "frame_times_ms": [
+        2204.152
+      ],
+      "process_lifetime_wall_ms": 2405.997800000023,
+      "lifetime_peak_working_set_mb": 797.9296875,
+      "lifetime_peak_pagefile_mb": 770.88671875
+    },
+    {
+      "iteration": 3,
+      "image": "DSC01858.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 319.589,
+      "init_ms": 317.234,
+      "first_image_load_ms": 280.877,
+      "first_image_last_op_ms": 22.638,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 682.8,
+      "working_set_mb": 592.58,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 319.589,
+      "avg_frame_time_ms": 319.589,
+      "fps": 3.13,
+      "frame_times_ms": [
+        319.589
+      ],
+      "process_lifetime_wall_ms": 469.34329999999136,
+      "lifetime_peak_working_set_mb": 682.796875,
+      "lifetime_peak_pagefile_mb": 1093.22265625
+    },
+    {
+      "iteration": 3,
+      "image": "DSC01869.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 306.649,
+      "init_ms": 304.668,
+      "first_image_load_ms": 266.912,
+      "first_image_last_op_ms": 22.314,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 685.05,
+      "working_set_mb": 598.02,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 306.649,
+      "avg_frame_time_ms": 306.649,
+      "fps": 3.26,
+      "frame_times_ms": [
+        306.649
+      ],
+      "process_lifetime_wall_ms": 438.64839999992,
+      "lifetime_peak_working_set_mb": 685.05078125,
+      "lifetime_peak_pagefile_mb": 1092.21875
+    },
+    {
+      "iteration": 3,
+      "image": "DSC01869.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 1941.7,
+      "init_ms": 1940.002,
+      "first_image_load_ms": 1896.22,
+      "first_image_last_op_ms": 28.488,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 787.95,
+      "working_set_mb": 262.56,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 1941.7,
+      "avg_frame_time_ms": 1941.7,
+      "fps": 0.52,
+      "frame_times_ms": [
+        1941.7
+      ],
+      "process_lifetime_wall_ms": 2128.878900000018,
+      "lifetime_peak_working_set_mb": 787.94921875,
+      "lifetime_peak_pagefile_mb": 766.19921875
+    },
+    {
+      "iteration": 3,
+      "image": "DSC01861.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 3153.938,
+      "init_ms": 3152.73,
+      "first_image_load_ms": 3115.6,
+      "first_image_last_op_ms": 21.052,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 961.38,
+      "working_set_mb": 258.52,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 3153.938,
+      "avg_frame_time_ms": 3153.938,
+      "fps": 0.32,
+      "frame_times_ms": [
+        3153.938
+      ],
+      "process_lifetime_wall_ms": 3353.3414999999422,
+      "lifetime_peak_working_set_mb": 961.37890625,
+      "lifetime_peak_pagefile_mb": 938.49609375
+    },
+    {
+      "iteration": 3,
+      "image": "DSC01861.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 361.018,
+      "init_ms": 359.726,
+      "first_image_load_ms": 326.825,
+      "first_image_last_op_ms": 16.548,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 653.62,
+      "working_set_mb": 604.75,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 361.018,
+      "avg_frame_time_ms": 361.018,
+      "fps": 2.77,
+      "frame_times_ms": [
+        361.018
+      ],
+      "process_lifetime_wall_ms": 501.4638999998624,
+      "lifetime_peak_working_set_mb": 653.625,
+      "lifetime_peak_pagefile_mb": 1077.66796875
+    },
+    {
+      "iteration": 4,
+      "image": "DSC01858.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 323.348,
+      "init_ms": 321.449,
+      "first_image_load_ms": 282.827,
+      "first_image_last_op_ms": 22.422,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 685.31,
+      "working_set_mb": 598.4,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 323.348,
+      "avg_frame_time_ms": 323.348,
+      "fps": 3.09,
+      "frame_times_ms": [
+        323.348
+      ],
+      "process_lifetime_wall_ms": 471.1912999998731,
+      "lifetime_peak_working_set_mb": 685.30859375,
+      "lifetime_peak_pagefile_mb": 1091.05859375
+    },
+    {
+      "iteration": 4,
+      "image": "DSC01858.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 2223.276,
+      "init_ms": 2221.616,
+      "first_image_load_ms": 2177.992,
+      "first_image_last_op_ms": 29.327,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 797.0,
+      "working_set_mb": 262.54,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 2223.276,
+      "avg_frame_time_ms": 2223.276,
+      "fps": 0.45,
+      "frame_times_ms": [
+        2223.276
+      ],
+      "process_lifetime_wall_ms": 2407.6431999999386,
+      "lifetime_peak_working_set_mb": 797.00390625,
+      "lifetime_peak_pagefile_mb": 770.765625
+    },
+    {
+      "iteration": 4,
+      "image": "DSC01861.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 3108.156,
+      "init_ms": 3106.599,
+      "first_image_load_ms": 3071.245,
+      "first_image_last_op_ms": 18.885,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 961.72,
+      "working_set_mb": 258.39,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 3108.156,
+      "avg_frame_time_ms": 3108.156,
+      "fps": 0.32,
+      "frame_times_ms": [
+        3108.156
+      ],
+      "process_lifetime_wall_ms": 3319.906700000047,
+      "lifetime_peak_working_set_mb": 961.72265625,
+      "lifetime_peak_pagefile_mb": 938.875
+    },
+    {
+      "iteration": 4,
+      "image": "DSC01861.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 358.064,
+      "init_ms": 356.75,
+      "first_image_load_ms": 323.227,
+      "first_image_last_op_ms": 17.658,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 638.42,
+      "working_set_mb": 595.14,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 358.064,
+      "avg_frame_time_ms": 358.064,
+      "fps": 2.79,
+      "frame_times_ms": [
+        358.064
+      ],
+      "process_lifetime_wall_ms": 502.80640000005405,
+      "lifetime_peak_working_set_mb": 639.125,
+      "lifetime_peak_pagefile_mb": 1072.9140625
+    },
+    {
+      "iteration": 4,
+      "image": "DSC01869.HIF",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 306.145,
+      "init_ms": 304.165,
+      "first_image_load_ms": 263.433,
+      "first_image_last_op_ms": 23.451,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 675.41,
+      "working_set_mb": 598.02,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 306.145,
+      "avg_frame_time_ms": 306.145,
+      "fps": 3.27,
+      "frame_times_ms": [
+        306.145
+      ],
+      "process_lifetime_wall_ms": 434.56029999993007,
+      "lifetime_peak_working_set_mb": 675.41015625,
+      "lifetime_peak_pagefile_mb": 1083.140625
+    },
+    {
+      "iteration": 4,
+      "image": "DSC01869.HIF",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 2031.744,
+      "init_ms": 2029.656,
+      "first_image_load_ms": 1985.967,
+      "first_image_last_op_ms": 28.926,
+      "first_image_unsharp_mask_ms": 0.0,
+      "timing_info": "",
+      "peak_working_set_mb": 787.93,
+      "working_set_mb": 266.34,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 2031.744,
+      "avg_frame_time_ms": 2031.744,
+      "fps": 0.49,
+      "frame_times_ms": [
+        2031.744
+      ],
+      "process_lifetime_wall_ms": 2224.5646000001216,
+      "lifetime_peak_working_set_mb": 787.93359375,
+      "lifetime_peak_pagefile_mb": 766.1796875
+    }
+  ],
+  "summary": [
+    {
+      "image": "DSC01858.HIF",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 283.2892,
+          "median": 282.345,
+          "min": 280.877,
+          "max": 288.425,
+          "stdev": 2.9595315845586136
+        },
+        "candidate": {
+          "mean": 2207.61,
+          "median": 2177.992,
+          "min": 2159.492,
+          "max": 2339.334,
+          "stdev": 74.19741829740427
+        },
+        "mean_reduction_percent": -679.2778545740538
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 325.1762,
+          "median": 324.194,
+          "min": 319.589,
+          "max": 333.965,
+          "stdev": 5.313188280119562
+        },
+        "candidate": {
+          "mean": 2252.6896,
+          "median": 2223.453,
+          "min": 2204.152,
+          "max": 2383.017,
+          "stdev": 73.47875464581574
+        },
+        "mean_reduction_percent": -592.7596792139154
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 475.1884799999516,
+          "median": 472.7278000000297,
+          "min": 469.34329999999136,
+          "max": 484.2537999998058,
+          "stdev": 6.100438114304259
+        },
+        "candidate": {
+          "mean": 2444.156479999947,
+          "median": 2408.6909999998625,
+          "min": 2405.997800000023,
+          "max": 2580.515099999957,
+          "stdev": 76.36806969576874
+        },
+        "mean_reduction_percent": -414.3551628188032
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 677.674,
+          "median": 682.8,
+          "min": 663.82,
+          "max": 685.31,
+          "stdev": 9.133984891601216
+        },
+        "candidate": {
+          "mean": 797.1999999999999,
+          "median": 797.05,
+          "min": 796.92,
+          "max": 797.93,
+          "stdev": 0.41346100178854805
+        },
+        "mean_reduction_percent": -17.63768419623595
+      }
+    },
+    {
+      "image": "DSC01861.HIF",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 324.8898,
+          "median": 324.064,
+          "min": 323.227,
+          "max": 326.825,
+          "stdev": 1.5889602575269102
+        },
+        "candidate": {
+          "mean": 3081.3994000000002,
+          "median": 3077.309,
+          "min": 3004.65,
+          "max": 3138.193,
+          "stdev": 51.00369509457135
+        },
+        "mean_reduction_percent": -848.4444879463746
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 359.876,
+          "median": 359.488,
+          "min": 358.064,
+          "max": 362.702,
+          "stdev": 1.9906124685633713
+        },
+        "candidate": {
+          "mean": 3117.4494,
+          "median": 3114.718,
+          "min": 3039.563,
+          "max": 3170.872,
+          "stdev": 50.85644318864616
+        },
+        "mean_reduction_percent": -766.2565439206838
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 501.14572000002227,
+          "median": 501.4638999998624,
+          "min": 496.7303000000811,
+          "max": 503.9875000002212,
+          "stdev": 2.7656349708846193
+        },
+        "candidate": {
+          "mean": 3318.4294399999544,
+          "median": 3319.906700000047,
+          "min": 3235.08599999991,
+          "max": 3375.331899999992,
+          "stdev": 53.62840349200349
+        },
+        "mean_reduction_percent": -562.1685684554598
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 649.626,
+          "median": 652.92,
+          "min": 638.42,
+          "max": 655.38,
+          "stdev": 6.871250250136447
+        },
+        "candidate": {
+          "mean": 961.548,
+          "median": 961.53,
+          "min": 961.38,
+          "max": 961.72,
+          "stdev": 0.1380941707676331
+        },
+        "mean_reduction_percent": -48.015627453334695
+      }
+    },
+    {
+      "image": "DSC01869.HIF",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 263.302,
+          "median": 263.433,
+          "min": 260.271,
+          "max": 266.912,
+          "stdev": 2.6937891528476987
+        },
+        "candidate": {
+          "mean": 1941.4492,
+          "median": 1969.937,
+          "min": 1881.81,
+          "max": 1985.967,
+          "stdev": 48.50552030130179
+        },
+        "mean_reduction_percent": -637.3469248239663
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 304.8704,
+          "median": 305.696,
+          "min": 302.918,
+          "max": 306.649,
+          "stdev": 1.8022570016509791
+        },
+        "candidate": {
+          "mean": 1987.3564,
+          "median": 2017.673,
+          "min": 1927.003,
+          "max": 2031.744,
+          "stdev": 48.98069929370139
+        },
+        "mean_reduction_percent": -551.8692532958266
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 433.59989999999016,
+          "median": 432.26610000010623,
+          "min": 430.99370000004456,
+          "max": 438.64839999992,
+          "stdev": 3.1329446411782276
+        },
+        "candidate": {
+          "mean": 2179.1378200000054,
+          "median": 2203.0873000001066,
+          "min": 2128.878900000018,
+          "max": 2224.5646000001216,
+          "stdev": 45.798245226258395
+        },
+        "mean_reduction_percent": -402.5688013304557
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 679.854,
+          "median": 682.84,
+          "min": 671.84,
+          "max": 685.05,
+          "stdev": 5.877331877646511
+        },
+        "candidate": {
+          "mean": 788.2040000000001,
+          "median": 787.96,
+          "min": 787.93,
+          "max": 788.61,
+          "stdev": 0.35281723313921126
+        },
+        "mean_reduction_percent": -15.937245349736862
+      }
+    }
+  ]
+}

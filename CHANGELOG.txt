@@ -1,6 +1,16 @@
 JPEGView Changelog
 ******************
 
+[2.8.0] 2026-10-02
+- perf(heif): choose software or hardware decoding from image metadata
+  * Small-tile 8-bit 4:2:0 grids avoid cold GPU startup and decode tiles concurrently
+  * High-bit-depth, other chroma layouts and large tiles try hardware first, with software fallback
+  * Alpha images retain software decoding even when the GPU is warm
+  * Background GPU initialization is joined before COM teardown
+  * On the supplied corpus, 21 HEIC images averaged 44.4% faster loading than the pre-optimization build
+  * Corrects the software-first regression for three 60 MP HIFs: 85.7-89.0% faster than that regressed build
+  * HIF loading remains 4.6-6.5% slower than the original hardware-first build; memory gains vary by image
+
 [2.7.0] 2026-09-27
 - feat(navigation): Windows Explorer natural sorting order by default and enhanced folder traversal
   * Follows Windows Explorer natural sorting order (StrCmpLogicalW) by default for all image formats

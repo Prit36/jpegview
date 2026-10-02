@@ -194,15 +194,6 @@ void * HeifReader::ReadImage(int &width,
 	unsigned char* pPixelData = NULL;
 	exif_chunk = NULL;
 
-	// A cold D3D/MFT startup is more expensive than software tile decoding.
-	// Use hardware once its background initialization has completed.
-	if (GpuHeifDecoder::IsHardwareReady() &&
-		GpuHeifDecoder::DecodeHeif(buffer, sizebytes, frame_index, width, height, nchannels, frame_count, (void*&)pPixelData, exif_chunk, has_alpha, outOfMemory)) {
-		if (pPixelData != NULL) {
-			return (void*)pPixelData;
-		}
-	}
-
 	std::unique_ptr<heif_context, decltype(&heif_context_free)> context(heif_context_alloc(), heif_context_free);
 	heif_error readError = heif_context_read_from_memory_without_copy(context.get(), buffer, sizebytes, NULL);
 	if (readError.code != heif_error_Ok) return NULL;
@@ -224,6 +215,31 @@ void * HeifReader::ReadImage(int &width,
 	bool parallelTiles = tilingError.code == heif_error_Ok &&
 		(uint64_t)tiling.num_columns * tiling.num_rows > 1 &&
 		(uint64_t)tiling.tile_width * tiling.tile_height <= 1024 * 1024;
+
+	// Inspect the encoded layout before paying either decoder's startup cost.
+	// Small-tile 8-bit 4:2:0 grids and small images are cheap in software;
+	// high-bit-depth, other chroma layouts and large tiles can be much slower.
+	// Those use hardware even when cold, falling back to software on failure.
+	heif_colorspace sourceColorspace = heif_colorspace_undefined;
+	heif_chroma sourceChroma = heif_chroma_undefined;
+	heif_error formatError = heif_image_handle_get_preferred_decoding_colorspace(
+		rawHandle, &sourceColorspace, &sourceChroma);
+	uint64_t pixels = (uint64_t)handle.get_width() * handle.get_height();
+	bool cheapSoftware = formatError.code == heif_error_Ok &&
+		sourceColorspace == heif_colorspace_YCbCr && sourceChroma == heif_chroma_420 &&
+		handle.get_luma_bits_per_pixel() == 8 && handle.get_chroma_bits_per_pixel() == 8 &&
+		(parallelTiles || pixels <= 4 * 1024 * 1024);
+	// The hardware path does not decode auxiliary alpha planes.
+	if (!has_alpha && (GpuHeifDecoder::IsHardwareReady() || !cheapSoftware)) {
+		if (GpuHeifDecoder::DecodeHeif(buffer, sizebytes, frame_index, width, height, nchannels,
+			frame_count, (void*&)pPixelData, exif_chunk, has_alpha, outOfMemory) && pPixelData != NULL) {
+			return (void*)pPixelData;
+		}
+		// Restore the software handle's metadata after a failed hardware attempt.
+		frame_count = (int)imageIds.size();
+		has_alpha = handle.has_alpha_channel();
+		outOfMemory = false;
+	}
 	if (parallelTiles) {
 		heif_context_set_max_decoding_threads(context.get(), (int)hw_threads);
 	}
@@ -430,7 +446,7 @@ void * HeifReader::ReadImage(int &width,
 		}
 	}
 
-	if (pPixelData != NULL) {
+	if (pPixelData != NULL && !has_alpha) {
 		GpuHeifDecoder::StartHardwareInitialization();
 	}
 	return (void*)pPixelData;

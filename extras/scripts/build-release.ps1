@@ -83,14 +83,13 @@ Remove-Item (Join-Path $OutDir "JPEGView64_en-us_$Version.wixpdb") -Force -Error
 # Portable ZIP - mirrors the upstream release layout: JPEGView64/ folder
 # ---------------------------------------------------------------------------
 Write-Host "==> Staging portable layout..." -ForegroundColor Cyan
-$Stage = Join-Path $env:TEMP "jpegview-zip-stage"
-Remove-Item $Stage -Recurse -Force -ErrorAction SilentlyContinue
+$Stage = Join-Path $env:TEMP ("jpegview-zip-stage-" + [guid]::NewGuid().ToString("N"))
 $Stage64 = Join-Path $Stage "JPEGView64"
 New-Item -ItemType Directory -Force -Path $Stage64 | Out-Null
 
 Copy-Item (Join-Path $BinDir "*.*") $Stage64
 # strip intermediates, same as CI upload cleanup
-foreach ($junk in @("*.pdb", "*.exp", "*.lib")) {
+foreach ($junk in @("*.pdb", "*.exp", "*.lib", "*.obj")) {
 	Get-ChildItem $Stage64 -Filter $junk | Remove-Item -Force
 }
 # extra docs shipped in releases
@@ -102,7 +101,15 @@ foreach ($doc in @("HowToInstall.txt", "HowToInstall_ru.txt", "CHANGELOG.txt")) 
 Write-Host "==> Creating ZIP..." -ForegroundColor Cyan
 $ZipOut = Join-Path $OutDir "JPEGView_$Version.zip"
 Compress-Archive -Path (Join-Path $Stage "JPEGView64") -DestinationPath $ZipOut -Force
-Remove-Item $Stage -Recurse -Force
+$ResolvedStage = (Resolve-Path -LiteralPath $Stage).Path
+$ResolvedTemp = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+if (-not $ResolvedStage.StartsWith($ResolvedTemp, [StringComparison]::OrdinalIgnoreCase)) {
+	throw "Refusing to remove staging directory outside TEMP: $ResolvedStage"
+}
+Remove-Item -LiteralPath $ResolvedStage -Recurse -Force
+
+# Also publish the exact executable packaged in the ZIP and MSI.
+Copy-Item -LiteralPath (Join-Path $BinDir "JPEGView.exe") -Destination (Join-Path $OutDir "JPEGView.exe")
 
 # ---------------------------------------------------------------------------
 # Checksums
