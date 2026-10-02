@@ -27,4 +27,10 @@ public:
 
 	// Checks if hardware HEVC decoding is supported on this system
 	static bool IsHardwareSupported();
+
+	// The first HEIF image is decoded in software while the GPU decoder is cold.
+	// Initialize it in the background afterwards so later images can use it.
+	static void StartHardwareInitialization();
+	static void WaitForHardwareInitialization();
+	static bool IsHardwareReady();
 };

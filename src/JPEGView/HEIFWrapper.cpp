@@ -194,27 +194,45 @@ void * HeifReader::ReadImage(int &width,
 	unsigned char* pPixelData = NULL;
 	exif_chunk = NULL;
 
-	// Primary accelerated path: GPU Hardware HEVC Decoding (Direct3D 11 + Media Foundation MFT)
-	if (GpuHeifDecoder::DecodeHeif(buffer, sizebytes, frame_index, width, height, nchannels, frame_count, (void*&)pPixelData, exif_chunk, has_alpha, outOfMemory)) {
+	// A cold D3D/MFT startup is more expensive than software tile decoding.
+	// Use hardware once its background initialization has completed.
+	if (GpuHeifDecoder::IsHardwareReady() &&
+		GpuHeifDecoder::DecodeHeif(buffer, sizebytes, frame_index, width, height, nchannels, frame_count, (void*&)pPixelData, exif_chunk, has_alpha, outOfMemory)) {
 		if (pPixelData != NULL) {
 			return (void*)pPixelData;
 		}
 	}
 
-	heif::Context context;
-	context.read_from_memory_without_copy(buffer, sizebytes);
-	frame_count = context.get_number_of_top_level_images();
+	std::unique_ptr<heif_context, decltype(&heif_context_free)> context(heif_context_alloc(), heif_context_free);
+	heif_error readError = heif_context_read_from_memory_without_copy(context.get(), buffer, sizebytes, NULL);
+	if (readError.code != heif_error_Ok) return NULL;
+	frame_count = heif_context_get_number_of_top_level_images(context.get());
 	if (frame_count <= 0 || frame_index < 0 || frame_index >= frame_count) {
 		return NULL;
 	}
-	heif_item_id item_id = context.get_list_of_top_level_image_IDs().at(frame_index);
-	heif::ImageHandle handle = context.get_image_handle(item_id);
+	std::vector<heif_item_id> imageIds(frame_count);
+	heif_context_get_list_of_top_level_image_IDs(context.get(), imageIds.data(), frame_count);
+	heif_image_handle* rawHandle = NULL;
+	heif_error handleError = heif_context_get_image_handle(context.get(), imageIds[frame_index], &rawHandle);
+	if (handleError.code != heif_error_Ok) return NULL;
+	heif::ImageHandle handle(rawHandle);
 	has_alpha = handle.has_alpha_channel();
+	unsigned int hw_threads = max(1u, min(std::thread::hardware_concurrency(), 16u));
+	heif_image_tiling tiling = {};
+	tiling.version = 1;
+	heif_error tilingError = heif_image_handle_get_image_tiling(rawHandle, false, &tiling);
+	bool parallelTiles = tilingError.code == heif_error_Ok &&
+		(uint64_t)tiling.num_columns * tiling.num_rows > 1 &&
+		(uint64_t)tiling.tile_width * tiling.tile_height <= 1024 * 1024;
+	if (parallelTiles) {
+		heif_context_set_max_decoding_threads(context.get(), (int)hw_threads);
+	}
 
 	struct heif_decoding_options* decode_options = heif_decoding_options_alloc();
 	if (decode_options != NULL) {
-		unsigned int hw_threads = std::thread::hardware_concurrency();
-		decode_options->num_codec_threads = (int)max(2u, min(hw_threads, 16u));
+		// Small grid tiles already run concurrently. Extra codec workers per tile
+		// oversubscribe the CPU and repeatedly pay thread startup costs.
+		decode_options->num_codec_threads = parallelTiles ? 1 : (int)max(2u, hw_threads);
 		decode_options->convert_hdr_to_8bit = 1;
 	}
 
@@ -412,5 +430,8 @@ void * HeifReader::ReadImage(int &width,
 		}
 	}
 
+	if (pPixelData != NULL) {
+		GpuHeifDecoder::StartHardwareInitialization();
+	}
 	return (void*)pPixelData;
 }

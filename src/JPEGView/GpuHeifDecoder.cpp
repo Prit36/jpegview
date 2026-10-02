@@ -15,8 +15,12 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <string>
 #include <algorithm>
+#include <atomic>
+#include <mutex>
+#include <thread>
 #include <immintrin.h>
 #include <omp.h>
 
@@ -721,7 +725,7 @@ public:
 	int m_numDecoders = 0;
 
 	UINT m_resetToken = 0;
-	bool m_initialized = false;
+	std::atomic<bool> m_initialized{ false };
 	bool m_supportChecked = false;
 	bool m_hasHwDecoder = false;
 
@@ -743,12 +747,15 @@ public:
 
 	bool EnsureInit() {
 		if (m_initialized) return true;
-		if (m_supportChecked && !m_hasHwDecoder) return false;
 
 		EnterCriticalSection(&m_cs);
 		if (m_initialized) {
 			LeaveCriticalSection(&m_cs);
 			return true;
+		}
+		if (m_supportChecked && !m_hasHwDecoder) {
+			LeaveCriticalSection(&m_cs);
+			return false;
 		}
 
 		MFStartup(MF_VERSION);
@@ -838,9 +845,13 @@ public:
 
 		m_hasHwDecoder = true;
 		m_supportChecked = true;
-		m_initialized = true;
+		m_initialized.store(true, std::memory_order_release);
 		LeaveCriticalSection(&m_cs);
 		return true;
+	}
+
+	bool IsReady() const {
+		return m_initialized.load(std::memory_order_acquire);
 	}
 
 	ID3D11Texture2D* GetStagingTex(uint32_t w, uint32_t h, DXGI_FORMAT format = DXGI_FORMAT_NV12) {
@@ -1054,6 +1065,49 @@ private:
 	}
 };
 
+class HardwareDecoderInitialization {
+public:
+	static HardwareDecoderInitialization& Instance() {
+		// Construct the decoder first so this worker is joined before its teardown.
+		MfGpuContext::Instance();
+		static HardwareDecoderInitialization task;
+		return task;
+	}
+
+	void Start() {
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (m_started || m_stopped) return;
+		try {
+			m_thread = std::thread([] {
+				HRESULT hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+				if (SUCCEEDED(hr)) {
+					MfGpuContext::Instance().EnsureInit();
+					::CoUninitialize();
+				}
+			});
+			m_started = true;
+		} catch (const std::system_error&) {
+			// Software decoding remains available if a worker cannot be started.
+		}
+	}
+
+	void Wait() {
+		std::lock_guard<std::mutex> lock(m_mutex);
+		m_stopped = true;
+		if (m_thread.joinable()) m_thread.join();
+	}
+
+	~HardwareDecoderInitialization() {
+		Wait();
+	}
+
+private:
+	std::mutex m_mutex;
+	std::thread m_thread;
+	bool m_started = false;
+	bool m_stopped = false;
+};
+
 // ISOBMFF Structures
 struct IsoItem {
 	uint32_t id = 0;
@@ -1089,6 +1143,7 @@ public:
 	std::map<uint32_t, IsoItem> m_items;
 	std::map<uint32_t, IsoGrid> m_grids;
 	std::vector<uint32_t> m_topLevelItemIds;
+	std::set<uint32_t> m_nonTopLevelItemIds;
 	uint32_t m_primaryItemId = 0;
 	uint32_t m_exifItemId = 0;
 
@@ -1100,6 +1155,7 @@ public:
 		m_items.clear();
 		m_grids.clear();
 		m_topLevelItemIds.clear();
+		m_nonTopLevelItemIds.clear();
 		m_primaryItemId = 0;
 		m_exifItemId = 0;
 
@@ -1126,6 +1182,7 @@ public:
 			m_topLevelItemIds.push_back(m_primaryItemId);
 		}
 		for (const auto& kv : m_items) {
+			if (m_nonTopLevelItemIds.count(kv.first) != 0) continue;
 			if (kv.second.type == "hvc1" || kv.second.type == "grid") {
 				if (std::find(m_topLevelItemIds.begin(), m_topLevelItemIds.end(), kv.first) == m_topLevelItemIds.end()) {
 					bool isTile = false;
@@ -1236,6 +1293,7 @@ private:
 						itemType = std::string((const char*)&m_data[typeOff], 4);
 						m_items[itemId].id = itemId;
 						m_items[itemId].type = itemType;
+						if (ReadU32(p + 8) & 1) m_nonTopLevelItemIds.insert(itemId);
 						if (itemType == "Exif") {
 							m_exifItemId = itemId;
 						}
@@ -1375,6 +1433,11 @@ private:
 			uint32_t boxSize = ReadU32(off);
 			if (boxSize < 8 || off + boxSize > end) break;
 			std::string refType((const char*)&m_data[off + 4], 4);
+			// Thumbnail and auxiliary items are not navigable image frames.
+			if (refType == "thmb" || refType == "auxl") {
+				uint32_t fromId = (ver == 0) ? ReadU16(off + 8) : ReadU32(off + 8);
+				m_nonTopLevelItemIds.insert(fromId);
+			}
 			if (refType == "dimg") {
 				size_t p = off + 8;
 				uint32_t fromId = (ver == 0) ? ReadU16(p) : ReadU32(p);
@@ -1406,6 +1469,21 @@ private:
 bool GpuHeifDecoder::IsHardwareSupported()
 {
 	return MfGpuContext::Instance().EnsureInit();
+}
+
+void GpuHeifDecoder::StartHardwareInitialization()
+{
+	HardwareDecoderInitialization::Instance().Start();
+}
+
+void GpuHeifDecoder::WaitForHardwareInitialization()
+{
+	HardwareDecoderInitialization::Instance().Wait();
+}
+
+bool GpuHeifDecoder::IsHardwareReady()
+{
+	return MfGpuContext::Instance().IsReady();
 }
 
 bool GpuHeifDecoder::DecodeHeif(
@@ -1448,10 +1526,8 @@ bool GpuHeifDecoder::DecodeHeif(
 	uint32_t finalW = targetItem.width;
 	uint32_t finalH = targetItem.height;
 
-	double t0 = Helpers::GetExactTickCount();
 	MfGpuContext& gpuCtx = MfGpuContext::Instance();
 	if (!gpuCtx.EnsureInit()) return false;
-	double t_init = Helpers::GetExactTickCount() - t0;
 
 	// Check if this is a grid derived item
 	bool isGrid = (demuxer.m_grids.count(targetItemId) != 0);

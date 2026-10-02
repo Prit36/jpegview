@@ -1,0 +1,4653 @@
+{
+  "iterations_per_file_per_build": 12,
+  "seed": 4202,
+  "cache": "warm OS file cache; fresh decoder/process per sample",
+  "executables": {
+    "baseline": {
+      "path": "C:\\Users\\My_Home\\Desktop\\projects\\jpegview\\benchmarks\\.cache\\bin\\baseline_heic_current_corpus\\JPEGView.exe",
+      "sha256": "553c8f3fb606ecbb5fedd62b6152d1d92dcdb5d576bdd2232d9d22ec54013681"
+    },
+    "candidate": {
+      "path": "C:\\Users\\My_Home\\Desktop\\projects\\jpegview\\benchmarks\\.cache\\build\\current\\bin\\Release\\JPEGView.exe",
+      "sha256": "0a0af5d77f90de2f001a1e818f11c1906d73ea714fad4094221e640163b90b41"
+    }
+  },
+  "images": {
+    "chef-with-trumpet.heic": {
+      "sha256": "7c331207b67f159177675c8b2760ad6035a8dada04c12ed7f878d1c50120a9c7",
+      "bytes": 1618040
+    },
+    "childrens-show-theater.heic": {
+      "sha256": "8221a26df520b6e571818aeb1608ab7112e170be58cbe362de8ced107000b1eb",
+      "bytes": 1332170
+    },
+    "classic-car.heic": {
+      "sha256": "8e2a5725aa7639678a0c10d25e1211981d81c0d94062db51e99dc002ce6ff349",
+      "bytes": 1960764
+    },
+    "greyhounds-looking-for-a-table.heic": {
+      "sha256": "65960bf2782cd8ebd29a958e75b6adb7dff2bbff841389e869d917438c729010",
+      "bytes": 1721433
+    },
+    "old-safe-wall.heic": {
+      "sha256": "9fbec4990572aebe765b9c1bd4094d94ea9de98c790edb9b7c5d0077095a0087",
+      "bytes": 2832865
+    },
+    "sewing-threads.heic": {
+      "sha256": "1b62f2f1969d4bc04bb3e8d094dbdd7c96a070a8692bb305c517c1a78357118b",
+      "bytes": 1595244
+    },
+    "shelf-christmas-decoration.heic": {
+      "sha256": "fbb59e78fac17ab72331da3f4f650a0aade2e55159ab8ac4390899e297dc9f71",
+      "bytes": 1442278
+    },
+    "soundboard.heic": {
+      "sha256": "eca52795e2acb6123f40ef47b59611f1c4d20762bfff443ac929a47800a11a49",
+      "bytes": 1220221
+    }
+  },
+  "samples": [
+    {
+      "iteration": 0,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 231.912,
+      "init_ms": 228.865,
+      "first_image_load_ms": 203.128,
+      "first_image_last_op_ms": 8.17,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 175.2,
+      "working_set_mb": 137.67,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 231.912,
+      "avg_frame_time_ms": 231.912,
+      "fps": 4.31,
+      "frame_times_ms": [
+        231.912
+      ],
+      "process_lifetime_wall_ms": 319.61069999999836
+    },
+    {
+      "iteration": 0,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 118.233,
+      "init_ms": 116.874,
+      "first_image_load_ms": 75.583,
+      "first_image_last_op_ms": 9.363,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 113.82,
+      "working_set_mb": 102.39,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 118.233,
+      "avg_frame_time_ms": 118.233,
+      "fps": 8.46,
+      "frame_times_ms": [
+        118.233
+      ],
+      "process_lifetime_wall_ms": 356.39630000002853
+    },
+    {
+      "iteration": 0,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 191.687,
+      "init_ms": 189.347,
+      "first_image_load_ms": 153.37,
+      "first_image_last_op_ms": 8.913,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 112.26,
+      "working_set_mb": 94.9,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 191.687,
+      "avg_frame_time_ms": 191.687,
+      "fps": 5.22,
+      "frame_times_ms": [
+        191.687
+      ],
+      "process_lifetime_wall_ms": 468.5871000000361
+    },
+    {
+      "iteration": 0,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 226.12,
+      "init_ms": 224.487,
+      "first_image_load_ms": 199.175,
+      "first_image_last_op_ms": 8.038,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 184.48,
+      "working_set_mb": 148.86,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 226.12,
+      "avg_frame_time_ms": 226.12,
+      "fps": 4.42,
+      "frame_times_ms": [
+        226.12
+      ],
+      "process_lifetime_wall_ms": 291.06000000001586
+    },
+    {
+      "iteration": 0,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 234.074,
+      "init_ms": 232.404,
+      "first_image_load_ms": 207.987,
+      "first_image_last_op_ms": 7.888,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.24,
+      "working_set_mb": 140.98,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 234.074,
+      "avg_frame_time_ms": 234.074,
+      "fps": 4.27,
+      "frame_times_ms": [
+        234.074
+      ],
+      "process_lifetime_wall_ms": 297.2676000000547
+    },
+    {
+      "iteration": 0,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 113.291,
+      "init_ms": 111.77,
+      "first_image_load_ms": 67.518,
+      "first_image_last_op_ms": 9.318,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 107.04,
+      "working_set_mb": 102.14,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 113.291,
+      "avg_frame_time_ms": 113.291,
+      "fps": 8.83,
+      "frame_times_ms": [
+        113.291
+      ],
+      "process_lifetime_wall_ms": 357.30709999995725
+    },
+    {
+      "iteration": 0,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 172.907,
+      "init_ms": 171.781,
+      "first_image_load_ms": 133.795,
+      "first_image_last_op_ms": 6.912,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 98.6,
+      "working_set_mb": 93.1,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 172.907,
+      "avg_frame_time_ms": 172.907,
+      "fps": 5.78,
+      "frame_times_ms": [
+        172.907
+      ],
+      "process_lifetime_wall_ms": 426.18160000006355
+    },
+    {
+      "iteration": 0,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 248.818,
+      "init_ms": 247.773,
+      "first_image_load_ms": 226.755,
+      "first_image_last_op_ms": 6.443,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 171.78,
+      "working_set_mb": 141.95,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 248.818,
+      "avg_frame_time_ms": 248.818,
+      "fps": 4.02,
+      "frame_times_ms": [
+        248.818
+      ],
+      "process_lifetime_wall_ms": 315.6599000000142
+    },
+    {
+      "iteration": 0,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 238.798,
+      "init_ms": 237.54,
+      "first_image_load_ms": 214.044,
+      "first_image_last_op_ms": 6.12,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 170.65,
+      "working_set_mb": 144.28,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 238.798,
+      "avg_frame_time_ms": 238.798,
+      "fps": 4.19,
+      "frame_times_ms": [
+        238.798
+      ],
+      "process_lifetime_wall_ms": 304.62359999989985
+    },
+    {
+      "iteration": 0,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 212.907,
+      "init_ms": 210.852,
+      "first_image_load_ms": 184.294,
+      "first_image_last_op_ms": 6.241,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 96.61,
+      "working_set_mb": 87.31,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 212.907,
+      "avg_frame_time_ms": 212.907,
+      "fps": 4.7,
+      "frame_times_ms": [
+        212.907
+      ],
+      "process_lifetime_wall_ms": 481.07679999998254
+    },
+    {
+      "iteration": 0,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 204.952,
+      "init_ms": 199.628,
+      "first_image_load_ms": 163.878,
+      "first_image_last_op_ms": 8.959,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 106.45,
+      "working_set_mb": 94.68,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 204.952,
+      "avg_frame_time_ms": 204.952,
+      "fps": 4.88,
+      "frame_times_ms": [
+        204.952
+      ],
+      "process_lifetime_wall_ms": 456.3666999999896
+    },
+    {
+      "iteration": 0,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 229.656,
+      "init_ms": 227.569,
+      "first_image_load_ms": 203.355,
+      "first_image_last_op_ms": 8.181,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 185.19,
+      "working_set_mb": 149.1,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 229.656,
+      "avg_frame_time_ms": 229.656,
+      "fps": 4.35,
+      "frame_times_ms": [
+        229.656
+      ],
+      "process_lifetime_wall_ms": 292.2327999999652
+    },
+    {
+      "iteration": 0,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 245.822,
+      "init_ms": 244.417,
+      "first_image_load_ms": 222.216,
+      "first_image_last_op_ms": 6.28,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 163.97,
+      "working_set_mb": 136.7,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 245.822,
+      "avg_frame_time_ms": 245.822,
+      "fps": 4.07,
+      "frame_times_ms": [
+        245.822
+      ],
+      "process_lifetime_wall_ms": 308.30679999996846
+    },
+    {
+      "iteration": 0,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 144.408,
+      "init_ms": 143.257,
+      "first_image_load_ms": 108.448,
+      "first_image_last_op_ms": 6.429,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.89,
+      "working_set_mb": 90.26,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 144.408,
+      "avg_frame_time_ms": 144.408,
+      "fps": 6.92,
+      "frame_times_ms": [
+        144.408
+      ],
+      "process_lifetime_wall_ms": 406.93770000007135
+    },
+    {
+      "iteration": 0,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 172.244,
+      "init_ms": 170.947,
+      "first_image_load_ms": 131.776,
+      "first_image_last_op_ms": 6.625,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 103.82,
+      "working_set_mb": 95.92,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 172.244,
+      "avg_frame_time_ms": 172.244,
+      "fps": 5.81,
+      "frame_times_ms": [
+        172.244
+      ],
+      "process_lifetime_wall_ms": 421.22040000003835
+    },
+    {
+      "iteration": 0,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 242.102,
+      "init_ms": 240.504,
+      "first_image_load_ms": 217.641,
+      "first_image_last_op_ms": 6.463,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 165.91,
+      "working_set_mb": 142.53,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 242.102,
+      "avg_frame_time_ms": 242.102,
+      "fps": 4.13,
+      "frame_times_ms": [
+        242.102
+      ],
+      "process_lifetime_wall_ms": 311.50880000006964
+    },
+    {
+      "iteration": 1,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 212.479,
+      "init_ms": 210.63,
+      "first_image_load_ms": 188.937,
+      "first_image_last_op_ms": 6.949,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.37,
+      "working_set_mb": 85.21,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 212.479,
+      "avg_frame_time_ms": 212.479,
+      "fps": 4.71,
+      "frame_times_ms": [
+        212.479
+      ],
+      "process_lifetime_wall_ms": 473.7305999999535
+    },
+    {
+      "iteration": 1,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 247.172,
+      "init_ms": 245.726,
+      "first_image_load_ms": 222.109,
+      "first_image_last_op_ms": 6.188,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 166.11,
+      "working_set_mb": 142.22,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 247.172,
+      "avg_frame_time_ms": 247.172,
+      "fps": 4.05,
+      "frame_times_ms": [
+        247.172
+      ],
+      "process_lifetime_wall_ms": 310.33830000001217
+    },
+    {
+      "iteration": 1,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 228.74,
+      "init_ms": 227.096,
+      "first_image_load_ms": 202.693,
+      "first_image_last_op_ms": 8.108,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.06,
+      "working_set_mb": 139.77,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 228.74,
+      "avg_frame_time_ms": 228.74,
+      "fps": 4.37,
+      "frame_times_ms": [
+        228.74
+      ],
+      "process_lifetime_wall_ms": 293.19060000000263
+    },
+    {
+      "iteration": 1,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 104.238,
+      "init_ms": 100.394,
+      "first_image_load_ms": 69.022,
+      "first_image_last_op_ms": 9.102,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 108.02,
+      "working_set_mb": 95.39,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 104.238,
+      "avg_frame_time_ms": 104.238,
+      "fps": 9.59,
+      "frame_times_ms": [
+        104.238
+      ],
+      "process_lifetime_wall_ms": 366.93109999998796
+    },
+    {
+      "iteration": 1,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 208.339,
+      "init_ms": 206.005,
+      "first_image_load_ms": 156.332,
+      "first_image_last_op_ms": 9.574,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 112.12,
+      "working_set_mb": 97.27,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 208.339,
+      "avg_frame_time_ms": 208.339,
+      "fps": 4.8,
+      "frame_times_ms": [
+        208.339
+      ],
+      "process_lifetime_wall_ms": 456.8593000000192
+    },
+    {
+      "iteration": 1,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 226.189,
+      "init_ms": 224.168,
+      "first_image_load_ms": 198.953,
+      "first_image_last_op_ms": 8.102,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 179.95,
+      "working_set_mb": 148.83,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 226.189,
+      "avg_frame_time_ms": 226.189,
+      "fps": 4.42,
+      "frame_times_ms": [
+        226.189
+      ],
+      "process_lifetime_wall_ms": 288.76049999996667
+    },
+    {
+      "iteration": 1,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 234.665,
+      "init_ms": 232.322,
+      "first_image_load_ms": 205.566,
+      "first_image_last_op_ms": 7.98,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 172.95,
+      "working_set_mb": 138.75,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 234.665,
+      "avg_frame_time_ms": 234.665,
+      "fps": 4.26,
+      "frame_times_ms": [
+        234.665
+      ],
+      "process_lifetime_wall_ms": 320.0895999999602
+    },
+    {
+      "iteration": 1,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 108.847,
+      "init_ms": 106.847,
+      "first_image_load_ms": 75.416,
+      "first_image_last_op_ms": 9.101,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 109.75,
+      "working_set_mb": 96.69,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 108.847,
+      "avg_frame_time_ms": 108.847,
+      "fps": 9.19,
+      "frame_times_ms": [
+        108.847
+      ],
+      "process_lifetime_wall_ms": 363.16149999993286
+    },
+    {
+      "iteration": 1,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 150.717,
+      "init_ms": 149.586,
+      "first_image_load_ms": 112.623,
+      "first_image_last_op_ms": 6.693,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.37,
+      "working_set_mb": 98.27,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 150.717,
+      "avg_frame_time_ms": 150.717,
+      "fps": 6.63,
+      "frame_times_ms": [
+        150.717
+      ],
+      "process_lifetime_wall_ms": 408.7428000000273
+    },
+    {
+      "iteration": 1,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 248.914,
+      "init_ms": 247.63,
+      "first_image_load_ms": 225.226,
+      "first_image_last_op_ms": 6.689,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 161.71,
+      "working_set_mb": 140.13,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 248.914,
+      "avg_frame_time_ms": 248.914,
+      "fps": 4.02,
+      "frame_times_ms": [
+        248.914
+      ],
+      "process_lifetime_wall_ms": 317.32149999993453
+    },
+    {
+      "iteration": 1,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 247.522,
+      "init_ms": 244.514,
+      "first_image_load_ms": 220.074,
+      "first_image_last_op_ms": 8.215,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 179.31,
+      "working_set_mb": 144.95,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 247.522,
+      "avg_frame_time_ms": 247.522,
+      "fps": 4.04,
+      "frame_times_ms": [
+        247.522
+      ],
+      "process_lifetime_wall_ms": 322.48230000004696
+    },
+    {
+      "iteration": 1,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 207.968,
+      "init_ms": 206.295,
+      "first_image_load_ms": 173.143,
+      "first_image_last_op_ms": 8.427,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 108.29,
+      "working_set_mb": 93.82,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 207.968,
+      "avg_frame_time_ms": 207.968,
+      "fps": 4.81,
+      "frame_times_ms": [
+        207.968
+      ],
+      "process_lifetime_wall_ms": 515.176399999973
+    },
+    {
+      "iteration": 1,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 163.125,
+      "init_ms": 162.231,
+      "first_image_load_ms": 136.584,
+      "first_image_last_op_ms": 6.985,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 101.47,
+      "working_set_mb": 91.56,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 163.125,
+      "avg_frame_time_ms": 163.125,
+      "fps": 6.13,
+      "frame_times_ms": [
+        163.125
+      ],
+      "process_lifetime_wall_ms": 450.41890000004514
+    },
+    {
+      "iteration": 1,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 261.135,
+      "init_ms": 259.632,
+      "first_image_load_ms": 237.576,
+      "first_image_last_op_ms": 6.189,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 165.55,
+      "working_set_mb": 138.87,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 261.135,
+      "avg_frame_time_ms": 261.135,
+      "fps": 3.83,
+      "frame_times_ms": [
+        261.135
+      ],
+      "process_lifetime_wall_ms": 322.97300000004725
+    },
+    {
+      "iteration": 1,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 252.748,
+      "init_ms": 251.321,
+      "first_image_load_ms": 228.271,
+      "first_image_last_op_ms": 6.279,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 179.82,
+      "working_set_mb": 152.8,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 252.748,
+      "avg_frame_time_ms": 252.748,
+      "fps": 3.96,
+      "frame_times_ms": [
+        252.748
+      ],
+      "process_lifetime_wall_ms": 314.8883000000069
+    },
+    {
+      "iteration": 1,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 177.224,
+      "init_ms": 176.402,
+      "first_image_load_ms": 139.927,
+      "first_image_last_op_ms": 6.513,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 99.73,
+      "working_set_mb": 92.09,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 177.224,
+      "avg_frame_time_ms": 177.224,
+      "fps": 5.64,
+      "frame_times_ms": [
+        177.224
+      ],
+      "process_lifetime_wall_ms": 451.60889999999654
+    },
+    {
+      "iteration": 2,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 242.02,
+      "init_ms": 240.649,
+      "first_image_load_ms": 217.248,
+      "first_image_last_op_ms": 6.156,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 172.09,
+      "working_set_mb": 144.59,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 242.02,
+      "avg_frame_time_ms": 242.02,
+      "fps": 4.13,
+      "frame_times_ms": [
+        242.02
+      ],
+      "process_lifetime_wall_ms": 305.5818000000272
+    },
+    {
+      "iteration": 2,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 182.119,
+      "init_ms": 180.617,
+      "first_image_load_ms": 136.257,
+      "first_image_last_op_ms": 6.567,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.08,
+      "working_set_mb": 98.56,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 182.119,
+      "avg_frame_time_ms": 182.119,
+      "fps": 5.49,
+      "frame_times_ms": [
+        182.119
+      ],
+      "process_lifetime_wall_ms": 436.9153999999753
+    },
+    {
+      "iteration": 2,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 108.578,
+      "init_ms": 106.968,
+      "first_image_load_ms": 77.374,
+      "first_image_last_op_ms": 9.053,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 114.1,
+      "working_set_mb": 96.86,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 108.578,
+      "avg_frame_time_ms": 108.578,
+      "fps": 9.21,
+      "frame_times_ms": [
+        108.578
+      ],
+      "process_lifetime_wall_ms": 355.6518000000324
+    },
+    {
+      "iteration": 2,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 231.657,
+      "init_ms": 229.84,
+      "first_image_load_ms": 204.848,
+      "first_image_last_op_ms": 8.285,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 176.02,
+      "working_set_mb": 137.66,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 231.657,
+      "avg_frame_time_ms": 231.657,
+      "fps": 4.32,
+      "frame_times_ms": [
+        231.657
+      ],
+      "process_lifetime_wall_ms": 326.19830000010097
+    },
+    {
+      "iteration": 2,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 241.843,
+      "init_ms": 240.051,
+      "first_image_load_ms": 217.864,
+      "first_image_last_op_ms": 6.341,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 169.73,
+      "working_set_mb": 142.32,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 241.843,
+      "avg_frame_time_ms": 241.843,
+      "fps": 4.13,
+      "frame_times_ms": [
+        241.843
+      ],
+      "process_lifetime_wall_ms": 306.76149999999325
+    },
+    {
+      "iteration": 2,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 161.108,
+      "init_ms": 160.193,
+      "first_image_load_ms": 132.909,
+      "first_image_last_op_ms": 6.935,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.27,
+      "working_set_mb": 95.1,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 161.108,
+      "avg_frame_time_ms": 161.108,
+      "fps": 6.21,
+      "frame_times_ms": [
+        161.108
+      ],
+      "process_lifetime_wall_ms": 421.34309999994457
+    },
+    {
+      "iteration": 2,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 138.855,
+      "init_ms": 137.463,
+      "first_image_load_ms": 111.586,
+      "first_image_last_op_ms": 6.856,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 95.65,
+      "working_set_mb": 95.65,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 138.855,
+      "avg_frame_time_ms": 138.855,
+      "fps": 7.2,
+      "frame_times_ms": [
+        138.855
+      ],
+      "process_lifetime_wall_ms": 411.7292000000816
+    },
+    {
+      "iteration": 2,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 241.508,
+      "init_ms": 239.794,
+      "first_image_load_ms": 217.594,
+      "first_image_last_op_ms": 6.457,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 161.02,
+      "working_set_mb": 138.57,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 241.508,
+      "avg_frame_time_ms": 241.508,
+      "fps": 4.14,
+      "frame_times_ms": [
+        241.508
+      ],
+      "process_lifetime_wall_ms": 356.46600000006856
+    },
+    {
+      "iteration": 2,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 222.5,
+      "init_ms": 220.528,
+      "first_image_load_ms": 198.496,
+      "first_image_last_op_ms": 8,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 180.46,
+      "working_set_mb": 143.11,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 222.5,
+      "avg_frame_time_ms": 222.5,
+      "fps": 4.49,
+      "frame_times_ms": [
+        222.5
+      ],
+      "process_lifetime_wall_ms": 285.63420000000406
+    },
+    {
+      "iteration": 2,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 207.686,
+      "init_ms": 204.641,
+      "first_image_load_ms": 163.778,
+      "first_image_last_op_ms": 9.217,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.8,
+      "working_set_mb": 95.11,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 207.686,
+      "avg_frame_time_ms": 207.686,
+      "fps": 4.81,
+      "frame_times_ms": [
+        207.686
+      ],
+      "process_lifetime_wall_ms": 475.2740000000131
+    },
+    {
+      "iteration": 2,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 189.443,
+      "init_ms": 187.158,
+      "first_image_load_ms": 153.636,
+      "first_image_last_op_ms": 8.306,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 116.97,
+      "working_set_mb": 88.94,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 189.443,
+      "avg_frame_time_ms": 189.443,
+      "fps": 5.28,
+      "frame_times_ms": [
+        189.443
+      ],
+      "process_lifetime_wall_ms": 458.88539999998557
+    },
+    {
+      "iteration": 2,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 222.753,
+      "init_ms": 221.163,
+      "first_image_load_ms": 197.25,
+      "first_image_last_op_ms": 8.009,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 185.12,
+      "working_set_mb": 149.18,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 222.753,
+      "avg_frame_time_ms": 222.753,
+      "fps": 4.49,
+      "frame_times_ms": [
+        222.753
+      ],
+      "process_lifetime_wall_ms": 287.85530000004655
+    },
+    {
+      "iteration": 2,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 230.296,
+      "init_ms": 228.445,
+      "first_image_load_ms": 206.168,
+      "first_image_last_op_ms": 8.266,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 176.13,
+      "working_set_mb": 135.97,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 230.296,
+      "avg_frame_time_ms": 230.296,
+      "fps": 4.34,
+      "frame_times_ms": [
+        230.296
+      ],
+      "process_lifetime_wall_ms": 293.9877000000024
+    },
+    {
+      "iteration": 2,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 112.425,
+      "init_ms": 107.667,
+      "first_image_load_ms": 66.945,
+      "first_image_last_op_ms": 8.546,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 107.44,
+      "working_set_mb": 98.87,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 112.425,
+      "avg_frame_time_ms": 112.425,
+      "fps": 8.89,
+      "frame_times_ms": [
+        112.425
+      ],
+      "process_lifetime_wall_ms": 360.17660000004526
+    },
+    {
+      "iteration": 2,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 218.195,
+      "init_ms": 216.273,
+      "first_image_load_ms": 184.486,
+      "first_image_last_op_ms": 6.579,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 94.48,
+      "working_set_mb": 86.91,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 218.195,
+      "avg_frame_time_ms": 218.195,
+      "fps": 4.58,
+      "frame_times_ms": [
+        218.195
+      ],
+      "process_lifetime_wall_ms": 489.3862999999783
+    },
+    {
+      "iteration": 2,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 238.132,
+      "init_ms": 236.542,
+      "first_image_load_ms": 213.45,
+      "first_image_last_op_ms": 6.63,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 170.71,
+      "working_set_mb": 144.3,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 238.132,
+      "avg_frame_time_ms": 238.132,
+      "fps": 4.2,
+      "frame_times_ms": [
+        238.132
+      ],
+      "process_lifetime_wall_ms": 300.50840000001244
+    },
+    {
+      "iteration": 3,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 145.959,
+      "init_ms": 144.665,
+      "first_image_load_ms": 111.06,
+      "first_image_last_op_ms": 6.584,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 95.62,
+      "working_set_mb": 86.66,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 145.959,
+      "avg_frame_time_ms": 145.959,
+      "fps": 6.85,
+      "frame_times_ms": [
+        145.959
+      ],
+      "process_lifetime_wall_ms": 414.9028999999018
+    },
+    {
+      "iteration": 3,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 249.383,
+      "init_ms": 247.64,
+      "first_image_load_ms": 225.504,
+      "first_image_last_op_ms": 6.223,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 165.49,
+      "working_set_mb": 138.39,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 249.383,
+      "avg_frame_time_ms": 249.383,
+      "fps": 4.01,
+      "frame_times_ms": [
+        249.383
+      ],
+      "process_lifetime_wall_ms": 310.39080000005015
+    },
+    {
+      "iteration": 3,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 226.007,
+      "init_ms": 224.221,
+      "first_image_load_ms": 199.152,
+      "first_image_last_op_ms": 8.295,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 184.9,
+      "working_set_mb": 149.34,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 226.007,
+      "avg_frame_time_ms": 226.007,
+      "fps": 4.42,
+      "frame_times_ms": [
+        226.007
+      ],
+      "process_lifetime_wall_ms": 289.43100000003597
+    },
+    {
+      "iteration": 3,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 204.421,
+      "init_ms": 203.155,
+      "first_image_load_ms": 172.23,
+      "first_image_last_op_ms": 8.067,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 111.68,
+      "working_set_mb": 94.75,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 204.421,
+      "avg_frame_time_ms": 204.421,
+      "fps": 4.89,
+      "frame_times_ms": [
+        204.421
+      ],
+      "process_lifetime_wall_ms": 471.8781999999919
+    },
+    {
+      "iteration": 3,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 109.031,
+      "init_ms": 107.667,
+      "first_image_load_ms": 82.599,
+      "first_image_last_op_ms": 9.76,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 108.46,
+      "working_set_mb": 89.85,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 109.031,
+      "avg_frame_time_ms": 109.031,
+      "fps": 9.17,
+      "frame_times_ms": [
+        109.031
+      ],
+      "process_lifetime_wall_ms": 373.25539999994817
+    },
+    {
+      "iteration": 3,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 265.379,
+      "init_ms": 262.973,
+      "first_image_load_ms": 236.102,
+      "first_image_last_op_ms": 9.47,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 169.57,
+      "working_set_mb": 137.82,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 265.379,
+      "avg_frame_time_ms": 265.379,
+      "fps": 3.77,
+      "frame_times_ms": [
+        265.379
+      ],
+      "process_lifetime_wall_ms": 357.32229999996434
+    },
+    {
+      "iteration": 3,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 246,
+      "init_ms": 244.149,
+      "first_image_load_ms": 218.243,
+      "first_image_last_op_ms": 9.426,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 171.86,
+      "working_set_mb": 144.96,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 246,
+      "avg_frame_time_ms": 246,
+      "fps": 4.07,
+      "frame_times_ms": [
+        246
+      ],
+      "process_lifetime_wall_ms": 310.91509999998834
+    },
+    {
+      "iteration": 3,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 183.225,
+      "init_ms": 180.886,
+      "first_image_load_ms": 150.633,
+      "first_image_last_op_ms": 8.904,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 105.41,
+      "working_set_mb": 91.75,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 183.225,
+      "avg_frame_time_ms": 183.225,
+      "fps": 5.46,
+      "frame_times_ms": [
+        183.225
+      ],
+      "process_lifetime_wall_ms": 456.3676000000214
+    },
+    {
+      "iteration": 3,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 218.307,
+      "init_ms": 216.191,
+      "first_image_load_ms": 193.538,
+      "first_image_last_op_ms": 5.925,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.14,
+      "working_set_mb": 83.94,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 218.307,
+      "avg_frame_time_ms": 218.307,
+      "fps": 4.58,
+      "frame_times_ms": [
+        218.307
+      ],
+      "process_lifetime_wall_ms": 493.70070000009036
+    },
+    {
+      "iteration": 3,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 235.439,
+      "init_ms": 234.332,
+      "first_image_load_ms": 210.768,
+      "first_image_last_op_ms": 6.574,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 169.02,
+      "working_set_mb": 144.43,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 235.439,
+      "avg_frame_time_ms": 235.439,
+      "fps": 4.25,
+      "frame_times_ms": [
+        235.439
+      ],
+      "process_lifetime_wall_ms": 302.67030000004524
+    },
+    {
+      "iteration": 3,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 229.199,
+      "init_ms": 227.438,
+      "first_image_load_ms": 202.92,
+      "first_image_last_op_ms": 8.075,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 176.05,
+      "working_set_mb": 138.66,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 229.199,
+      "avg_frame_time_ms": 229.199,
+      "fps": 4.36,
+      "frame_times_ms": [
+        229.199
+      ],
+      "process_lifetime_wall_ms": 294.59400000007463
+    },
+    {
+      "iteration": 3,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 114.709,
+      "init_ms": 113.593,
+      "first_image_load_ms": 69.516,
+      "first_image_last_op_ms": 9.331,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 111.6,
+      "working_set_mb": 99.85,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 114.709,
+      "avg_frame_time_ms": 114.709,
+      "fps": 8.72,
+      "frame_times_ms": [
+        114.709
+      ],
+      "process_lifetime_wall_ms": 363.98239999994075
+    },
+    {
+      "iteration": 3,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 192.617,
+      "init_ms": 191.114,
+      "first_image_load_ms": 135.263,
+      "first_image_last_op_ms": 6.712,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.05,
+      "working_set_mb": 96.81,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 192.617,
+      "avg_frame_time_ms": 192.617,
+      "fps": 5.19,
+      "frame_times_ms": [
+        192.617
+      ],
+      "process_lifetime_wall_ms": 468.3594999999059
+    },
+    {
+      "iteration": 3,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 244.302,
+      "init_ms": 242.908,
+      "first_image_load_ms": 220.395,
+      "first_image_last_op_ms": 6.273,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 171.25,
+      "working_set_mb": 145.13,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 244.302,
+      "avg_frame_time_ms": 244.302,
+      "fps": 4.09,
+      "frame_times_ms": [
+        244.302
+      ],
+      "process_lifetime_wall_ms": 308.2941000000119
+    },
+    {
+      "iteration": 3,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 246.236,
+      "init_ms": 244.715,
+      "first_image_load_ms": 221.203,
+      "first_image_last_op_ms": 6.406,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 164.86,
+      "working_set_mb": 141.05,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 246.236,
+      "avg_frame_time_ms": 246.236,
+      "fps": 4.06,
+      "frame_times_ms": [
+        246.236
+      ],
+      "process_lifetime_wall_ms": 311.27249999997275
+    },
+    {
+      "iteration": 3,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 165.083,
+      "init_ms": 164.126,
+      "first_image_load_ms": 129.415,
+      "first_image_last_op_ms": 6.811,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 98.09,
+      "working_set_mb": 95.88,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 165.083,
+      "avg_frame_time_ms": 165.083,
+      "fps": 6.06,
+      "frame_times_ms": [
+        165.083
+      ],
+      "process_lifetime_wall_ms": 426.06069999999363
+    },
+    {
+      "iteration": 4,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 234.611,
+      "init_ms": 232.863,
+      "first_image_load_ms": 207.342,
+      "first_image_last_op_ms": 8.035,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 176.24,
+      "working_set_mb": 135.57,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 234.611,
+      "avg_frame_time_ms": 234.611,
+      "fps": 4.26,
+      "frame_times_ms": [
+        234.611
+      ],
+      "process_lifetime_wall_ms": 323.71330000000853
+    },
+    {
+      "iteration": 4,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 112.479,
+      "init_ms": 110.03,
+      "first_image_load_ms": 75.915,
+      "first_image_last_op_ms": 8.978,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 114.96,
+      "working_set_mb": 100.58,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 112.479,
+      "avg_frame_time_ms": 112.479,
+      "fps": 8.89,
+      "frame_times_ms": [
+        112.479
+      ],
+      "process_lifetime_wall_ms": 363.1152000000384
+    },
+    {
+      "iteration": 4,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 151.767,
+      "init_ms": 150.656,
+      "first_image_load_ms": 115.958,
+      "first_image_last_op_ms": 6.623,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.92,
+      "working_set_mb": 94.82,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 151.767,
+      "avg_frame_time_ms": 151.767,
+      "fps": 6.59,
+      "frame_times_ms": [
+        151.767
+      ],
+      "process_lifetime_wall_ms": 420.9235999999237
+    },
+    {
+      "iteration": 4,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 260.217,
+      "init_ms": 258.872,
+      "first_image_load_ms": 234.722,
+      "first_image_last_op_ms": 6.532,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 153.65,
+      "working_set_mb": 136.25,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 260.217,
+      "avg_frame_time_ms": 260.217,
+      "fps": 3.84,
+      "frame_times_ms": [
+        260.217
+      ],
+      "process_lifetime_wall_ms": 327.53709999997227
+    },
+    {
+      "iteration": 4,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 236.196,
+      "init_ms": 234.59,
+      "first_image_load_ms": 211.399,
+      "first_image_last_op_ms": 6.149,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 168.5,
+      "working_set_mb": 142.18,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 236.196,
+      "avg_frame_time_ms": 236.196,
+      "fps": 4.23,
+      "frame_times_ms": [
+        236.196
+      ],
+      "process_lifetime_wall_ms": 302.84039999992274
+    },
+    {
+      "iteration": 4,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 212.938,
+      "init_ms": 211.05,
+      "first_image_load_ms": 187.448,
+      "first_image_last_op_ms": 6.517,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 96.79,
+      "working_set_mb": 86.65,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 212.938,
+      "avg_frame_time_ms": 212.938,
+      "fps": 4.7,
+      "frame_times_ms": [
+        212.938
+      ],
+      "process_lifetime_wall_ms": 482.25010000010116
+    },
+    {
+      "iteration": 4,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 182.722,
+      "init_ms": 181.089,
+      "first_image_load_ms": 133.036,
+      "first_image_last_op_ms": 7.018,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.43,
+      "working_set_mb": 95.71,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 182.722,
+      "avg_frame_time_ms": 182.722,
+      "fps": 5.47,
+      "frame_times_ms": [
+        182.722
+      ],
+      "process_lifetime_wall_ms": 426.9214999999349
+    },
+    {
+      "iteration": 4,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 249.517,
+      "init_ms": 248.152,
+      "first_image_load_ms": 224.877,
+      "first_image_last_op_ms": 7.248,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 169.5,
+      "working_set_mb": 151.58,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 249.517,
+      "avg_frame_time_ms": 249.517,
+      "fps": 4.01,
+      "frame_times_ms": [
+        249.517
+      ],
+      "process_lifetime_wall_ms": 312.88630000005924
+    },
+    {
+      "iteration": 4,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 241.512,
+      "init_ms": 240.083,
+      "first_image_load_ms": 217.686,
+      "first_image_last_op_ms": 6.172,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 170.04,
+      "working_set_mb": 142.88,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 241.512,
+      "avg_frame_time_ms": 241.512,
+      "fps": 4.14,
+      "frame_times_ms": [
+        241.512
+      ],
+      "process_lifetime_wall_ms": 304.9908000000414
+    },
+    {
+      "iteration": 4,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 160.919,
+      "init_ms": 159.783,
+      "first_image_load_ms": 127.966,
+      "first_image_last_op_ms": 6.877,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 103.05,
+      "working_set_mb": 96.01,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 160.919,
+      "avg_frame_time_ms": 160.919,
+      "fps": 6.21,
+      "frame_times_ms": [
+        160.919
+      ],
+      "process_lifetime_wall_ms": 401.21369999997114
+    },
+    {
+      "iteration": 4,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 110.197,
+      "init_ms": 108.474,
+      "first_image_load_ms": 67.34,
+      "first_image_last_op_ms": 8.806,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 108.65,
+      "working_set_mb": 99.55,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 110.197,
+      "avg_frame_time_ms": 110.197,
+      "fps": 9.07,
+      "frame_times_ms": [
+        110.197
+      ],
+      "process_lifetime_wall_ms": 364.06720000002224
+    },
+    {
+      "iteration": 4,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 227.179,
+      "init_ms": 225.443,
+      "first_image_load_ms": 201.604,
+      "first_image_last_op_ms": 8.11,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 176.09,
+      "working_set_mb": 138.8,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 227.179,
+      "avg_frame_time_ms": 227.179,
+      "fps": 4.4,
+      "frame_times_ms": [
+        227.179
+      ],
+      "process_lifetime_wall_ms": 289.8675999999796
+    },
+    {
+      "iteration": 4,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 227.313,
+      "init_ms": 225.015,
+      "first_image_load_ms": 200.592,
+      "first_image_last_op_ms": 8.162,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 177.48,
+      "working_set_mb": 147.29,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 227.313,
+      "avg_frame_time_ms": 227.313,
+      "fps": 4.4,
+      "frame_times_ms": [
+        227.313
+      ],
+      "process_lifetime_wall_ms": 289.8063000000093
+    },
+    {
+      "iteration": 4,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 209.519,
+      "init_ms": 208.518,
+      "first_image_load_ms": 164.999,
+      "first_image_last_op_ms": 9.459,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 106.14,
+      "working_set_mb": 96.27,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 209.519,
+      "avg_frame_time_ms": 209.519,
+      "fps": 4.77,
+      "frame_times_ms": [
+        209.519
+      ],
+      "process_lifetime_wall_ms": 462.6518999999689
+    },
+    {
+      "iteration": 4,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 193.137,
+      "init_ms": 191.755,
+      "first_image_load_ms": 156.074,
+      "first_image_last_op_ms": 8.639,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 110.27,
+      "working_set_mb": 93.22,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 193.137,
+      "avg_frame_time_ms": 193.137,
+      "fps": 5.18,
+      "frame_times_ms": [
+        193.137
+      ],
+      "process_lifetime_wall_ms": 486.99440000007144
+    },
+    {
+      "iteration": 4,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 227.976,
+      "init_ms": 226.186,
+      "first_image_load_ms": 202.367,
+      "first_image_last_op_ms": 7.961,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 180.94,
+      "working_set_mb": 144.92,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 227.976,
+      "avg_frame_time_ms": 227.976,
+      "fps": 4.39,
+      "frame_times_ms": [
+        227.976
+      ],
+      "process_lifetime_wall_ms": 288.17159999994146
+    },
+    {
+      "iteration": 5,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 170.05,
+      "init_ms": 168.151,
+      "first_image_load_ms": 128.758,
+      "first_image_last_op_ms": 7.056,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 101.75,
+      "working_set_mb": 95.08,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 170.05,
+      "avg_frame_time_ms": 170.05,
+      "fps": 5.88,
+      "frame_times_ms": [
+        170.05
+      ],
+      "process_lifetime_wall_ms": 414.3406999999115
+    },
+    {
+      "iteration": 5,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 249.934,
+      "init_ms": 248.527,
+      "first_image_load_ms": 226.263,
+      "first_image_last_op_ms": 6.425,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 166.33,
+      "working_set_mb": 140.86,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 249.934,
+      "avg_frame_time_ms": 249.934,
+      "fps": 4,
+      "frame_times_ms": [
+        249.934
+      ],
+      "process_lifetime_wall_ms": 316.1542999999938
+    },
+    {
+      "iteration": 5,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 229.759,
+      "init_ms": 228.173,
+      "first_image_load_ms": 202.887,
+      "first_image_last_op_ms": 8.206,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.5,
+      "working_set_mb": 140.89,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 229.759,
+      "avg_frame_time_ms": 229.759,
+      "fps": 4.35,
+      "frame_times_ms": [
+        229.759
+      ],
+      "process_lifetime_wall_ms": 292.6709999999275
+    },
+    {
+      "iteration": 5,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 116.773,
+      "init_ms": 115.589,
+      "first_image_load_ms": 68.667,
+      "first_image_last_op_ms": 9.409,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 110.26,
+      "working_set_mb": 101.32,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 116.773,
+      "avg_frame_time_ms": 116.773,
+      "fps": 8.56,
+      "frame_times_ms": [
+        116.773
+      ],
+      "process_lifetime_wall_ms": 391.0146000000623
+    },
+    {
+      "iteration": 5,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 110.763,
+      "init_ms": 107.957,
+      "first_image_load_ms": 74.853,
+      "first_image_last_op_ms": 10.039,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 110,
+      "working_set_mb": 96.89,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 110.763,
+      "avg_frame_time_ms": 110.763,
+      "fps": 9.03,
+      "frame_times_ms": [
+        110.763
+      ],
+      "process_lifetime_wall_ms": 361.17990000002465
+    },
+    {
+      "iteration": 5,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 235.277,
+      "init_ms": 233.649,
+      "first_image_load_ms": 207.513,
+      "first_image_last_op_ms": 8.46,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.23,
+      "working_set_mb": 144.04,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 235.277,
+      "avg_frame_time_ms": 235.277,
+      "fps": 4.25,
+      "frame_times_ms": [
+        235.277
+      ],
+      "process_lifetime_wall_ms": 329.936699999962
+    },
+    {
+      "iteration": 5,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 256.557,
+      "init_ms": 255.282,
+      "first_image_load_ms": 233.064,
+      "first_image_last_op_ms": 6.332,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 163.3,
+      "working_set_mb": 136.28,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 256.557,
+      "avg_frame_time_ms": 256.557,
+      "fps": 3.9,
+      "frame_times_ms": [
+        256.557
+      ],
+      "process_lifetime_wall_ms": 319.07569999998486
+    },
+    {
+      "iteration": 5,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 148.303,
+      "init_ms": 146.526,
+      "first_image_load_ms": 111.394,
+      "first_image_last_op_ms": 6.624,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 93.25,
+      "working_set_mb": 92.88,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 148.303,
+      "avg_frame_time_ms": 148.303,
+      "fps": 6.74,
+      "frame_times_ms": [
+        148.303
+      ],
+      "process_lifetime_wall_ms": 410.7800000000452
+    },
+    {
+      "iteration": 5,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 180.307,
+      "init_ms": 179.304,
+      "first_image_load_ms": 136.076,
+      "first_image_last_op_ms": 6.585,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 99.9,
+      "working_set_mb": 96.15,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 180.307,
+      "avg_frame_time_ms": 180.307,
+      "fps": 5.55,
+      "frame_times_ms": [
+        180.307
+      ],
+      "process_lifetime_wall_ms": 431.29030000000057
+    },
+    {
+      "iteration": 5,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 244.048,
+      "init_ms": 242.639,
+      "first_image_load_ms": 219.947,
+      "first_image_last_op_ms": 6.772,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 171.89,
+      "working_set_mb": 146.75,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 244.048,
+      "avg_frame_time_ms": 244.048,
+      "fps": 4.1,
+      "frame_times_ms": [
+        244.048
+      ],
+      "process_lifetime_wall_ms": 309.2503000000306
+    },
+    {
+      "iteration": 5,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 225.674,
+      "init_ms": 223.884,
+      "first_image_load_ms": 199.489,
+      "first_image_last_op_ms": 8.238,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 181.56,
+      "working_set_mb": 146.71,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 225.674,
+      "avg_frame_time_ms": 225.674,
+      "fps": 4.43,
+      "frame_times_ms": [
+        225.674
+      ],
+      "process_lifetime_wall_ms": 291.2756000000627
+    },
+    {
+      "iteration": 5,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 192.847,
+      "init_ms": 191.282,
+      "first_image_load_ms": 155.094,
+      "first_image_last_op_ms": 8.601,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.1,
+      "working_set_mb": 91.68,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 192.847,
+      "avg_frame_time_ms": 192.847,
+      "fps": 5.19,
+      "frame_times_ms": [
+        192.847
+      ],
+      "process_lifetime_wall_ms": 471.244200000001
+    },
+    {
+      "iteration": 5,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 206.516,
+      "init_ms": 204.992,
+      "first_image_load_ms": 164.816,
+      "first_image_last_op_ms": 8.483,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 115.25,
+      "working_set_mb": 95.97,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 206.516,
+      "avg_frame_time_ms": 206.516,
+      "fps": 4.84,
+      "frame_times_ms": [
+        206.516
+      ],
+      "process_lifetime_wall_ms": 463.1908000000067
+    },
+    {
+      "iteration": 5,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 227.471,
+      "init_ms": 225.585,
+      "first_image_load_ms": 201.837,
+      "first_image_last_op_ms": 8.223,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.67,
+      "working_set_mb": 142.95,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 227.471,
+      "avg_frame_time_ms": 227.471,
+      "fps": 4.4,
+      "frame_times_ms": [
+        227.471
+      ],
+      "process_lifetime_wall_ms": 294.4181000000299
+    },
+    {
+      "iteration": 5,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 239.294,
+      "init_ms": 237.856,
+      "first_image_load_ms": 214.668,
+      "first_image_last_op_ms": 6.224,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 169.74,
+      "working_set_mb": 144.14,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 239.294,
+      "avg_frame_time_ms": 239.294,
+      "fps": 4.18,
+      "frame_times_ms": [
+        239.294
+      ],
+      "process_lifetime_wall_ms": 302.4303999999347
+    },
+    {
+      "iteration": 5,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 218.551,
+      "init_ms": 216.324,
+      "first_image_load_ms": 186.34,
+      "first_image_last_op_ms": 6.612,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 94.31,
+      "working_set_mb": 87.63,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 218.551,
+      "avg_frame_time_ms": 218.551,
+      "fps": 4.58,
+      "frame_times_ms": [
+        218.551
+      ],
+      "process_lifetime_wall_ms": 487.32810000001336
+    },
+    {
+      "iteration": 6,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 232.091,
+      "init_ms": 229.981,
+      "first_image_load_ms": 204.518,
+      "first_image_last_op_ms": 8.41,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 176.64,
+      "working_set_mb": 141.16,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 232.091,
+      "avg_frame_time_ms": 232.091,
+      "fps": 4.31,
+      "frame_times_ms": [
+        232.091
+      ],
+      "process_lifetime_wall_ms": 297.80110000001514
+    },
+    {
+      "iteration": 6,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 118.336,
+      "init_ms": 116.902,
+      "first_image_load_ms": 77.448,
+      "first_image_last_op_ms": 9.987,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 113.48,
+      "working_set_mb": 91.53,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 118.336,
+      "avg_frame_time_ms": 118.336,
+      "fps": 8.45,
+      "frame_times_ms": [
+        118.336
+      ],
+      "process_lifetime_wall_ms": 392.5324000000501
+    },
+    {
+      "iteration": 6,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 224.06,
+      "init_ms": 221.707,
+      "first_image_load_ms": 167.318,
+      "first_image_last_op_ms": 9.904,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 107.09,
+      "working_set_mb": 99.91,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 224.06,
+      "avg_frame_time_ms": 224.06,
+      "fps": 4.46,
+      "frame_times_ms": [
+        224.06
+      ],
+      "process_lifetime_wall_ms": 481.2400999999227
+    },
+    {
+      "iteration": 6,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 249.388,
+      "init_ms": 247.363,
+      "first_image_load_ms": 221.614,
+      "first_image_last_op_ms": 8.783,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.49,
+      "working_set_mb": 147.25,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 249.388,
+      "avg_frame_time_ms": 249.388,
+      "fps": 4.01,
+      "frame_times_ms": [
+        249.388
+      ],
+      "process_lifetime_wall_ms": 312.0237000000543
+    },
+    {
+      "iteration": 6,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 225.216,
+      "init_ms": 223.563,
+      "first_image_load_ms": 199.963,
+      "first_image_last_op_ms": 7.938,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 183.01,
+      "working_set_mb": 147.02,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 225.216,
+      "avg_frame_time_ms": 225.216,
+      "fps": 4.44,
+      "frame_times_ms": [
+        225.216
+      ],
+      "process_lifetime_wall_ms": 289.6367000000737
+    },
+    {
+      "iteration": 6,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 207.061,
+      "init_ms": 197.033,
+      "first_image_load_ms": 166.227,
+      "first_image_last_op_ms": 8.285,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 112.77,
+      "working_set_mb": 94.03,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 207.061,
+      "avg_frame_time_ms": 207.061,
+      "fps": 4.83,
+      "frame_times_ms": [
+        207.061
+      ],
+      "process_lifetime_wall_ms": 475.826100000063
+    },
+    {
+      "iteration": 6,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 162.586,
+      "init_ms": 156.703,
+      "first_image_load_ms": 129.569,
+      "first_image_last_op_ms": 7.283,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 98.83,
+      "working_set_mb": 93.08,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 162.586,
+      "avg_frame_time_ms": 162.586,
+      "fps": 6.15,
+      "frame_times_ms": [
+        162.586
+      ],
+      "process_lifetime_wall_ms": 424.87529999993967
+    },
+    {
+      "iteration": 6,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 237.734,
+      "init_ms": 236.425,
+      "first_image_load_ms": 216.166,
+      "first_image_last_op_ms": 6.611,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 168.29,
+      "working_set_mb": 141.92,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 237.734,
+      "avg_frame_time_ms": 237.734,
+      "fps": 4.21,
+      "frame_times_ms": [
+        237.734
+      ],
+      "process_lifetime_wall_ms": 305.6783000000678
+    },
+    {
+      "iteration": 6,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 232.943,
+      "init_ms": 230.939,
+      "first_image_load_ms": 204.594,
+      "first_image_last_op_ms": 8.158,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 180.43,
+      "working_set_mb": 140.18,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 232.943,
+      "avg_frame_time_ms": 232.943,
+      "fps": 4.29,
+      "frame_times_ms": [
+        232.943
+      ],
+      "process_lifetime_wall_ms": 320.5189999999902
+    },
+    {
+      "iteration": 6,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 117.7,
+      "init_ms": 116.06,
+      "first_image_load_ms": 75.259,
+      "first_image_last_op_ms": 9.708,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 112.98,
+      "working_set_mb": 102.85,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 117.7,
+      "avg_frame_time_ms": 117.7,
+      "fps": 8.5,
+      "frame_times_ms": [
+        117.7
+      ],
+      "process_lifetime_wall_ms": 354.2453000000023
+    },
+    {
+      "iteration": 6,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 147.447,
+      "init_ms": 146.541,
+      "first_image_load_ms": 112.241,
+      "first_image_last_op_ms": 7.191,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 97.11,
+      "working_set_mb": 93.57,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 147.447,
+      "avg_frame_time_ms": 147.447,
+      "fps": 6.78,
+      "frame_times_ms": [
+        147.447
+      ],
+      "process_lifetime_wall_ms": 411.1535999999205
+    },
+    {
+      "iteration": 6,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 242.021,
+      "init_ms": 240.553,
+      "first_image_load_ms": 218.666,
+      "first_image_last_op_ms": 6.08,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 164.71,
+      "working_set_mb": 137.39,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 242.021,
+      "avg_frame_time_ms": 242.021,
+      "fps": 4.13,
+      "frame_times_ms": [
+        242.021
+      ],
+      "process_lifetime_wall_ms": 306.93350000001374
+    },
+    {
+      "iteration": 6,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 242.912,
+      "init_ms": 241.692,
+      "first_image_load_ms": 219.402,
+      "first_image_last_op_ms": 6.235,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 172.19,
+      "working_set_mb": 144.42,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 242.912,
+      "avg_frame_time_ms": 242.912,
+      "fps": 4.12,
+      "frame_times_ms": [
+        242.912
+      ],
+      "process_lifetime_wall_ms": 306.83269999997265
+    },
+    {
+      "iteration": 6,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 195.689,
+      "init_ms": 186.821,
+      "first_image_load_ms": 131.942,
+      "first_image_last_op_ms": 6.844,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.91,
+      "working_set_mb": 100.38,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 195.689,
+      "avg_frame_time_ms": 195.689,
+      "fps": 5.11,
+      "frame_times_ms": [
+        195.689
+      ],
+      "process_lifetime_wall_ms": 421.600900000044
+    },
+    {
+      "iteration": 6,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 211.732,
+      "init_ms": 210.494,
+      "first_image_load_ms": 186.171,
+      "first_image_last_op_ms": 6.765,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.47,
+      "working_set_mb": 87.15,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 211.732,
+      "avg_frame_time_ms": 211.732,
+      "fps": 4.72,
+      "frame_times_ms": [
+        211.732
+      ],
+      "process_lifetime_wall_ms": 475.83689999999024
+    },
+    {
+      "iteration": 6,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 239.292,
+      "init_ms": 237.715,
+      "first_image_load_ms": 215.285,
+      "first_image_last_op_ms": 6.423,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 172.47,
+      "working_set_mb": 146.2,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 239.292,
+      "avg_frame_time_ms": 239.292,
+      "fps": 4.18,
+      "frame_times_ms": [
+        239.292
+      ],
+      "process_lifetime_wall_ms": 302.86949999992885
+    },
+    {
+      "iteration": 7,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 219.483,
+      "init_ms": 217.53,
+      "first_image_load_ms": 188.915,
+      "first_image_last_op_ms": 6.768,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 92.59,
+      "working_set_mb": 92.59,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 219.483,
+      "avg_frame_time_ms": 219.483,
+      "fps": 4.56,
+      "frame_times_ms": [
+        219.483
+      ],
+      "process_lifetime_wall_ms": 476.54130000000805
+    },
+    {
+      "iteration": 7,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 236.563,
+      "init_ms": 234.988,
+      "first_image_load_ms": 211.528,
+      "first_image_last_op_ms": 6.838,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 172.21,
+      "working_set_mb": 146.28,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 236.563,
+      "avg_frame_time_ms": 236.563,
+      "fps": 4.23,
+      "frame_times_ms": [
+        236.563
+      ],
+      "process_lifetime_wall_ms": 301.8378000000439
+    },
+    {
+      "iteration": 7,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 227.226,
+      "init_ms": 225.337,
+      "first_image_load_ms": 200.786,
+      "first_image_last_op_ms": 8.201,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 185.12,
+      "working_set_mb": 149.27,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 227.226,
+      "avg_frame_time_ms": 227.226,
+      "fps": 4.4,
+      "frame_times_ms": [
+        227.226
+      ],
+      "process_lifetime_wall_ms": 291.05010000000675
+    },
+    {
+      "iteration": 7,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 189.499,
+      "init_ms": 187.258,
+      "first_image_load_ms": 150.448,
+      "first_image_last_op_ms": 8.423,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 111.1,
+      "working_set_mb": 94.02,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 189.499,
+      "avg_frame_time_ms": 189.499,
+      "fps": 5.28,
+      "frame_times_ms": [
+        189.499
+      ],
+      "process_lifetime_wall_ms": 441.9689000000062
+    },
+    {
+      "iteration": 7,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 154.36,
+      "init_ms": 151.834,
+      "first_image_load_ms": 115.094,
+      "first_image_last_op_ms": 6.793,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.46,
+      "working_set_mb": 97.66,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 154.36,
+      "avg_frame_time_ms": 154.36,
+      "fps": 6.48,
+      "frame_times_ms": [
+        154.36
+      ],
+      "process_lifetime_wall_ms": 401.85570000005555
+    },
+    {
+      "iteration": 7,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 244.223,
+      "init_ms": 242.801,
+      "first_image_load_ms": 220.324,
+      "first_image_last_op_ms": 6.228,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 165.72,
+      "working_set_mb": 138.59,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 244.223,
+      "avg_frame_time_ms": 244.223,
+      "fps": 4.09,
+      "frame_times_ms": [
+        244.223
+      ],
+      "process_lifetime_wall_ms": 306.08189999998103
+    },
+    {
+      "iteration": 7,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 226.742,
+      "init_ms": 224.691,
+      "first_image_load_ms": 199.316,
+      "first_image_last_op_ms": 8.288,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 184.87,
+      "working_set_mb": 149.45,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 226.742,
+      "avg_frame_time_ms": 226.742,
+      "fps": 4.41,
+      "frame_times_ms": [
+        226.742
+      ],
+      "process_lifetime_wall_ms": 293.8598999999158
+    },
+    {
+      "iteration": 7,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 207.281,
+      "init_ms": 205.262,
+      "first_image_load_ms": 165.788,
+      "first_image_last_op_ms": 8.412,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 116.82,
+      "working_set_mb": 95.53,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 207.281,
+      "avg_frame_time_ms": 207.281,
+      "fps": 4.82,
+      "frame_times_ms": [
+        207.281
+      ],
+      "process_lifetime_wall_ms": 460.1453999999876
+    },
+    {
+      "iteration": 7,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 162.985,
+      "init_ms": 162.159,
+      "first_image_load_ms": 131.451,
+      "first_image_last_op_ms": 6.651,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.47,
+      "working_set_mb": 94.43,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 162.985,
+      "avg_frame_time_ms": 162.985,
+      "fps": 6.14,
+      "frame_times_ms": [
+        162.985
+      ],
+      "process_lifetime_wall_ms": 419.05880000001616
+    },
+    {
+      "iteration": 7,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 243.518,
+      "init_ms": 241.412,
+      "first_image_load_ms": 218.33,
+      "first_image_last_op_ms": 6.446,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 167.78,
+      "working_set_mb": 140.65,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 243.518,
+      "avg_frame_time_ms": 243.518,
+      "fps": 4.11,
+      "frame_times_ms": [
+        243.518
+      ],
+      "process_lifetime_wall_ms": 310.3138999999828
+    },
+    {
+      "iteration": 7,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 232.404,
+      "init_ms": 229.825,
+      "first_image_load_ms": 204.306,
+      "first_image_last_op_ms": 8,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 175.09,
+      "working_set_mb": 138.44,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 232.404,
+      "avg_frame_time_ms": 232.404,
+      "fps": 4.3,
+      "frame_times_ms": [
+        232.404
+      ],
+      "process_lifetime_wall_ms": 318.21739999998044
+    },
+    {
+      "iteration": 7,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 107.86,
+      "init_ms": 106.565,
+      "first_image_load_ms": 75.5,
+      "first_image_last_op_ms": 9.168,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 111.16,
+      "working_set_mb": 97.78,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 107.86,
+      "avg_frame_time_ms": 107.86,
+      "fps": 9.27,
+      "frame_times_ms": [
+        107.86
+      ],
+      "process_lifetime_wall_ms": 373.6746999999241
+    },
+    {
+      "iteration": 7,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 199.073,
+      "init_ms": 197.201,
+      "first_image_load_ms": 135.584,
+      "first_image_last_op_ms": 7.042,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 101.52,
+      "working_set_mb": 100.96,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 199.073,
+      "avg_frame_time_ms": 199.073,
+      "fps": 5.02,
+      "frame_times_ms": [
+        199.073
+      ],
+      "process_lifetime_wall_ms": 434.9703000000318
+    },
+    {
+      "iteration": 7,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 246.36,
+      "init_ms": 244.926,
+      "first_image_load_ms": 221.848,
+      "first_image_last_op_ms": 6.324,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 172.3,
+      "working_set_mb": 145.13,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 246.36,
+      "avg_frame_time_ms": 246.36,
+      "fps": 4.06,
+      "frame_times_ms": [
+        246.36
+      ],
+      "process_lifetime_wall_ms": 308.1399000000147
+    },
+    {
+      "iteration": 7,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 229.451,
+      "init_ms": 227.725,
+      "first_image_load_ms": 203.32,
+      "first_image_last_op_ms": 8.253,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 176.2,
+      "working_set_mb": 138.83,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 229.451,
+      "avg_frame_time_ms": 229.451,
+      "fps": 4.36,
+      "frame_times_ms": [
+        229.451
+      ],
+      "process_lifetime_wall_ms": 292.23449999994955
+    },
+    {
+      "iteration": 7,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 114.651,
+      "init_ms": 113.197,
+      "first_image_load_ms": 68.798,
+      "first_image_last_op_ms": 9.803,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 111.23,
+      "working_set_mb": 100.15,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 114.651,
+      "avg_frame_time_ms": 114.651,
+      "fps": 8.72,
+      "frame_times_ms": [
+        114.651
+      ],
+      "process_lifetime_wall_ms": 356.55240000005506
+    },
+    {
+      "iteration": 8,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 241.953,
+      "init_ms": 240.62,
+      "first_image_load_ms": 217.509,
+      "first_image_last_op_ms": 6.179,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 169.81,
+      "working_set_mb": 142.69,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 241.953,
+      "avg_frame_time_ms": 241.953,
+      "fps": 4.13,
+      "frame_times_ms": [
+        241.953
+      ],
+      "process_lifetime_wall_ms": 307.2849000000133
+    },
+    {
+      "iteration": 8,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 160.103,
+      "init_ms": 159.287,
+      "first_image_load_ms": 130.158,
+      "first_image_last_op_ms": 7.084,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 102.64,
+      "working_set_mb": 89.59,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 160.103,
+      "avg_frame_time_ms": 160.103,
+      "fps": 6.25,
+      "frame_times_ms": [
+        160.103
+      ],
+      "process_lifetime_wall_ms": 425.7663999999295
+    },
+    {
+      "iteration": 8,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 222.573,
+      "init_ms": 213.587,
+      "first_image_load_ms": 161.449,
+      "first_image_last_op_ms": 12.622,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.45,
+      "working_set_mb": 99.76,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 222.573,
+      "avg_frame_time_ms": 222.573,
+      "fps": 4.49,
+      "frame_times_ms": [
+        222.573
+      ],
+      "process_lifetime_wall_ms": 469.96630000001005
+    },
+    {
+      "iteration": 8,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 249.805,
+      "init_ms": 247.689,
+      "first_image_load_ms": 221.481,
+      "first_image_last_op_ms": 9.754,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 168.18,
+      "working_set_mb": 142.66,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 249.805,
+      "avg_frame_time_ms": 249.805,
+      "fps": 4,
+      "frame_times_ms": [
+        249.805
+      ],
+      "process_lifetime_wall_ms": 314.62390000001506
+    },
+    {
+      "iteration": 8,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 239.333,
+      "init_ms": 238.218,
+      "first_image_load_ms": 217.089,
+      "first_image_last_op_ms": 6.273,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 165.87,
+      "working_set_mb": 135.64,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 239.333,
+      "avg_frame_time_ms": 239.333,
+      "fps": 4.18,
+      "frame_times_ms": [
+        239.333
+      ],
+      "process_lifetime_wall_ms": 304.4211000000132
+    },
+    {
+      "iteration": 8,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 150.287,
+      "init_ms": 149.416,
+      "first_image_load_ms": 112.505,
+      "first_image_last_op_ms": 7.012,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 103.02,
+      "working_set_mb": 98.12,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 150.287,
+      "avg_frame_time_ms": 150.287,
+      "fps": 6.65,
+      "frame_times_ms": [
+        150.287
+      ],
+      "process_lifetime_wall_ms": 448.3749999999418
+    },
+    {
+      "iteration": 8,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 109.623,
+      "init_ms": 108.298,
+      "first_image_load_ms": 68.416,
+      "first_image_last_op_ms": 8.461,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 113.24,
+      "working_set_mb": 89.13,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 109.623,
+      "avg_frame_time_ms": 109.623,
+      "fps": 9.12,
+      "frame_times_ms": [
+        109.623
+      ],
+      "process_lifetime_wall_ms": 368.77739999999903
+    },
+    {
+      "iteration": 8,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 230.998,
+      "init_ms": 229,
+      "first_image_load_ms": 205.2,
+      "first_image_last_op_ms": 7.986,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.16,
+      "working_set_mb": 140.94,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 230.998,
+      "avg_frame_time_ms": 230.998,
+      "fps": 4.33,
+      "frame_times_ms": [
+        230.998
+      ],
+      "process_lifetime_wall_ms": 294.3701000000374
+    },
+    {
+      "iteration": 8,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 240.008,
+      "init_ms": 237.967,
+      "first_image_load_ms": 210.892,
+      "first_image_last_op_ms": 8.31,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 177.61,
+      "working_set_mb": 149.16,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 240.008,
+      "avg_frame_time_ms": 240.008,
+      "fps": 4.17,
+      "frame_times_ms": [
+        240.008
+      ],
+      "process_lifetime_wall_ms": 303.85710000007293
+    },
+    {
+      "iteration": 8,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 213.061,
+      "init_ms": 211.459,
+      "first_image_load_ms": 178.209,
+      "first_image_last_op_ms": 8.357,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 113.5,
+      "working_set_mb": 85.22,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 213.061,
+      "avg_frame_time_ms": 213.061,
+      "fps": 4.69,
+      "frame_times_ms": [
+        213.061
+      ],
+      "process_lifetime_wall_ms": 503.1113000000005
+    },
+    {
+      "iteration": 8,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 111.625,
+      "init_ms": 110.456,
+      "first_image_load_ms": 75.317,
+      "first_image_last_op_ms": 8.6,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 114.83,
+      "working_set_mb": 93.32,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 111.625,
+      "avg_frame_time_ms": 111.625,
+      "fps": 8.96,
+      "frame_times_ms": [
+        111.625
+      ],
+      "process_lifetime_wall_ms": 357.7189999999746
+    },
+    {
+      "iteration": 8,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 229.819,
+      "init_ms": 227.684,
+      "first_image_load_ms": 202.667,
+      "first_image_last_op_ms": 7.963,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.11,
+      "working_set_mb": 137.56,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 229.819,
+      "avg_frame_time_ms": 229.819,
+      "fps": 4.35,
+      "frame_times_ms": [
+        229.819
+      ],
+      "process_lifetime_wall_ms": 316.7330999999649
+    },
+    {
+      "iteration": 8,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 250.587,
+      "init_ms": 248.397,
+      "first_image_load_ms": 224.529,
+      "first_image_last_op_ms": 6.733,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 170.32,
+      "working_set_mb": 147.07,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 250.587,
+      "avg_frame_time_ms": 250.587,
+      "fps": 3.99,
+      "frame_times_ms": [
+        250.587
+      ],
+      "process_lifetime_wall_ms": 315.7082000000173
+    },
+    {
+      "iteration": 8,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 170.063,
+      "init_ms": 168.882,
+      "first_image_load_ms": 131.884,
+      "first_image_last_op_ms": 6.669,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 95.68,
+      "working_set_mb": 95.47,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 170.063,
+      "avg_frame_time_ms": 170.063,
+      "fps": 5.88,
+      "frame_times_ms": [
+        170.063
+      ],
+      "process_lifetime_wall_ms": 424.6601999999484
+    },
+    {
+      "iteration": 8,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 212.765,
+      "init_ms": 211.299,
+      "first_image_load_ms": 189.498,
+      "first_image_last_op_ms": 6.909,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.68,
+      "working_set_mb": 85.73,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 212.765,
+      "avg_frame_time_ms": 212.765,
+      "fps": 4.7,
+      "frame_times_ms": [
+        212.765
+      ],
+      "process_lifetime_wall_ms": 470.55169999998725
+    },
+    {
+      "iteration": 8,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 236.071,
+      "init_ms": 234.497,
+      "first_image_load_ms": 211.851,
+      "first_image_last_op_ms": 6.267,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 167.75,
+      "working_set_mb": 142.16,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 236.071,
+      "avg_frame_time_ms": 236.071,
+      "fps": 4.24,
+      "frame_times_ms": [
+        236.071
+      ],
+      "process_lifetime_wall_ms": 302.0608000000493
+    },
+    {
+      "iteration": 9,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 204.494,
+      "init_ms": 202.121,
+      "first_image_load_ms": 164.781,
+      "first_image_last_op_ms": 9.018,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 103.94,
+      "working_set_mb": 92.9,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 204.494,
+      "avg_frame_time_ms": 204.494,
+      "fps": 4.89,
+      "frame_times_ms": [
+        204.494
+      ],
+      "process_lifetime_wall_ms": 476.52529999993476
+    },
+    {
+      "iteration": 9,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 230.853,
+      "init_ms": 229.107,
+      "first_image_load_ms": 205.95,
+      "first_image_last_op_ms": 8.16,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 180.88,
+      "working_set_mb": 144.88,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 230.853,
+      "avg_frame_time_ms": 230.853,
+      "fps": 4.33,
+      "frame_times_ms": [
+        230.853
+      ],
+      "process_lifetime_wall_ms": 292.2851000000719
+    },
+    {
+      "iteration": 9,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 243.15,
+      "init_ms": 241.479,
+      "first_image_load_ms": 218.607,
+      "first_image_last_op_ms": 6.575,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 168.29,
+      "working_set_mb": 145.3,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 243.15,
+      "avg_frame_time_ms": 243.15,
+      "fps": 4.11,
+      "frame_times_ms": [
+        243.15
+      ],
+      "process_lifetime_wall_ms": 312.5312000000804
+    },
+    {
+      "iteration": 9,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 183.997,
+      "init_ms": 181.334,
+      "first_image_load_ms": 133.316,
+      "first_image_last_op_ms": 6.935,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 103.2,
+      "working_set_mb": 100.06,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 183.997,
+      "avg_frame_time_ms": 183.997,
+      "fps": 5.43,
+      "frame_times_ms": [
+        183.997
+      ],
+      "process_lifetime_wall_ms": 436.82860000001256
+    },
+    {
+      "iteration": 9,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 113.206,
+      "init_ms": 103.385,
+      "first_image_load_ms": 75.545,
+      "first_image_last_op_ms": 9.473,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 112.79,
+      "working_set_mb": 95.13,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 113.206,
+      "avg_frame_time_ms": 113.206,
+      "fps": 8.83,
+      "frame_times_ms": [
+        113.206
+      ],
+      "process_lifetime_wall_ms": 356.56010000002425
+    },
+    {
+      "iteration": 9,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 230.826,
+      "init_ms": 229.079,
+      "first_image_load_ms": 203.886,
+      "first_image_last_op_ms": 7.995,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 173.3,
+      "working_set_mb": 138.35,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 230.826,
+      "avg_frame_time_ms": 230.826,
+      "fps": 4.33,
+      "frame_times_ms": [
+        230.826
+      ],
+      "process_lifetime_wall_ms": 317.47729999995045
+    },
+    {
+      "iteration": 9,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 233.816,
+      "init_ms": 232.544,
+      "first_image_load_ms": 208.959,
+      "first_image_last_op_ms": 6.15,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 168.85,
+      "working_set_mb": 142.5,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 233.816,
+      "avg_frame_time_ms": 233.816,
+      "fps": 4.28,
+      "frame_times_ms": [
+        233.816
+      ],
+      "process_lifetime_wall_ms": 295.8041999999068
+    },
+    {
+      "iteration": 9,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 211.055,
+      "init_ms": 209.711,
+      "first_image_load_ms": 186.786,
+      "first_image_last_op_ms": 7.183,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 90.9,
+      "working_set_mb": 85.5,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 211.055,
+      "avg_frame_time_ms": 211.055,
+      "fps": 4.74,
+      "frame_times_ms": [
+        211.055
+      ],
+      "process_lifetime_wall_ms": 491.20379999999386
+    },
+    {
+      "iteration": 9,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 156.563,
+      "init_ms": 155.524,
+      "first_image_load_ms": 127.315,
+      "first_image_last_op_ms": 6.576,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 99.2,
+      "working_set_mb": 87.8,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 156.563,
+      "avg_frame_time_ms": 156.563,
+      "fps": 6.39,
+      "frame_times_ms": [
+        156.563
+      ],
+      "process_lifetime_wall_ms": 414.4344999999703
+    },
+    {
+      "iteration": 9,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 242.979,
+      "init_ms": 241.563,
+      "first_image_load_ms": 218.821,
+      "first_image_last_op_ms": 6.176,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 171.93,
+      "working_set_mb": 144.77,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 242.979,
+      "avg_frame_time_ms": 242.979,
+      "fps": 4.12,
+      "frame_times_ms": [
+        242.979
+      ],
+      "process_lifetime_wall_ms": 311.10469999998713
+    },
+    {
+      "iteration": 9,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 245.996,
+      "init_ms": 243.317,
+      "first_image_load_ms": 220.732,
+      "first_image_last_op_ms": 6.612,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 160.89,
+      "working_set_mb": 136.12,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 245.996,
+      "avg_frame_time_ms": 245.996,
+      "fps": 4.07,
+      "frame_times_ms": [
+        245.996
+      ],
+      "process_lifetime_wall_ms": 312.26460000004863
+    },
+    {
+      "iteration": 9,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 151.257,
+      "init_ms": 149.668,
+      "first_image_load_ms": 113.691,
+      "first_image_last_op_ms": 7.004,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 99.05,
+      "working_set_mb": 97.4,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 151.257,
+      "avg_frame_time_ms": 151.257,
+      "fps": 6.61,
+      "frame_times_ms": [
+        151.257
+      ],
+      "process_lifetime_wall_ms": 411.3915000000361
+    },
+    {
+      "iteration": 9,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 187.546,
+      "init_ms": 186.098,
+      "first_image_load_ms": 153.513,
+      "first_image_last_op_ms": 8.176,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 117.01,
+      "working_set_mb": 89.21,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 187.546,
+      "avg_frame_time_ms": 187.546,
+      "fps": 5.33,
+      "frame_times_ms": [
+        187.546
+      ],
+      "process_lifetime_wall_ms": 464.0578999999434
+    },
+    {
+      "iteration": 9,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 225.962,
+      "init_ms": 224.198,
+      "first_image_load_ms": 198.72,
+      "first_image_last_op_ms": 8.55,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 182.76,
+      "working_set_mb": 146.76,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 225.962,
+      "avg_frame_time_ms": 225.962,
+      "fps": 4.43,
+      "frame_times_ms": [
+        225.962
+      ],
+      "process_lifetime_wall_ms": 289.80030000002444
+    },
+    {
+      "iteration": 9,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 237.817,
+      "init_ms": 235.017,
+      "first_image_load_ms": 209.716,
+      "first_image_last_op_ms": 8.29,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 175.86,
+      "working_set_mb": 138.57,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 237.817,
+      "avg_frame_time_ms": 237.817,
+      "fps": 4.2,
+      "frame_times_ms": [
+        237.817
+      ],
+      "process_lifetime_wall_ms": 300.31099999996513
+    },
+    {
+      "iteration": 9,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 112.854,
+      "init_ms": 111.563,
+      "first_image_load_ms": 68.91,
+      "first_image_last_op_ms": 8.559,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 107.94,
+      "working_set_mb": 101.54,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 112.854,
+      "avg_frame_time_ms": 112.854,
+      "fps": 8.86,
+      "frame_times_ms": [
+        112.854
+      ],
+      "process_lifetime_wall_ms": 361.663099999987
+    },
+    {
+      "iteration": 10,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 235.159,
+      "init_ms": 232.537,
+      "first_image_load_ms": 205.651,
+      "first_image_last_op_ms": 7.997,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.01,
+      "working_set_mb": 137.66,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 235.159,
+      "avg_frame_time_ms": 235.159,
+      "fps": 4.25,
+      "frame_times_ms": [
+        235.159
+      ],
+      "process_lifetime_wall_ms": 320.19379999997
+    },
+    {
+      "iteration": 10,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 110.816,
+      "init_ms": 109.497,
+      "first_image_load_ms": 76.166,
+      "first_image_last_op_ms": 9.108,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 114.42,
+      "working_set_mb": 98.67,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 110.816,
+      "avg_frame_time_ms": 110.816,
+      "fps": 9.02,
+      "frame_times_ms": [
+        110.816
+      ],
+      "process_lifetime_wall_ms": 365.50790000001143
+    },
+    {
+      "iteration": 10,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 121.408,
+      "init_ms": 119.462,
+      "first_image_load_ms": 75.747,
+      "first_image_last_op_ms": 9.1,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 109.91,
+      "working_set_mb": 101.25,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 121.408,
+      "avg_frame_time_ms": 121.408,
+      "fps": 8.24,
+      "frame_times_ms": [
+        121.408
+      ],
+      "process_lifetime_wall_ms": 368.3154000000286
+    },
+    {
+      "iteration": 10,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 251.708,
+      "init_ms": 249.735,
+      "first_image_load_ms": 224.6,
+      "first_image_last_op_ms": 8.387,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 176.7,
+      "working_set_mb": 140.26,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 251.708,
+      "avg_frame_time_ms": 251.708,
+      "fps": 3.97,
+      "frame_times_ms": [
+        251.708
+      ],
+      "process_lifetime_wall_ms": 316.1152000000129
+    },
+    {
+      "iteration": 10,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 223.132,
+      "init_ms": 221.265,
+      "first_image_load_ms": 197.571,
+      "first_image_last_op_ms": 7.967,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 182.61,
+      "working_set_mb": 147.34,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 223.132,
+      "avg_frame_time_ms": 223.132,
+      "fps": 4.48,
+      "frame_times_ms": [
+        223.132
+      ],
+      "process_lifetime_wall_ms": 288.79090000009455
+    },
+    {
+      "iteration": 10,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 194.227,
+      "init_ms": 192.613,
+      "first_image_load_ms": 155.445,
+      "first_image_last_op_ms": 9.175,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 107.77,
+      "working_set_mb": 87.52,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 194.227,
+      "avg_frame_time_ms": 194.227,
+      "fps": 5.15,
+      "frame_times_ms": [
+        194.227
+      ],
+      "process_lifetime_wall_ms": 452.61230000005526
+    },
+    {
+      "iteration": 10,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 143.167,
+      "init_ms": 142.427,
+      "first_image_load_ms": 111.61,
+      "first_image_last_op_ms": 6.321,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.11,
+      "working_set_mb": 89.29,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 143.167,
+      "avg_frame_time_ms": 143.167,
+      "fps": 6.98,
+      "frame_times_ms": [
+        143.167
+      ],
+      "process_lifetime_wall_ms": 411.39029999999366
+    },
+    {
+      "iteration": 10,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 246.625,
+      "init_ms": 244.276,
+      "first_image_load_ms": 220.701,
+      "first_image_last_op_ms": 6.824,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 159.71,
+      "working_set_mb": 136.24,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 246.625,
+      "avg_frame_time_ms": 246.625,
+      "fps": 4.05,
+      "frame_times_ms": [
+        246.625
+      ],
+      "process_lifetime_wall_ms": 309.2480999999907
+    },
+    {
+      "iteration": 10,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 243.088,
+      "init_ms": 241.87,
+      "first_image_load_ms": 221.848,
+      "first_image_last_op_ms": 6.233,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 169.68,
+      "working_set_mb": 139.98,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 243.088,
+      "avg_frame_time_ms": 243.088,
+      "fps": 4.11,
+      "frame_times_ms": [
+        243.088
+      ],
+      "process_lifetime_wall_ms": 309.7814999999855
+    },
+    {
+      "iteration": 10,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 160.866,
+      "init_ms": 159.83,
+      "first_image_load_ms": 128.595,
+      "first_image_last_op_ms": 6.608,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 96.88,
+      "working_set_mb": 93.3,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 160.866,
+      "avg_frame_time_ms": 160.866,
+      "fps": 6.22,
+      "frame_times_ms": [
+        160.866
+      ],
+      "process_lifetime_wall_ms": 411.89970000004905
+    },
+    {
+      "iteration": 10,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 201.455,
+      "init_ms": 198.746,
+      "first_image_load_ms": 161.601,
+      "first_image_last_op_ms": 8.4,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 110.1,
+      "working_set_mb": 92.91,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 201.455,
+      "avg_frame_time_ms": 201.455,
+      "fps": 4.96,
+      "frame_times_ms": [
+        201.455
+      ],
+      "process_lifetime_wall_ms": 463.16079999996873
+    },
+    {
+      "iteration": 10,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 228.059,
+      "init_ms": 226.495,
+      "first_image_load_ms": 201.988,
+      "first_image_last_op_ms": 8.482,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 173.72,
+      "working_set_mb": 146.84,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 228.059,
+      "avg_frame_time_ms": 228.059,
+      "fps": 4.38,
+      "frame_times_ms": [
+        228.059
+      ],
+      "process_lifetime_wall_ms": 289.2135000000735
+    },
+    {
+      "iteration": 10,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 246.449,
+      "init_ms": 245.078,
+      "first_image_load_ms": 222.282,
+      "first_image_last_op_ms": 6.68,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 166.03,
+      "working_set_mb": 144.2,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 246.449,
+      "avg_frame_time_ms": 246.449,
+      "fps": 4.06,
+      "frame_times_ms": [
+        246.449
+      ],
+      "process_lifetime_wall_ms": 310.0676999999905
+    },
+    {
+      "iteration": 10,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 175.142,
+      "init_ms": 173.062,
+      "first_image_load_ms": 137.045,
+      "first_image_last_op_ms": 6.58,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 103.92,
+      "working_set_mb": 85.92,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 175.142,
+      "avg_frame_time_ms": 175.142,
+      "fps": 5.71,
+      "frame_times_ms": [
+        175.142
+      ],
+      "process_lifetime_wall_ms": 443.5240000000249
+    },
+    {
+      "iteration": 10,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 224.951,
+      "init_ms": 222.427,
+      "first_image_load_ms": 190.412,
+      "first_image_last_op_ms": 6.446,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 100.93,
+      "working_set_mb": 88.36,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 224.951,
+      "avg_frame_time_ms": 224.951,
+      "fps": 4.45,
+      "frame_times_ms": [
+        224.951
+      ],
+      "process_lifetime_wall_ms": 505.51450000000386
+    },
+    {
+      "iteration": 10,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 235.061,
+      "init_ms": 233.634,
+      "first_image_load_ms": 211.089,
+      "first_image_last_op_ms": 6.157,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 169.74,
+      "working_set_mb": 144.2,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 235.061,
+      "avg_frame_time_ms": 235.061,
+      "fps": 4.25,
+      "frame_times_ms": [
+        235.061
+      ],
+      "process_lifetime_wall_ms": 300.07639999996627
+    },
+    {
+      "iteration": 11,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 149.968,
+      "init_ms": 148.291,
+      "first_image_load_ms": 111.539,
+      "first_image_last_op_ms": 6.553,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 95.81,
+      "working_set_mb": 89.23,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 149.968,
+      "avg_frame_time_ms": 149.968,
+      "fps": 6.67,
+      "frame_times_ms": [
+        149.968
+      ],
+      "process_lifetime_wall_ms": 401.5464999999949
+    },
+    {
+      "iteration": 11,
+      "image": "greyhounds-looking-for-a-table.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 250.421,
+      "init_ms": 248.764,
+      "first_image_load_ms": 224.954,
+      "first_image_last_op_ms": 6.48,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 167.52,
+      "working_set_mb": 140.37,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 250.421,
+      "avg_frame_time_ms": 250.421,
+      "fps": 3.99,
+      "frame_times_ms": [
+        250.421
+      ],
+      "process_lifetime_wall_ms": 311.5263000000823
+    },
+    {
+      "iteration": 11,
+      "image": "old-safe-wall.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 245.644,
+      "init_ms": 244.157,
+      "first_image_load_ms": 220.74,
+      "first_image_last_op_ms": 6.345,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 168.48,
+      "working_set_mb": 142.62,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 245.644,
+      "avg_frame_time_ms": 245.644,
+      "fps": 4.07,
+      "frame_times_ms": [
+        245.644
+      ],
+      "process_lifetime_wall_ms": 307.4560999999676
+    },
+    {
+      "iteration": 11,
+      "image": "old-safe-wall.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 175.698,
+      "init_ms": 174.523,
+      "first_image_load_ms": 135.606,
+      "first_image_last_op_ms": 6.648,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 101.32,
+      "working_set_mb": 88.79,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 175.698,
+      "avg_frame_time_ms": 175.698,
+      "fps": 5.69,
+      "frame_times_ms": [
+        175.698
+      ],
+      "process_lifetime_wall_ms": 430.2229999999554
+    },
+    {
+      "iteration": 11,
+      "image": "chef-with-trumpet.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 108.489,
+      "init_ms": 106.519,
+      "first_image_load_ms": 74.163,
+      "first_image_last_op_ms": 8.921,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 106.13,
+      "working_set_mb": 99.96,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 108.489,
+      "avg_frame_time_ms": 108.489,
+      "fps": 9.22,
+      "frame_times_ms": [
+        108.489
+      ],
+      "process_lifetime_wall_ms": 358.0951000000141
+    },
+    {
+      "iteration": 11,
+      "image": "chef-with-trumpet.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 232.356,
+      "init_ms": 230.468,
+      "first_image_load_ms": 205.577,
+      "first_image_last_op_ms": 8.077,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 178.58,
+      "working_set_mb": 142.84,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 232.356,
+      "avg_frame_time_ms": 232.356,
+      "fps": 4.3,
+      "frame_times_ms": [
+        232.356
+      ],
+      "process_lifetime_wall_ms": 327.21970000000056
+    },
+    {
+      "iteration": 11,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 229.04,
+      "init_ms": 227.453,
+      "first_image_load_ms": 202.691,
+      "first_image_last_op_ms": 8.452,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 187.02,
+      "working_set_mb": 151.02,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 229.04,
+      "avg_frame_time_ms": 229.04,
+      "fps": 4.37,
+      "frame_times_ms": [
+        229.04
+      ],
+      "process_lifetime_wall_ms": 292.32330000002094
+    },
+    {
+      "iteration": 11,
+      "image": "shelf-christmas-decoration.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 183.303,
+      "init_ms": 182.248,
+      "first_image_load_ms": 151.462,
+      "first_image_last_op_ms": 9.093,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 105.73,
+      "working_set_mb": 89.64,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 183.303,
+      "avg_frame_time_ms": 183.303,
+      "fps": 5.46,
+      "frame_times_ms": [
+        183.303
+      ],
+      "process_lifetime_wall_ms": 444.7466000000304
+    },
+    {
+      "iteration": 11,
+      "image": "soundboard.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 214.466,
+      "init_ms": 213.467,
+      "first_image_load_ms": 192.088,
+      "first_image_last_op_ms": 6.139,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 103.7,
+      "working_set_mb": 86.92,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 214.466,
+      "avg_frame_time_ms": 214.466,
+      "fps": 4.66,
+      "frame_times_ms": [
+        214.466
+      ],
+      "process_lifetime_wall_ms": 483.0610000000206
+    },
+    {
+      "iteration": 11,
+      "image": "soundboard.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 240.768,
+      "init_ms": 239.107,
+      "first_image_load_ms": 216.527,
+      "first_image_last_op_ms": 6.29,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 168.29,
+      "working_set_mb": 141.94,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 240.768,
+      "avg_frame_time_ms": 240.768,
+      "fps": 4.15,
+      "frame_times_ms": [
+        240.768
+      ],
+      "process_lifetime_wall_ms": 302.2181000000046
+    },
+    {
+      "iteration": 11,
+      "image": "sewing-threads.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 229.809,
+      "init_ms": 227.864,
+      "first_image_load_ms": 203.687,
+      "first_image_last_op_ms": 8.014,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 183,
+      "working_set_mb": 146.92,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 229.809,
+      "avg_frame_time_ms": 229.809,
+      "fps": 4.35,
+      "frame_times_ms": [
+        229.809
+      ],
+      "process_lifetime_wall_ms": 295.9556999999222
+    },
+    {
+      "iteration": 11,
+      "image": "sewing-threads.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 195.368,
+      "init_ms": 194.038,
+      "first_image_load_ms": 164.692,
+      "first_image_last_op_ms": 8.843,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 105.66,
+      "working_set_mb": 93.76,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 195.368,
+      "avg_frame_time_ms": 195.368,
+      "fps": 5.12,
+      "frame_times_ms": [
+        195.368
+      ],
+      "process_lifetime_wall_ms": 463.99510000003374
+    },
+    {
+      "iteration": 11,
+      "image": "classic-car.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 168.509,
+      "init_ms": 167.068,
+      "first_image_load_ms": 135.946,
+      "first_image_last_op_ms": 6.881,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 97.91,
+      "working_set_mb": 97.91,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 168.509,
+      "avg_frame_time_ms": 168.509,
+      "fps": 5.93,
+      "frame_times_ms": [
+        168.509
+      ],
+      "process_lifetime_wall_ms": 411.15369999999984
+    },
+    {
+      "iteration": 11,
+      "image": "classic-car.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 240.195,
+      "init_ms": 238.707,
+      "first_image_load_ms": 216.543,
+      "first_image_last_op_ms": 6.126,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 167.9,
+      "working_set_mb": 145.17,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 240.195,
+      "avg_frame_time_ms": 240.195,
+      "fps": 4.16,
+      "frame_times_ms": [
+        240.195
+      ],
+      "process_lifetime_wall_ms": 305.54129999995894
+    },
+    {
+      "iteration": 11,
+      "image": "childrens-show-theater.heic",
+      "build": "baseline",
+      "process_start_to_first_paint_ms": 229.028,
+      "init_ms": 227.034,
+      "first_image_load_ms": 202.45,
+      "first_image_last_op_ms": 7.939,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 177.96,
+      "working_set_mb": 140.83,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 229.028,
+      "avg_frame_time_ms": 229.028,
+      "fps": 4.37,
+      "frame_times_ms": [
+        229.028
+      ],
+      "process_lifetime_wall_ms": 294.0995000000157
+    },
+    {
+      "iteration": 11,
+      "image": "childrens-show-theater.heic",
+      "build": "candidate",
+      "process_start_to_first_paint_ms": 112.448,
+      "init_ms": 111.359,
+      "first_image_load_ms": 68.672,
+      "first_image_last_op_ms": 8.514,
+      "first_image_unsharp_mask_ms": 0,
+      "timing_info": "",
+      "peak_working_set_mb": 112.68,
+      "working_set_mb": 99.23,
+      "nav_frame_count": 1,
+      "total_nav_time_ms": 112.448,
+      "avg_frame_time_ms": 112.448,
+      "fps": 8.89,
+      "frame_times_ms": [
+        112.448
+      ],
+      "process_lifetime_wall_ms": 358.2268999999769
+    }
+  ],
+  "summary": [
+    {
+      "image": "chef-with-trumpet.heic",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 207.59833333333333,
+          "median": 205.207,
+          "min": 202.667,
+          "max": 236.102,
+          "stdev": 9.095720445585519
+        },
+        "candidate": {
+          "mean": 76.14083333333333,
+          "median": 75.52250000000001,
+          "min": 74.163,
+          "max": 82.599,
+          "stdev": 2.1723294507105155
+        },
+        "mean_reduction_percent": 63.3230035565475
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 235.584,
+          "median": 232.6735,
+          "min": 229.819,
+          "max": 265.379,
+          "stdev": 9.54460416818177
+        },
+        "candidate": {
+          "mean": 111.46891666666667,
+          "median": 110.7895,
+          "min": 107.86,
+          "max": 118.233,
+          "stdev": 3.4725599270523326
+        },
+        "mean_reduction_percent": 52.6840037240786
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 324.76926666665423,
+          "median": 320.3563999999801,
+          "min": 316.7330999999649,
+          "max": 357.32229999996434,
+          "stdev": 11.052575320409249
+        },
+        "candidate": {
+          "mean": 361.5468499999963,
+          "median": 359.6375000000194,
+          "min": 354.2453000000023,
+          "max": 373.6746999999241,
+          "stdev": 6.544208931470124
+        },
+        "mean_reduction_percent": -11.324219102015864
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 175.9775,
+          "median": 176.13,
+          "min": 169.57,
+          "max": 180.43,
+          "stdev": 3.0030866696541687
+        },
+        "candidate": {
+          "mean": 111.95,
+          "median": 112.885,
+          "min": 106.13,
+          "max": 114.96,
+          "stdev": 2.8390203175807613
+        },
+        "mean_reduction_percent": 36.383912716114274
+      }
+    },
+    {
+      "image": "childrens-show-theater.heic",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 206.17191666666668,
+          "median": 203.91899999999998,
+          "min": 201.604,
+          "max": 224.6,
+          "stdev": 6.291768380674911
+        },
+        "candidate": {
+          "mean": 69.74991666666666,
+          "median": 68.735,
+          "min": 66.945,
+          "max": 77.448,
+          "stdev": 3.3055371577876937
+        },
+        "mean_reduction_percent": 66.16905066685852
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 232.52833333333334,
+          "median": 230.02749999999997,
+          "min": 227.179,
+          "max": 251.708,
+          "stdev": 6.6686376192570025
+        },
+        "candidate": {
+          "mean": 113.41275,
+          "median": 113.07249999999999,
+          "min": 104.238,
+          "max": 121.408,
+          "stdev": 4.408462195802316
+        },
+        "mean_reduction_percent": 51.22626633313503
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 296.3758250000031,
+          "median": 294.23480000002655,
+          "min": 289.8675999999796,
+          "max": 316.1152000000129,
+          "stdev": 6.805190403879442
+        },
+        "candidate": {
+          "mean": 367.46221666667606,
+          "median": 364.0247999999815,
+          "min": 356.55240000005506,
+          "max": 392.5324000000501,
+          "stdev": 12.074599039614357
+        },
+        "mean_reduction_percent": -23.985219329772335
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 177.04916666666668,
+          "median": 176.67,
+          "min": 175.86,
+          "max": 178.5,
+          "stdev": 1.035553943402743
+        },
+        "candidate": {
+          "mean": 110.12416666666667,
+          "median": 110.08500000000001,
+          "min": 107.04,
+          "max": 113.48,
+          "stdev": 2.3170453690906103
+        },
+        "mean_reduction_percent": 37.800234398166246
+      }
+    },
+    {
+      "image": "classic-car.heic",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 220.62083333333334,
+          "median": 218.097,
+          "min": 216.166,
+          "max": 237.576,
+          "stdev": 6.03696529472358
+        },
+        "candidate": {
+          "mean": 130.87016666666668,
+          "median": 129.8635,
+          "min": 127.315,
+          "max": 136.584,
+          "stdev": 2.9962927042758984
+        },
+        "mean_reduction_percent": 40.68095714744376
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 244.35241666666667,
+          "median": 242.5405,
+          "min": 237.734,
+          "max": 261.135,
+          "stdev": 6.081362010398255
+        },
+        "candidate": {
+          "mean": 163.67841666666666,
+          "median": 162.7855,
+          "min": 156.563,
+          "max": 172.244,
+          "stdev": 4.540705000494432
+        },
+        "mean_reduction_percent": 33.01542955887825
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 310.2804583333428,
+          "median": 310.04769999998416,
+          "min": 304.9908000000414,
+          "max": 322.97300000004725,
+          "stdev": 5.152240974828307
+        },
+        "candidate": {
+          "mean": 420.1488249999841,
+          "median": 420.13960000002726,
+          "min": 401.21369999997114,
+          "max": 450.41890000004514,
+          "stdev": 11.99535616055936
+        },
+        "mean_reduction_percent": -35.409373589556424
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 168.15083333333334,
+          "median": 168.095,
+          "min": 164.86,
+          "max": 171.93,
+          "stdev": 2.165567145254574
+        },
+        "candidate": {
+          "mean": 100.69833333333334,
+          "median": 101.61,
+          "min": 96.88,
+          "max": 103.82,
+          "stdev": 2.3596834661890687
+        },
+        "mean_reduction_percent": 40.11428231597623
+      }
+    },
+    {
+      "image": "greyhounds-looking-for-a-table.heic",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 223.39933333333335,
+          "median": 221.474,
+          "min": 217.089,
+          "max": 234.722,
+          "stdev": 5.664660405986534
+        },
+        "candidate": {
+          "mean": 112.31241666666666,
+          "median": 111.9255,
+          "min": 108.448,
+          "max": 115.958,
+          "stdev": 1.9547523190388798
+        },
+        "mean_reduction_percent": 49.72571538560246
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 247.585,
+          "median": 246.3105,
+          "min": 239.333,
+          "max": 260.217,
+          "stdev": 6.08236954424238
+        },
+        "candidate": {
+          "mean": 148.04125,
+          "median": 149.13549999999998,
+          "min": 138.855,
+          "max": 154.36,
+          "stdev": 4.32926277841222
+        },
+        "mean_reduction_percent": 40.20588888664499
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 315.79778333334235,
+          "median": 310.9585500000662,
+          "min": 304.4211000000132,
+          "max": 356.46600000006856,
+          "stdev": 14.353214054382393
+        },
+        "candidate": {
+          "mean": 413.3107333333328,
+          "median": 411.2719499999571,
+          "min": 401.5464999999949,
+          "max": 448.3749999999418,
+          "stdev": 12.21779878150405
+        },
+        "mean_reduction_percent": -30.87828830548187
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 162.79666666666668,
+          "median": 163.635,
+          "min": 153.65,
+          "max": 167.52,
+          "stdev": 3.741752951694587
+        },
+        "candidate": {
+          "mean": 99.02166666666666,
+          "median": 99.58,
+          "min": 93.25,
+          "max": 103.02,
+          "stdev": 3.426022961588746
+        },
+        "mean_reduction_percent": 39.174635025287174
+      }
+    },
+    {
+      "image": "old-safe-wall.heic",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 222.07508333333334,
+          "median": 221.294,
+          "min": 217.248,
+          "max": 228.271,
+          "stdev": 3.3826483024220506
+        },
+        "candidate": {
+          "mean": 134.97758333333334,
+          "median": 135.4235,
+          "min": 131.884,
+          "max": 139.927,
+          "stdev": 2.319337815307452
+        },
+        "mean_reduction_percent": 39.21984343883693
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 246.37958333333333,
+          "median": 246.002,
+          "min": 242.02,
+          "max": 252.748,
+          "stdev": 3.381871092063283
+        },
+        "candidate": {
+          "mean": 182.2965,
+          "median": 181.213,
+          "min": 170.063,
+          "max": 199.073,
+          "stdev": 9.208018526361586
+        },
+        "mean_reduction_percent": 26.00990003568342
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 310.60804166668277,
+          "median": 309.65900000001056,
+          "min": 305.5818000000272,
+          "max": 315.7082000000173,
+          "stdev": 3.5900750206147474
+        },
+        "candidate": {
+          "mean": 436.09034999999113,
+          "median": 433.1303000000162,
+          "min": 421.600900000044,
+          "max": 468.3594999999059,
+          "stdev": 13.21215942691515
+        },
+        "mean_reduction_percent": -40.39892452880049
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 171.16166666666666,
+          "median": 171.515,
+          "min": 166.03,
+          "max": 179.82,
+          "stdev": 3.3621390197133114
+        },
+        "candidate": {
+          "mean": 100.77833333333334,
+          "median": 101.115,
+          "min": 95.68,
+          "max": 103.92,
+          "stdev": 2.2188606139734017
+        },
+        "mean_reduction_percent": 41.12096750635364
+      }
+    },
+    {
+      "image": "sewing-threads.heic",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 203.77516666666668,
+          "median": 201.9125,
+          "min": 198.496,
+          "max": 220.074,
+          "stdev": 6.193534426881772
+        },
+        "candidate": {
+          "mean": 167.01183333333333,
+          "median": 164.9075,
+          "min": 161.601,
+          "max": 178.209,
+          "stdev": 4.87197807192657
+        },
+        "mean_reduction_percent": 18.04112539064705
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 230.09633333333335,
+          "median": 227.765,
+          "min": 222.5,
+          "max": 247.522,
+          "stdev": 6.948055141003433
+        },
+        "candidate": {
+          "mean": 205.81516666666667,
+          "median": 206.7885,
+          "min": 195.368,
+          "max": 213.061,
+          "stdev": 4.381113491367513
+        },
+        "mean_reduction_percent": 10.552609124584055
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 294.9010583333518,
+          "median": 292.25895000001856,
+          "min": 285.63420000000406,
+          "max": 322.48230000004696,
+          "stdev": 9.8125267605457
+        },
+        "candidate": {
+          "mean": 473.9418333333276,
+          "median": 467.93665000001283,
+          "min": 456.3666999999896,
+          "max": 515.176399999973,
+          "stdev": 17.900857434531673
+        },
+        "mean_reduction_percent": -60.71215071652636
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 180.75833333333333,
+          "median": 180.67000000000002,
+          "min": 173.72,
+          "max": 185.19,
+          "stdev": 3.5745841038016604
+        },
+        "candidate": {
+          "mean": 109.45,
+          "median": 109.195,
+          "min": 102.8,
+          "max": 116.82,
+          "stdev": 4.582829614193317
+        },
+        "mean_reduction_percent": 39.449541284403665
+      }
+    },
+    {
+      "image": "shelf-christmas-decoration.heic",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 204.86166666666668,
+          "median": 200.1375,
+          "min": 197.25,
+          "max": 221.614,
+          "stdev": 9.574476651572926
+        },
+        "candidate": {
+          "mean": 155.39783333333332,
+          "median": 154.365,
+          "min": 150.448,
+          "max": 167.318,
+          "stdev": 4.801471665178831
+        },
+        "mean_reduction_percent": 24.144992149173838
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 231.60541666666666,
+          "median": 226.70749999999998,
+          "min": 222.753,
+          "max": 249.805,
+          "stdev": 10.314172698135792
+        },
+        "candidate": {
+          "mean": 196.65716666666668,
+          "median": 192.267,
+          "min": 183.225,
+          "max": 224.06,
+          "stdev": 14.018111368274022
+        },
+        "mean_reduction_percent": 15.089565046873886
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 295.55419166668645,
+          "median": 291.0550500000113,
+          "min": 287.85530000004655,
+          "max": 314.62390000001506,
+          "stdev": 10.35227167046106
+        },
+        "candidate": {
+          "mean": 462.7941750000086,
+          "median": 461.4716499999645,
+          "min": 441.9689000000062,
+          "max": 486.99440000007144,
+          "stdev": 13.614097205138869
+        },
+        "mean_reduction_percent": -56.58521788854489
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 180.67416666666668,
+          "median": 182.085,
+          "min": 168.18,
+          "max": 187.02,
+          "stdev": 5.578588055858729
+        },
+        "candidate": {
+          "mean": 108.85666666666667,
+          "median": 109.02,
+          "min": 100.1,
+          "max": 117.01,
+          "stdev": 5.517524697532291
+        },
+        "mean_reduction_percent": 39.74973363651878
+      }
+    },
+    {
+      "image": "soundboard.heic",
+      "first_image_load_ms": {
+        "baseline": {
+          "mean": 213.47308333333334,
+          "median": 212.6505,
+          "min": 208.959,
+          "max": 222.109,
+          "stdev": 3.47768748813799
+        },
+        "candidate": {
+          "mean": 188.24275,
+          "median": 188.1815,
+          "min": 184.294,
+          "max": 193.538,
+          "stdev": 2.8669428165968656
+        },
+        "mean_reduction_percent": 11.818976397102364
+      },
+      "process_start_to_first_paint_ms": {
+        "baseline": {
+          "mean": 238.05016666666666,
+          "median": 237.3475,
+          "min": 233.816,
+          "max": 247.172,
+          "stdev": 3.5355063886581264
+        },
+        "candidate": {
+          "mean": 215.65241666666665,
+          "median": 213.702,
+          "min": 211.055,
+          "max": 224.951,
+          "stdev": 4.202563707987892
+        },
+        "mean_reduction_percent": 9.408836092672345
+      },
+      "process_lifetime_wall_ms": {
+        "baseline": {
+          "mean": 302.3565166666439,
+          "median": 302.32424999996965,
+          "min": 295.8041999999068,
+          "max": 310.33830000001217,
+          "stdev": 3.3217293026036194
+        },
+        "candidate": {
+          "mean": 484.1818166666769,
+          "median": 482.6555500000609,
+          "min": 470.55169999998725,
+          "max": 505.51450000000386,
+          "stdev": 9.86102770174016
+        },
+        "mean_reduction_percent": -60.136061231483296
+      },
+      "peak_working_set_mb": {
+        "baseline": {
+          "mean": 169.50333333333333,
+          "median": 169.38,
+          "min": 166.11,
+          "max": 172.47,
+          "stdev": 1.8275235769320253
+        },
+        "candidate": {
+          "mean": 97.83083333333333,
+          "median": 98.58000000000001,
+          "min": 90.9,
+          "max": 103.7,
+          "stdev": 4.1104312057215715
+        },
+        "mean_reduction_percent": 42.28382922656388
+      }
+    }
+  ]
+}

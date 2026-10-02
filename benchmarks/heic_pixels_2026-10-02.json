@@ -1,0 +1,178 @@
+[
+  {
+    "image": "chef-with-trumpet.heic",
+    "probe": "4032x3024 frames=1 channels=4 alpha=0 hardware_ready=0\n4032x3024 frames=1 channels=4 alpha=0 hardware_ready=1",
+    "reference_size": [
+      4032,
+      3024
+    ],
+    "cpu": {
+      "sha256": "5aeb87e6875ead42e9b3fb55e6bb86ba8f6c304144e02c6af2594147376ff494",
+      "mean_absolute_rgb_error": 0.4962098570781193,
+      "p99_absolute_rgb_error": 7,
+      "maximum_absolute_rgb_error": 113
+    },
+    "warm": {
+      "sha256": "856435183f3f1492101a1aa3910531eeb7cbacc492b8019d746ff10c1c25e608",
+      "mean_absolute_rgb_error": 2.642020936782635,
+      "p99_absolute_rgb_error": 17,
+      "maximum_absolute_rgb_error": 32
+    },
+    "legacy_software_sha256": "5aeb87e6875ead42e9b3fb55e6bb86ba8f6c304144e02c6af2594147376ff494",
+    "unchanged_software_pixels": true
+  },
+  {
+    "image": "childrens-show-theater.heic",
+    "probe": "4032x3024 frames=1 channels=4 alpha=0 hardware_ready=0\n4032x3024 frames=1 channels=4 alpha=0 hardware_ready=1",
+    "reference_size": [
+      4032,
+      3024
+    ],
+    "cpu": {
+      "sha256": "3140ce9ab1a189a558d924f3981be6f4bbefdd3e8a76755f3fadef7cc2309df3",
+      "mean_absolute_rgb_error": 0.3035424769830772,
+      "p99_absolute_rgb_error": 5,
+      "maximum_absolute_rgb_error": 90
+    },
+    "warm": {
+      "sha256": "176901e9b82114276745d61f210356965191427fda69e4cacf3ca7d0dd61b13a",
+      "mean_absolute_rgb_error": 1.576931888367487,
+      "p99_absolute_rgb_error": 10,
+      "maximum_absolute_rgb_error": 27
+    },
+    "legacy_software_sha256": "3140ce9ab1a189a558d924f3981be6f4bbefdd3e8a76755f3fadef7cc2309df3",
+    "unchanged_software_pixels": true
+  },
+  {
+    "image": "classic-car.heic",
+    "probe": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+    "reference_size": [
+      3024,
+      4032
+    ],
+    "cpu": {
+      "sha256": "2ea8268cb01095dbb2597f13845a4149b649da4e535f24249eddc5412aa93875",
+      "mean_absolute_rgb_error": 0.10272676939860306,
+      "p99_absolute_rgb_error": 2,
+      "maximum_absolute_rgb_error": 39
+    },
+    "warm": {
+      "sha256": "fc26fcfefdf5dc9b67eb7de112c39138f95873f8299910a8d6f130b88a3b1697",
+      "mean_absolute_rgb_error": 0.3925232564090451,
+      "p99_absolute_rgb_error": 3,
+      "maximum_absolute_rgb_error": 9
+    },
+    "legacy_software_sha256": "2ea8268cb01095dbb2597f13845a4149b649da4e535f24249eddc5412aa93875",
+    "unchanged_software_pixels": true
+  },
+  {
+    "image": "greyhounds-looking-for-a-table.heic",
+    "probe": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+    "reference_size": [
+      3024,
+      4032
+    ],
+    "cpu": {
+      "sha256": "68f65448fbed2e01dd201c4eb0cb80ecba92ae0b5c4f8a306c2d69dad02da022",
+      "mean_absolute_rgb_error": 0.22220456147994178,
+      "p99_absolute_rgb_error": 3,
+      "maximum_absolute_rgb_error": 43
+    },
+    "warm": {
+      "sha256": "7e4fdfd4543fe5530e90cf61a3e43115ea9a96a249f65daf8276e9e2ba101bb3",
+      "mean_absolute_rgb_error": 1.0265378351057501,
+      "p99_absolute_rgb_error": 5,
+      "maximum_absolute_rgb_error": 16
+    },
+    "legacy_software_sha256": "68f65448fbed2e01dd201c4eb0cb80ecba92ae0b5c4f8a306c2d69dad02da022",
+    "unchanged_software_pixels": true
+  },
+  {
+    "image": "old-safe-wall.heic",
+    "probe": "3024x4032 frames=1 channels=4 alpha=0 hardware_ready=0\n3024x4032 frames=1 channels=4 alpha=0 hardware_ready=1",
+    "reference_size": [
+      3024,
+      4032
+    ],
+    "cpu": {
+      "sha256": "c7cdbbf7d55532fd86634e6f8375048c61671e616989ba58db5c2e999be1d03b",
+      "mean_absolute_rgb_error": 0.3168073074137062,
+      "p99_absolute_rgb_error": 4,
+      "maximum_absolute_rgb_error": 132
+    },
+    "warm": {
+      "sha256": "e3da3a3a29fdfd5c115cf44b83b5129561bfdc2f9d472e1cb88baaedec64737d",
+      "mean_absolute_rgb_error": 1.2960239490600767,
+      "p99_absolute_rgb_error": 6,
+      "maximum_absolute_rgb_error": 28
+    },
+    "legacy_software_sha256": "c7cdbbf7d55532fd86634e6f8375048c61671e616989ba58db5c2e999be1d03b",
+    "unchanged_software_pixels": true
+  },
+  {
+    "image": "sewing-threads.heic",
+    "probe": "4000x3000 frames=1 channels=4 alpha=0 hardware_ready=0\n4000x3000 frames=1 channels=4 alpha=0 hardware_ready=1",
+    "reference_size": [
+      4000,
+      3000
+    ],
+    "cpu": {
+      "sha256": "6459850858d3d2bb5483bf30878753d33d037fd7755ed19f0f65c6f4b8382e2b",
+      "mean_absolute_rgb_error": 0.3148477777777778,
+      "p99_absolute_rgb_error": 5,
+      "maximum_absolute_rgb_error": 73
+    },
+    "warm": {
+      "sha256": "0136fc76dded968a0718e6d2cdcd9187517f7c7f3ba8c76c1b3cdca8b8641d10",
+      "mean_absolute_rgb_error": 1.91157775,
+      "p99_absolute_rgb_error": 11,
+      "maximum_absolute_rgb_error": 16
+    },
+    "legacy_software_sha256": "6459850858d3d2bb5483bf30878753d33d037fd7755ed19f0f65c6f4b8382e2b",
+    "unchanged_software_pixels": true
+  },
+  {
+    "image": "shelf-christmas-decoration.heic",
+    "probe": "4000x3000 frames=1 channels=4 alpha=0 hardware_ready=0\n4000x3000 frames=1 channels=4 alpha=0 hardware_ready=1",
+    "reference_size": [
+      4000,
+      3000
+    ],
+    "cpu": {
+      "sha256": "72dbacc7e4d20e2adb9f065830b07fe677e6d59f24051740c6e606da07187e9f",
+      "mean_absolute_rgb_error": 0.18708691666666666,
+      "p99_absolute_rgb_error": 4,
+      "maximum_absolute_rgb_error": 69
+    },
+    "warm": {
+      "sha256": "c7b0b6a0b9289e569824dc5ce0859326e963fe005e874f3d8c0d6692fe608c3e",
+      "mean_absolute_rgb_error": 1.0614090277777777,
+      "p99_absolute_rgb_error": 10,
+      "maximum_absolute_rgb_error": 18
+    },
+    "legacy_software_sha256": "72dbacc7e4d20e2adb9f065830b07fe677e6d59f24051740c6e606da07187e9f",
+    "unchanged_software_pixels": true
+  },
+  {
+    "image": "soundboard.heic",
+    "probe": "3000x4000 frames=1 channels=4 alpha=0 hardware_ready=0\n3000x4000 frames=1 channels=4 alpha=0 hardware_ready=1",
+    "reference_size": [
+      3000,
+      4000
+    ],
+    "cpu": {
+      "sha256": "4b72550cf056e4c3dd630fa57df7d827d009ca8ddc684b097b879830d353168a",
+      "mean_absolute_rgb_error": 0.26962936111111113,
+      "p99_absolute_rgb_error": 4,
+      "maximum_absolute_rgb_error": 64
+    },
+    "warm": {
+      "sha256": "bf8846195d591e2c2014224b8f3f43ff369b44399f46d7d1f179f4cc752ba6a1",
+      "mean_absolute_rgb_error": 1.7039820833333332,
+      "p99_absolute_rgb_error": 15,
+      "maximum_absolute_rgb_error": 27
+    },
+    "legacy_software_sha256": "4b72550cf056e4c3dd630fa57df7d827d009ca8ddc684b097b879830d353168a",
+    "unchanged_software_pixels": true
+  }
+]
