@@ -51,6 +51,7 @@ CNavigationPanel::CNavigationPanel(HWND hWnd, INotifiyMouseCapture* pNotifyMouse
 	AddUserPaintButton(ID_btnLandscapeMode, GetTooltip(keyMap, _T("Landscape picture enhancement mode"), IDM_LANDSCAPE_MODE), &PaintLandscapeModeBtn);
 	AddGap(ID_gap6, 16);
 	AddUserPaintButton(ID_btnShowInfo, GetTooltip(keyMap, _T("Display image (EXIF) information"), IDM_SHOW_FILEINFO), &PaintInfoBtn);
+	AddUserPaintButton(ID_btnOCR, CNLS::GetString(_T("Recognize text (OCR) / toggle text regions")), &PaintOCRBtn);
 
 	m_nOptimalWidth = PanelRect().Width();
 }
@@ -411,4 +412,12 @@ LPCTSTR CNavigationPanel::ZoomFitToggleTooltip(void* pContext) {
 		staticTooltip = pNavPanel->GetTooltip(pNavPanel->m_keyMap, _T("Fit image to screen"), IDM_TOGGLE_FIT_TO_SCREEN_100_PERCENTS);
 	}
 	return staticTooltip;
+}
+
+void CNavigationPanel::PaintOCRBtn(void*, const CRect& rect, CDC& dc) {
+	CFont font;
+	font.CreatePointFont(max(45, min(rect.Width() * 3, 100)), _T("Segoe UI"), dc, true);
+	HFONT oldFont = dc.SelectFont(font);
+	dc.DrawText(_T("OCR"), 3, (LPRECT)&rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+	dc.SelectFont(oldFont);
 }

@@ -7,7 +7,7 @@
 // if a define is to be included in the publicly-exposed definitions, start the comment with ":KeyMap:"
 // don't worry about the formatting, the script that auto-generates the definition will take care of it
 
-#define JPEGVIEW_VERSION "2, 8, 0, 0\0"
+#define JPEGVIEW_VERSION "2, 9, 0, 0\0"
 // title for main window and msgbox so it can be change via actions
 #define JPEGVIEW_TITLE "JPEGView"
 
@@ -289,6 +289,7 @@
 #define IDM_PAN_RIGHT	15202		// :KeyMap: pan right
 #define IDM_PAN_LEFT	15203		// :KeyMap: pan left
 #define IDM_CONTEXT_MENU	16000		// :KeyMap: display context menu
+#define IDM_OCR_TEXT        16100
 
 #define IDM_CROP_SEL		20000
 #define IDM_LOSSLESS_CROP_SEL 20010

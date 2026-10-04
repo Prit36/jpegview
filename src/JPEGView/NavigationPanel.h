@@ -29,7 +29,8 @@ public:
 		ID_btnKeepParams,
 		ID_btnLandscapeMode,
 		ID_gap6,
-		ID_btnShowInfo
+		ID_btnShowInfo,
+		ID_btnOCR
 	};
 public:
 	// The panel is on the given window above the image processing panel
@@ -51,6 +52,7 @@ public:
 	CButtonCtrl* GetBtnKeepParams() { return GetControl<CButtonCtrl*>(ID_btnKeepParams); }
 	CButtonCtrl* GetBtnLandscapeMode() { return GetControl<CButtonCtrl*>(ID_btnLandscapeMode); }
 	CButtonCtrl* GetBtnShowInfo() { return GetControl<CButtonCtrl*>(ID_btnShowInfo); }
+	CButtonCtrl* GetBtnOCR() { return GetControl<CButtonCtrl*>(ID_btnOCR); }
 
 	virtual CRect PanelRect();
 	virtual void RequestRepositioning();
@@ -61,6 +63,7 @@ protected:
 	virtual void RepositionAll();
 
 private:
+	static void PaintOCRBtn(void* pContext, const CRect& rect, CDC& dc);
 	// Painting handlers for the buttons
 	static void PaintHomeBtn(void* pContext, const CRect& rect, CDC& dc);
 	static void PaintPrevBtn(void* pContext, const CRect& rect, CDC& dc);

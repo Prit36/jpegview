@@ -364,6 +364,17 @@
   <ItemGroup>
     <ResourceCompile Include="JPEGView.rc" />
   </ItemGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <AdditionalDependencies>windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="OcrEngine.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
+    <ClCompile Include="OcrController.cpp" />
+    <ClInclude Include="OcrEngine.h" />
+    <ClInclude Include="OcrController.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

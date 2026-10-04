@@ -7,6 +7,10 @@ A performance-focused, modernized fork of [sylikc/jpegview](https://github.com/s
 
 JPEGView is a lean, fast and highly configurable image viewer/editor with a minimal GUI.
 
+## Text recognition (OCR)
+
+Click **OCR** to recognize text locally, then drag across highlighted words to select them. **Ctrl+A** selects all text, **Ctrl+C** copies it, and **Esc** hides the regions. Recognition runs only on demand using Windows' installed OCR engine, with no bundled models.
+
 ## The Journey - What This Fork Changed
 
 This fork started from sylikc's `master` (post v1.3.46) and went through a full

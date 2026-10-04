@@ -299,6 +299,7 @@ CMainDlg::CMainDlg(bool bForceFullScreen) {
 }
 
 CMainDlg::~CMainDlg() {
+	if (m_ocr) m_ocr->Shutdown();
 	delete m_pDirectoryWatcher;
 	if (m_pJPEGProvider != NULL) {
 		delete m_pJPEGProvider;
@@ -650,6 +651,7 @@ LRESULT CMainDlg::OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 	}
 
 	// Restore the old clipping region by adding the excluded rectangles again
+	if (m_ocr && m_pCurrentImage && !m_pPanelMgr->IsModalPanelShown()) m_ocr->Paint(*this, dc);
 	memDCMgr.IncludeIntoClippingRegion(dc, excludedClippingRects);
 
 	// paint zoom navigator
@@ -877,7 +879,19 @@ LRESULT CMainDlg::OnLoadFileAsynch(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 	return 0;
 }
 
+LRESULT CMainDlg::OnOcrCompleted(UINT, WPARAM, LPARAM, BOOL&) {
+	if (m_ocr) m_ocr->Complete(*this);
+	return 0;
+}
+
+LRESULT CMainDlg::OnOcrCaptureChanged(UINT, WPARAM, LPARAM, BOOL& handled) {
+	if (m_ocr) m_ocr->MouseUp();
+	handled = FALSE;
+	return 0;
+}
+
 LRESULT CMainDlg::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled) {
+	if (m_ocr) m_ocr->Shutdown();
 	GetWindowRect(m_windowRectOnClose);
 	bHandled = FALSE;
 	return 0;
@@ -890,6 +904,9 @@ LRESULT CMainDlg::OnLButtonDown(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 	bool bEatenByPanel = isCropping ? false : m_pPanelMgr->OnMouseLButton(MouseEvent_BtnDown, pointClicked.x, pointClicked.y);
 
 	if (!bEatenByPanel) {
+		if (m_ocr && !isCropping && !m_pPanelMgr->IsModalPanelShown() &&
+			(::GetKeyState(VK_CONTROL) & 0x8000) == 0 && (::GetKeyState(VK_SHIFT) & 0x8000) == 0 &&
+			!m_pZoomNavigatorCtl->IsPointInZoomNavigatorThumbnail(pointClicked) && m_ocr->MouseDown(*this, pointClicked)) return 0;
 		bool bCtrl = (::GetKeyState(VK_CONTROL) & 0x8000) != 0;
 		bool bShift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
 
@@ -921,6 +938,7 @@ LRESULT CMainDlg::OnLButtonDown(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 }
 
 LRESULT CMainDlg::OnLButtonUp(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/) {
+	if (m_ocr && m_ocr->MouseUp()) { ::ReleaseCapture(); return 0; }
 	if (m_bZoomMode) {
 		m_bZoomMode = false;
 		AdjustWindowToImage(false);
@@ -998,6 +1016,8 @@ LRESULT CMainDlg::OnLButtonDblClk(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPara
 			return 0;
 		}
 	}
+	if (m_ocr && m_ocr->Active() && !m_pCropCtl->IsCropping() && !m_pPanelMgr->IsModalPanelShown() &&
+		m_ocr->MouseDown(*this, CPoint(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)))) return 0;
 	if (!m_pCropCtl->IsCropping() && m_pCurrentImage != NULL) {
 		if (HandleMouseButtonByKeymap(VK_LBUTTONDBLCLK)) {
 			return 0;
@@ -1035,6 +1055,7 @@ LRESULT CMainDlg::OnMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 	int nOldMouseX = m_nMouseX;
 	m_nMouseX = GET_X_LPARAM(lParam);
 	m_nMouseY = GET_Y_LPARAM(lParam);
+	if (m_ocr && m_ocr->Selecting()) { m_ocr->MouseMove(*this, CPoint(m_nMouseX, m_nMouseY)); return 0; }
 	if (!m_bDragging) {
 		if (m_startMouse.x == -1 && m_startMouse.y == -1) {
 			m_startMouse.x = m_nMouseX;
@@ -1058,6 +1079,7 @@ LRESULT CMainDlg::OnMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 	} else if (m_pCropCtl->IsCropping()) {
 		bMouseCursorSet = m_pCropCtl->DoCropping(m_nMouseX, m_nMouseY);
 	} else if (!m_pPanelMgr->OnMouseMove(m_nMouseX, m_nMouseY)) {
+		if (m_ocr && !m_pPanelMgr->IsModalPanelShown() && m_ocr->MouseMove(*this, CPoint(m_nMouseX, m_nMouseY))) return 0;
 		m_pZoomNavigatorCtl->OnMouseMove(nOldMouseX, nOldMouseY);
 	}
 	if (!m_bPanMouseCursorSet && !bMouseCursorSet) {
@@ -1092,6 +1114,14 @@ LRESULT CMainDlg::OnKeyDown(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 		return 1; // a panel has handled the key
 	}
 	bool bHandled = false;
+	if (m_ocr && m_ocr->Busy() && wParam == VK_ESCAPE) { m_ocr->Reset(); Invalidate(FALSE); return 1; }
+	if (m_ocr && m_ocr->Active()) {
+		if (bCtrl && !bShift && !bAlt && wParam == 'A') {
+			m_ocr->SelectAll(); Invalidate(FALSE); return 1;
+		}
+		if (bCtrl && !bShift && !bAlt && wParam == 'C' && m_ocr->Copy(m_hWnd)) return 1;
+		if (wParam == VK_ESCAPE) { m_ocr->Toggle(*this); return 1; }
+	}
 	if (wParam == VK_ESCAPE && CloseHelpDlg()) {
 		bHandled = true;
 	} else if (wParam == VK_ESCAPE && m_pCropCtl->IsCropping()) {
@@ -1284,6 +1314,11 @@ LRESULT CMainDlg::OnContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 
 	HMENU hMenuTrackPopup = ::GetSubMenu(hMenu, 0);
 	HelpersGUI::TranslateMenuStrings(hMenuTrackPopup, m_pKeyMap);
+	// Append after translation to preserve the existing submenu positions.
+	::AppendMenu(hMenuTrackPopup, MF_SEPARATOR, 0, nullptr);
+	::AppendMenu(hMenuTrackPopup, MF_STRING | ((m_ocr && m_ocr->Active()) ? MF_CHECKED : 0) |
+		((m_pCurrentImage && !m_pCropCtl->IsCropping()) ? 0 : MF_GRAYED), IDM_OCR_TEXT,
+		CNLS::GetString(_T("Recognize text (OCR) / toggle text regions")));
 	
 	if (m_pEXIFDisplayCtl->IsActive()) ::CheckMenuItem(hMenuTrackPopup, IDM_SHOW_FILEINFO, MF_CHECKED);
 	if (m_bShowFileName) ::CheckMenuItem(hMenuTrackPopup, IDM_SHOW_FILENAME, MF_CHECKED);
@@ -1494,9 +1529,26 @@ bool CMainDlg::CloseHelpDlg() {
 }
 
 void CMainDlg::ExecuteCommand(int nCommand) {
+	// Geometry-changing commands invalidate both cached text and in-flight work.
+	if (m_ocr) {
+		switch (nCommand) {
+		case IDM_ROTATE_90: case IDM_ROTATE_270: case IDM_ROTATE: case IDM_PERSPECTIVE:
+		case IDM_MIRROR_H: case IDM_MIRROR_V: case IDM_CHANGESIZE: case IDM_CROP_SEL: case IDM_CLEAR_PARAM_DB:
+			m_ocr->Reset(); break;
+		}
+	}
 	CSettingsProvider& sp = CSettingsProvider::This();
 	InvalidateHelpDlg();
 	switch (nCommand) {
+		case IDM_OCR_TEXT:
+			if (m_pCurrentImage && !m_pPanelMgr->IsModalPanelShown() && !m_pCropCtl->IsCropping()) {
+				StopMovieMode();
+				StopAnimation();
+				if (m_bDragging) EndDragging();
+				if (!m_ocr) m_ocr = std::make_unique<COcrController>();
+				m_ocr->Toggle(*this);
+			}
+			break;
 		case IDM_HELP:
 			if (m_pHelpDlg == NULL || m_pHelpDlg->IsDestroyed()) {
 				delete m_pHelpDlg;
@@ -1554,6 +1606,7 @@ void CMainDlg::ExecuteCommand(int nCommand) {
 			}
 			break;
 		case IDM_COPY:
+			if (m_ocr && m_ocr->Active() && m_ocr->Copy(m_hWnd)) break;
 			if (m_pCurrentImage != NULL) {
 				CClipboard::CopyImageToClipboard(this->m_hWnd, m_pCurrentImage, m_pFileList->Current());
 			}
@@ -2572,6 +2625,7 @@ void CMainDlg::GotoImage(EImagePosition ePos) {
 }
 
 void CMainDlg::GotoImage(EImagePosition ePos, int nFlags) {
+	if (m_ocr) m_ocr->Reset();
 	// Timer handling for slideshows
 	if (ePos == POS_Next || ePos == POS_NextSlideShow) {
 		if (m_nCurrentTimeout > 0) {
@@ -3012,6 +3066,7 @@ CProcessParams CMainDlg::CreateProcessParams(bool bNoProcessingAfterLoad) {
 }
 
 void CMainDlg::ResetParamsToDefault() {
+	if (m_ocr) m_ocr->Reset();
 	CSettingsProvider& sp = CSettingsProvider::This();
 	m_nRotation = 0;
 	m_nUserRotation = 0;
@@ -3156,6 +3211,7 @@ void CMainDlg::ExchangeProcessingParams() {
 }
 
 void CMainDlg::AfterNewImageLoaded(bool bSynchronize, bool bAfterStartup, bool noAdjustWindow) {
+	if (m_ocr) m_ocr->Reset();
 	UpdateWindowTitle();
 	InvalidateHelpDlg();
 	m_pDirectoryWatcher->SetCurrentFile(CurrentFileName(false));
@@ -3324,6 +3380,8 @@ LPCTSTR CMainDlg::CurrentFileName(bool bFileTitle) {
 }
 
 void CMainDlg::SetCursorForMoveSection() {
+	if (m_ocr && !m_pPanelMgr->IsModalPanelShown() && !m_pPanelMgr->MouseCursorCaptured() && !m_bDragging && !m_pCropCtl->IsCropping() &&
+		m_ocr->MouseMove(*this, CPoint(m_nMouseX, m_nMouseY))) { m_bPanMouseCursorSet = false; return; }
 	if (!m_pCropCtl->IsCropping()) {
 		if (m_pZoomNavigatorCtl->IsPointInZoomNavigatorThumbnail(CPoint(m_nMouseX, m_nMouseY)) || m_bDragging) {
 			::SetCursor(::LoadCursor(NULL, IDC_SIZEALL));
@@ -3632,6 +3690,7 @@ void CMainDlg::AnimateTransition() {
 }
 
 void CMainDlg::CleanupAndTerminate() {
+	if (m_ocr) m_ocr->Shutdown();
 	StopMovieMode();
 	StopAnimation();
 	delete m_pJPEGProvider; // delete this early to properly shut down the loading threads

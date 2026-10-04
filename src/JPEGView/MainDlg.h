@@ -7,6 +7,7 @@
 #include "ProcessParams.h"
 #include "Helpers.h"
 #include "CropCtl.h"
+#include "OcrController.h"
 
 class CFileList;
 class CJPEGProvider;
@@ -85,6 +86,8 @@ public:
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, OnCtlColorDlg)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, OnCtlColorEdit)
 		MESSAGE_HANDLER(WM_IMAGE_LOAD_COMPLETED, OnImageLoadCompleted)
+		MESSAGE_HANDLER(WM_OCR_COMPLETED, OnOcrCompleted)
+		MESSAGE_HANDLER(WM_CAPTURECHANGED, OnOcrCaptureChanged)
 		MESSAGE_HANDLER(WM_DISPLAYED_FILE_CHANGED_ON_DISK, OnDisplayedFileChangedOnDisk)
 		MESSAGE_HANDLER(WM_ACTIVE_DIRECTORY_FILELIST_CHANGED, OnActiveDirectoryFilelistChanged)
 		MESSAGE_HANDLER(WM_DROPFILES, OnDropFiles)
@@ -97,6 +100,8 @@ public:
 	END_MSG_MAP()
 
 	LRESULT OnCommand(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+	LRESULT OnOcrCompleted(UINT, WPARAM, LPARAM, BOOL&);
+	LRESULT OnOcrCaptureChanged(UINT, WPARAM, LPARAM, BOOL&);
 
 // Handler prototypes (uncomment arguments if needed):
 //	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -230,6 +235,7 @@ public:
 	static bool IsCurrentImageFitToScreen(void* pContext);
 
 private:
+	std::unique_ptr<COcrController> m_ocr;
 
 	CString m_sStartupFile; // file passed on command line
 	int m_nAutoStartSlideShow; // if positive: Auto start slide show with given interval in seconds, passed on command line

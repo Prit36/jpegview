@@ -1,6 +1,16 @@
 JPEGView Changelog
 ******************
 
+[2.9.0] 2026-10-04
+- feat(ocr): recognize and copy text on demand using the installed Windows OCR engine
+  * OCR button and context menu command highlight recognized words for click-and-drag selection
+  * Ctrl+A selects all text, Ctrl+C copies Unicode text, and Esc hides regions or cancels recognition
+  * Recognition runs on a background worker only when requested; results are cached for the current image
+  * Bounded grayscale snapshots and a single active job keep memory and background work limited
+  * No bundled OCR runtime or models; requires an installed Windows OCR language
+  * Adds about 50 KiB to the optimized x64 executable
+  * Fixes completion handling for recognition lasting longer than 50 ms
+
 [2.8.0] 2026-10-02
 - perf(heif): choose software or hardware decoding from image metadata
   * Small-tile 8-bit 4:2:0 grids avoid cold GPU startup and decode tiles concurrently

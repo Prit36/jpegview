@@ -48,6 +48,8 @@ set(JPEGVIEW_SOURCES
     NavigationPanel.cpp
     NavigationPanelCtl.cpp
     NLS.cpp
+    OcrController.cpp
+    OcrEngine.cpp
     PaintMemDCMgr.cpp
     Panel.cpp
     PanelController.cpp
@@ -147,6 +149,7 @@ target_link_libraries(JPEGView PRIVATE
     Dbghelp
     ole32
     oleaut32
+    windowsapp
     uuid
     delayimp
     mfplat

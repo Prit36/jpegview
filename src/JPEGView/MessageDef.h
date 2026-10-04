@@ -13,5 +13,6 @@
 
 // Posted to main dialog for asynchronously loading the image with file name CMainDlg::m_sStartupFile
 #define WM_LOAD_FILE_ASYNCH (WM_APP + 24)
+#define WM_OCR_COMPLETED (WM_APP + 25)
 
 #define KEY_MAGIC 2978465

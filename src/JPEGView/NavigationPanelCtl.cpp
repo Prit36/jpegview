@@ -54,6 +54,7 @@ CNavigationPanelCtl::CNavigationPanelCtl(CMainDlg* pMainDlg, CPanel* pImageProcP
 	m_pNavPanel->GetBtnKeepParams()->SetButtonPressedHandler(&CMainDlg::OnExecuteCommand, pMainDlg, IDM_KEEP_PARAMETERS, pMainDlg->IsKeepParams());
 	m_pNavPanel->GetBtnLandscapeMode()->SetButtonPressedHandler(&CMainDlg::OnExecuteCommand, pMainDlg, IDM_LANDSCAPE_MODE, pMainDlg->IsLandscapeMode());
 	m_pNavPanel->GetBtnShowInfo()->SetButtonPressedHandler(&CMainDlg::OnExecuteCommand, pMainDlg, IDM_SHOW_FILEINFO, pMainDlg->GetEXIFDisplayCtl()->IsActive());
+	m_pNavPanel->GetBtnOCR()->SetButtonPressedHandler(&CMainDlg::OnExecuteCommand, pMainDlg, IDM_OCR_TEXT);
 }
 
 CNavigationPanelCtl::~CNavigationPanelCtl() {
