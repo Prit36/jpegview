@@ -1,0 +1,43 @@
+{
+  "baseline_ref": "HEAD",
+  "baseline_commit": "f3fc6d7b5882f7723e88e922b281e6098b696608",
+  "sha256": {
+    "OcrEngine.h": {
+      "before": "52d48764339bb67bb88e8cf49696b818aa2f45ac3e602b75938aba08fbf84e32",
+      "after": "9e40240b1198c143fc102b773fb14a3c1ec43427dda962937a77cb956b364b29"
+    },
+    "OcrEngine.cpp": {
+      "before": "413b7e6b04b7bc48d88aa44f122eabe62ac563cdf3581f2f58d50462fecc9109",
+      "after": "ae5ef64cd67ebf53d3215b38bc64d66c84d81a3123e3981f4c14306df4b685aa"
+    }
+  },
+  "os": "Windows-11-10.0.26200-SP0",
+  "cpu": "Intel64 Family 6 Model 151 Stepping 5, GenuineIntel",
+  "msvc_tools_version": "14.44.35207",
+  "windows_sdk_version": "10.0.26100.0\\",
+  "compiler_flags": [
+    "/nologo",
+    "/c",
+    "/Ox",
+    "/Oi",
+    "/Ot",
+    "/Ob3",
+    "/fp:fast",
+    "/GA",
+    "/GT",
+    "/GS-",
+    "/Gy",
+    "/Gw",
+    "/GL",
+    "/Oy",
+    "/GF",
+    "/Qpar",
+    "/MD",
+    "/EHsc",
+    "/std:c++latest",
+    "/utf-8",
+    "/W4",
+    "/arch:AVX2",
+    "/openmp"
+  ]
+}

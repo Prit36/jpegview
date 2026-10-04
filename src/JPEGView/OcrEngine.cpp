@@ -14,6 +14,54 @@
 #include <MemoryBuffer.h>
 
 namespace Ocr {
+namespace {
+template<int Channels>
+void CopyLuminance(Snapshot& result, const uint8_t* source, size_t stride) {
+    for (int y = 0; y < result.height; ++y) {
+        const auto row = source + size_t(y) * stride;
+        auto output = result.gray.data() + size_t(y) * result.width;
+        for (int x = 0; x < result.width; ++x) {
+            const auto p = row + size_t(x) * Channels;
+            // Exactly the same rounding as the bilinear path at scale 1.
+            output[x] = uint8_t((29 * p[0] + 150 * p[1] + 77 * p[2] + 128) >> 8);
+        }
+    }
+}
+
+struct HorizontalSample {
+    size_t left, right;
+    double fraction;
+};
+
+template<int Channels>
+void ResizeLuminance(Snapshot& result, const uint8_t* source, size_t stride) {
+    // Horizontal positions are shared by every row. Keep the original double
+    // precision interpolation and rounding so small-text input is unchanged.
+    std::vector<HorizontalSample> samples(result.width);
+    for (int x = 0; x < result.width; ++x) {
+        const double sx = std::max(0.0, (x + 0.5) * result.imageWidth / result.width - 0.5);
+        const int x0 = int(sx), x1 = std::min(x0 + 1, result.imageWidth - 1);
+        samples[x] = {size_t(x0) * Channels, size_t(x1) * Channels, sx - x0};
+    }
+    auto luminance = [](const uint8_t* p) { return (29 * p[0] + 150 * p[1] + 77 * p[2]) / 256.0; };
+    for (int y = 0; y < result.height; ++y) {
+        const double sy = std::max(0.0, (y + 0.5) * result.imageHeight / result.height - 0.5);
+        const int y0 = int(sy), y1 = std::min(y0 + 1, result.imageHeight - 1);
+        const double fy = sy - y0;
+        const auto a = source + size_t(y0) * stride;
+        const auto b = source + size_t(y1) * stride;
+        auto output = result.gray.data() + size_t(y) * result.width;
+        for (int x = 0; x < result.width; ++x) {
+            const auto& sample = samples[x];
+            const double fx = sample.fraction;
+            const double top = luminance(a + sample.left) * (1 - fx) + luminance(a + sample.right) * fx;
+            const double bottom = luminance(b + sample.left) * (1 - fx) + luminance(b + sample.right) * fx;
+            output[x] = uint8_t(top * (1 - fy) + bottom * fy + 0.5);
+        }
+    }
+}
+}
+
 Snapshot MakeSnapshot(const void* pixels, int width, int height, int channels) {
     if (!pixels || width <= 0 || height <= 0 || (channels != 3 && channels != 4))
         throw std::invalid_argument("Invalid OCR image");
@@ -26,21 +74,12 @@ Snapshot MakeSnapshot(const void* pixels, int width, int height, int channels) {
     result.gray.resize(size_t(result.width) * result.height);
     const size_t stride = (size_t(width) * channels + 3) & ~size_t(3);
     auto source = static_cast<const uint8_t*>(pixels);
-    auto luminance = [](const uint8_t* p) { return (29 * p[0] + 150 * p[1] + 77 * p[2]) / 256.0; };
-    for (int y = 0; y < result.height; ++y) {
-        const double sy = std::max(0.0, (y + 0.5) * height / result.height - 0.5);
-        const int y0 = int(sy), y1 = std::min(y0 + 1, height - 1);
-        const double fy = sy - y0;
-        for (int x = 0; x < result.width; ++x) {
-            const double sx = std::max(0.0, (x + 0.5) * width / result.width - 0.5);
-            const int x0 = int(sx), x1 = std::min(x0 + 1, width - 1);
-            const double fx = sx - x0;
-            const auto a = source + size_t(y0) * stride;
-            const auto b = source + size_t(y1) * stride;
-            const double top = luminance(a + size_t(x0) * channels) * (1 - fx) + luminance(a + size_t(x1) * channels) * fx;
-            const double bottom = luminance(b + size_t(x0) * channels) * (1 - fx) + luminance(b + size_t(x1) * channels) * fx;
-            result.gray[size_t(y) * result.width + x] = uint8_t(top * (1 - fy) + bottom * fy + 0.5);
-        }
+    if (result.width == width && result.height == height) {
+        if (channels == 3) CopyLuminance<3>(result, source, stride);
+        else CopyLuminance<4>(result, source, stride);
+    } else {
+        if (channels == 3) ResizeLuminance<3>(result, source, stride);
+        else ResizeLuminance<4>(result, source, stride);
     }
     return result;
 }

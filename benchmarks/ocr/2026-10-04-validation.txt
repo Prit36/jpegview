@@ -1,0 +1,6 @@
+OCR fixture 800x600: English (United States), 73 words
+OCR fixture 1920x1080: English (United States), 85 words
+OCR fixture 3840x2160: English (United States), 85 words
+OCR fixture 6000x4000: English (United States), 94 words
+PASS: snapshots byte-identical on all tested inputs.
+PASS: OCR language/text/order/geometry identical on all measured fixtures.

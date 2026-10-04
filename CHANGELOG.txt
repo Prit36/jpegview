@@ -1,6 +1,15 @@
 JPEGView Changelog
 ******************
 
+[2.10.0] 2026-10-04
+- perf(ocr): reduce grayscale snapshot preparation without changing OCR pixels or results
+  * Convert BGR/BGRA directly to luminance when resizing is unnecessary
+  * Reuse horizontal bilinear sample coordinates across rows when downscaling
+  * On all 16 supplied images, warmed OCR pipeline medians improved by 6.8-28.7%
+  * Snapshot preparation was about 9-11x faster without resizing and about 2x faster with resizing
+  * Timings exclude image decoding, worker launch and UI rendering; cold-start gains are not measured
+  * Add reproducible paired benchmarks, per-file results and raw samples for two complete runs
+
 [2.9.0] 2026-10-04
 - feat(ocr): recognize and copy text on demand using the installed Windows OCR engine
   * OCR button and context menu command highlight recognized words for click-and-drag selection
