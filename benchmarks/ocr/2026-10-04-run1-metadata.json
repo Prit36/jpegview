@@ -1,6 +1,6 @@
 {
   "baseline_ref": "HEAD",
-  "baseline_commit": "f3fc6d7b5882f7723e88e922b281e6098b696608",
+  "baseline_commit": "943dafd486e64204b63673554743f332b5085111",
   "sha256": {
     "OcrEngine.h": {
       "before": "52d48764339bb67bb88e8cf49696b818aa2f45ac3e602b75938aba08fbf84e32",

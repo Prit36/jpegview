@@ -11,7 +11,7 @@ JPEGView is a lean, fast and highly configurable image viewer/editor with a mini
 
 Click **OCR** to recognize text locally, then drag across highlighted words to select them. **Ctrl+A** selects all text, **Ctrl+C** copies it, and **Esc** hides the regions. Recognition runs only on demand using Windows' installed OCR engine, with no bundled models.
 
-Version 2.10.0 reduces OCR snapshot preparation: warmed OCR pipeline medians were **6.8-28.7% faster** across all 16 supplied images, with identical snapshot pixels and recognition results. Timings exclude decoding and UI rendering. See the [per-file before/after measurements](benchmarks/ocr/random_data_2026-10-04/README.md) and [reproducible benchmark](benchmarks/ocr/README.md).
+Version 2.10.0 reduces OCR snapshot preparation: warmed OCR pipeline medians were **6.8-28.7% faster** across all 16 supplied images, with identical snapshot pixels and recognition results. Timings exclude decoding and UI rendering. See the [reproducible synthetic benchmark](benchmarks/ocr/README.md). Confidential test images and per-file reports remain local.
 
 ## The Journey - What This Fork Changed
 

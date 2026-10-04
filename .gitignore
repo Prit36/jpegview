@@ -75,3 +75,42 @@ release_out/
 
 # Scratch directory
 scratch/
+
+# Confidential benchmark inputs and per-file outputs: keep local only
+/benchmarks/random_data/
+/benchmarks/heic_test_data/
+/benchmarks/slow_images/
+/benchmarks/pngbench/corpus/
+/benchmarks/pngbench/test_pngs/
+/benchmarks/ocr/random_data_*/
+/benchmarks/**/*.[pP][nN][gG]
+/benchmarks/**/*.[jJ][pP][gG]
+/benchmarks/**/*.[jJ][pP][eE][gG]
+/benchmarks/**/*.[jJ][pP][eE]
+/benchmarks/**/*.[jJ][fF][iI][fF]
+/benchmarks/**/*.[hH][eE][iI][cC]
+/benchmarks/**/*.[hH][eE][iI][fF]
+/benchmarks/**/*.[hH][iI][fF]
+/benchmarks/**/*.[aA][vV][iI][fF]
+/benchmarks/**/*.[wW][eE][bB][pP]
+/benchmarks/**/*.[bB][mM][pP]
+/benchmarks/**/*.[gG][iI][fF]
+/benchmarks/**/*.[tT][iI][fF]
+/benchmarks/**/*.[tT][iI][fF][fF]
+/benchmarks/**/*.[jJ][xX][lL]
+/benchmarks/**/*.[dD][nN][gG]
+/benchmarks/**/*.[cC][rR]2
+/benchmarks/**/*.[cC][rR]3
+/benchmarks/**/*.[nN][eE][fF]
+/benchmarks/**/*.[aA][rR][wW]
+/benchmarks/**/*.[rR][aA][wW]
+/benchmarks/**/*.[iI][cC][oO]
+/benchmarks/**/*.[sS][vV][gG]
+/benchmarks/**/*.[pP][dD][fF]
+/benchmarks/**/*.[pP][pP][mM]
+/benchmarks/**/*.[pP][gG][mM]
+/benchmarks/**/*.[pP][bB][mM]
+/benchmarks/**/*.[pP][nN][mM]
+/benchmarks/**/*.[eE][xX][rR]
+/benchmarks/**/*.[hH][dD][rR]
+/benchmarks/**/*.[pP][sS][dD]

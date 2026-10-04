@@ -37,7 +37,7 @@ unscaled preparation speedup, and 1.99–2.03× downscaled preparation speedup.
 - MSVC x64 Release, Windows SDK 10.0.26100.0, including `/Ox`, `/fp:fast`,
   `/arch:AVX2`, `/Qpar`, `/GL` and `/LTCG`, matching the app's Release settings.
   Full flags, tool versions and source SHA-256 hashes are in the metadata files.
-- Baseline is commit `f3fc6d7b5882f7723e88e922b281e6098b696608`. The harness compiles
+- Baseline is commit `943dafd486e64204b63673554743f332b5085111`. The harness compiles
   its real OCR implementation and the working-tree implementation into one
   executable, changing only the baseline namespace to avoid symbol collisions.
 - Snapshot timings use deterministic random pixel inputs, include allocations,
@@ -86,7 +86,7 @@ From the repository root, with MSVC Build Tools, the Windows SDK and an installe
 Windows OCR language:
 
 ```powershell
-python benchmarks/run_ocr_benchmark.py --baseline-ref f3fc6d7b5882f7723e88e922b281e6098b696608
+python benchmarks/run_ocr_benchmark.py --baseline-ref 943dafd486e64204b63673554743f332b5085111
 ```
 
 Use `--micro-only` to measure preparation without Windows recognition. Generated
