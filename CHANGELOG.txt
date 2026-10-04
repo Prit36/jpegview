@@ -1,6 +1,10 @@
 JPEGView Changelog
 ******************
 
+[2.10.1] 2026-10-04
+- feat(ocr): add O keyboard shortcut to start OCR and toggle text regions
+  * Ctrl+O remains assigned to Open
+
 [2.10.0] 2026-10-04
 - perf(ocr): reduce grayscale snapshot preparation without changing OCR pixels or results
   * Convert BGR/BGRA directly to luminance when resizing is unnecessary
