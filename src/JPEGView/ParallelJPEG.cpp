@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #define JPEG_INTERNALS
 #include "ParallelJPEG.h"
+#include "ProcessorCount.h"
 #include "jconfig.h"
 #include "jpeglib.h"
 #include "jdhuff.h"
@@ -18,6 +19,10 @@
 #include <setjmp.h>
 #include <thread>
 #include <vector>
+#ifdef JPEGVIEW_DECODE_PROFILE
+#include <chrono>
+#include <cstdio>
+#endif
 
 namespace ParallelJPEG {
 
@@ -284,56 +289,8 @@ static bool prescanRun(PrescanCtx& ctx, ScanInfo& si) {
 	return ok;
 }
 
-// Build synthetic JPEG slice for row range [rowA, rowB)
-static std::vector<unsigned char> buildBandJpeg(const unsigned char* buf, long sz, const ScanInfo& si, int rowA, int rowB) {
-	std::vector<unsigned char> out;
-	out.insert(out.end(), buf, buf + si.sosEnd);
-
-	long bandTop = static_cast<long>(rowA) * si.mcuHeight;
-	long bandBot = si.height - bandTop;
-	if (bandBot > static_cast<long>(rowB - rowA) * si.mcuHeight) {
-		bandBot = static_cast<long>(rowB - rowA) * si.mcuHeight;
-	}
-
-	for (size_t i = 2; i < out.size() - 1; ) {
-		if (out[i] != 0xFF) { i++; continue; }
-		int m = out[i + 1];
-		while (m == 0xFF) {
-			i++;
-			if (i >= out.size() - 1) break;
-			m = out[i + 1];
-		}
-		if (m == 0xD8 || (m >= 0xD0 && m <= 0xD7) || m == 0x01) { i += 2; continue; }
-		if (m == 0xD9 || m == 0xDA) break;
-		if (i + 3 >= out.size()) break;
-		size_t len = (static_cast<size_t>(out[i + 2]) << 8) | out[i + 3];
-		if (len < 2 || i + 2 + len > out.size()) break;
-		if (m >= 0xC0 && m <= 0xCF && m != 0xC4 && m != 0xC8 && m != 0xCC) {
-			if (len >= 8) {
-				out[i + 5] = static_cast<unsigned char>(bandBot >> 8);
-				out[i + 6] = static_cast<unsigned char>(bandBot & 0xFF);
-			}
-			break;
-		}
-		i += 2 + len;
-	}
-
-	const JOCTET* pA = si.rowStates[rowA].next_input_byte;
-	long offA = static_cast<long>(pA - reinterpret_cast<const JOCTET*>(buf));
-	long offB = (rowB >= si.mcuRows) ? si.eoiPos : static_cast<long>(si.rowStates[rowB].next_input_byte - reinterpret_cast<const JOCTET*>(buf));
-
-	if (offA < si.sosEnd) offA = si.sosEnd;
-	if (offB > si.eoiPos) offB = si.eoiPos;
-	if (offB + 8 < sz) offB += 8; else offB = sz;
-
-	out.insert(out.end(), buf + offA, buf + offB);
-	out.push_back(0xFF);
-	out.push_back(0xD9);
-	return out;
-}
-
-// Decode single synthetic band directly into destination image buffer
-static bool decodeBand(const unsigned char* bandBuf, long bandSz, const ScanInfo& si, int rowA, long offA,
+// Decode a band directly from borrowed input into the destination image.
+static bool decodeBand(const unsigned char* buf, long size, const ScanInfo& si, int rowA, int rowB,
 	unsigned char* target, int pitch, int bandStartRowPx) {
 	jpeg_decompress_struct cinfo;
 	ErrMgr err;
@@ -346,7 +303,7 @@ static bool decodeBand(const unsigned char* bandBuf, long bandSz, const ScanInfo
 	}
 
 	jpeg_create_decompress(&cinfo);
-	jpeg_mem_src(&cinfo, bandBuf, bandSz);
+	jpeg_mem_src(&cinfo, buf, size);
 	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
 		jpeg_destroy_decompress(&cinfo);
 		return false;
@@ -364,19 +321,17 @@ static bool decodeBand(const unsigned char* bandBuf, long bandSz, const ScanInfo
 	memcpy(hd->saved.last_dc_val, rs.last_dc, sizeof(rs.last_dc));
 	cinfo.entropy->insufficient_data = FALSE;
 
-	long sosEnd = si.sosEnd;
-	long rel = static_cast<long>(rs.next_input_byte - si.fileBase) - offA;
-	if (rel < 0) rel = 0;
-	long avail = static_cast<long>(bandSz - sosEnd);
-	if (rel > avail) rel = avail;
-	cinfo.src->next_input_byte = reinterpret_cast<const JOCTET*>(bandBuf + sosEnd) + rel;
-	cinfo.src->bytes_in_buffer = static_cast<size_t>(avail - rel);
+	// Borrow original compressed bytes. Stop at the requested band's row
+	// count rather than synthesizing/copying another JPEG just to change SOF.
+	cinfo.src->next_input_byte = rs.next_input_byte;
+	cinfo.src->bytes_in_buffer = size - (rs.next_input_byte - si.fileBase);
 	cinfo.unread_marker = 0;
 
+	const int bandHeight = min(si.height-bandStartRowPx, (rowB-rowA)*si.mcuHeight);
 	JSAMPROW rows[16];
-	while (cinfo.output_scanline < cinfo.output_height) {
+	while ((int)cinfo.output_scanline < bandHeight) {
 		int start = static_cast<int>(cinfo.output_scanline);
-		int n = min(16, static_cast<int>(cinfo.output_height - cinfo.output_scanline));
+		int n = min(16, bandHeight-start);
 		for (int r = 0; r < n; r++) {
 			rows[r] = target + static_cast<size_t>(bandStartRowPx + start + r) * pitch;
 		}
@@ -386,7 +341,6 @@ static bool decodeBand(const unsigned char* bandBuf, long bandSz, const ScanInfo
 			return false;
 		}
 	}
-	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
 	return true;
 }
@@ -397,9 +351,13 @@ struct FastTbl {
 	JLONG valoffset[18];
 	int lookup[1 << 8];
 	unsigned char huffval[256];
+	// AC entropy prescan does not need coefficient values. Resolve the code,
+	// amplitude bit count and zero run in one lookup for <=12-bit codes.
+	uint16_t acSkip[4096];
+	uint32_t dcValue[4096];
 };
 
-static void CopyDerivedTbl(FastTbl& dst, const d_derived_tbl* src) {
+static void CopyDerivedTbl(FastTbl& dst, const d_derived_tbl* src, bool ac = false) {
 	if (src == nullptr) {
 		memset(&dst, 0, sizeof(dst));
 		return;
@@ -412,10 +370,43 @@ static void CopyDerivedTbl(FastTbl& dst, const d_derived_tbl* src) {
 	} else {
 		memset(dst.huffval, 0, sizeof(dst.huffval));
 	}
+	if (ac) {
+		for (unsigned int prefix = 0; prefix < 4096; ++prefix) {
+			uint16_t entry = 0;
+			for (int bits = 1; bits <= 12; ++bits) {
+				int code = prefix >> (12 - bits);
+				if (code > dst.maxcode[bits]) continue;
+				unsigned int symbol = dst.huffval[(code + dst.valoffset[bits]) & 255];
+				entry = (uint16_t)(((bits + (symbol & 15)) << 8) | symbol);
+				break;
+			}
+			dst.acSkip[prefix] = entry;
+		}
+	} else {
+		for (unsigned int prefix = 0; prefix < 4096; ++prefix) {
+			uint32_t entry = 0;
+			for (int bits = 1; bits <= 12; ++bits) {
+				int code = prefix >> (12-bits);
+				if (code > dst.maxcode[bits]) continue;
+				int category = dst.huffval[(code+dst.valoffset[bits]) & 255];
+				if (category <= 11 && bits+category <= 12) {
+					int delta = 0;
+					if (category) {
+						delta = (prefix >> (12-bits-category)) & ((1<<category)-1);
+						if (delta < (1<<(category-1))) delta += 1-(1<<category);
+					}
+					entry = ((uint32_t)delta << 8) | (bits+category);
+				}
+				break;
+			}
+			dst.dcValue[prefix] = entry;
+		}
+	}
 }
 
 struct WalkState {
 	const JOCTET* ptr = nullptr;
+	const JOCTET* limit = nullptr;
 	uint64_t get_buffer = 0;
 	int bits_left = 0;
 	int marker = 0;
@@ -427,8 +418,10 @@ struct WalkerConf {
 	int mcusPerRow = 0;
 	int blocksInMCU = 0;
 	unsigned char blockComp[D_MAX_BLOCKS_IN_MCU] = { 0 };
-	FastTbl dcTbl[D_MAX_BLOCKS_IN_MCU];
-	FastTbl acTbl[D_MAX_BLOCKS_IN_MCU];
+	FastTbl dcTbl[NUM_HUFF_TBLS];
+	FastTbl acTbl[NUM_HUFF_TBLS];
+	unsigned char dcIndex[D_MAX_BLOCKS_IN_MCU] = {};
+	unsigned char acIndex[D_MAX_BLOCKS_IN_MCU] = {};
 	bool dcNeeded[D_MAX_BLOCKS_IN_MCU] = { false };
 	bool acNeeded[D_MAX_BLOCKS_IN_MCU] = { false };
 };
@@ -439,6 +432,11 @@ struct LogEntry {
 };
 
 #define WALK_GET_BYTE(st) { \
+	if ((st).ptr + 1 >= (st).limit) { \
+		(st).marker = 0xD9; \
+		(st).get_buffer <<= 8; \
+		(st).bits_left += 8; \
+	} else { \
 	int c0_ = *(st).ptr++; \
 	int c1_ = *(st).ptr; \
 	(st).get_buffer = ((st).get_buffer << 8) | c0_; \
@@ -451,11 +449,27 @@ struct LogEntry {
 			(st).get_buffer &= ~static_cast<uint64_t>(0xFF); \
 		} \
 	} \
+	} \
 }
 
-#define WALK_FILL(st) if ((st).bits_left <= 16) { \
-	WALK_GET_BYTE((st)) WALK_GET_BYTE((st)) WALK_GET_BYTE((st)) \
-	WALK_GET_BYTE((st)) WALK_GET_BYTE((st)) WALK_GET_BYTE((st)) }
+static inline void WalkFill(WalkState& st) {
+	if (st.bits_left > 16) return;
+	uint64_t bytes = 0;
+	const bool canLoad = st.ptr <= st.limit - sizeof(bytes);
+	if (canLoad) memcpy(&bytes, st.ptr, sizeof(bytes));
+	// Detect FF among the six consumed bytes. Most JPEG entropy runs have
+	// none, allowing one load/byteswap instead of six byte loads/branches.
+	const uint64_t ff = ((~bytes - 0x0101010101010101ull) & bytes & 0x8080808080808080ull);
+	if (canLoad && !(ff & 0x0000ffffffffffffull)) {
+		st.get_buffer = (st.get_buffer << 48) | (_byteswap_uint64(bytes) >> 16);
+		st.ptr += 6;
+		st.bits_left += 48;
+	} else {
+		WALK_GET_BYTE(st) WALK_GET_BYTE(st) WALK_GET_BYTE(st)
+		WALK_GET_BYTE(st) WALK_GET_BYTE(st) WALK_GET_BYTE(st)
+	}
+}
+#define WALK_FILL(st) WalkFill(st)
 
 static inline int WalkHuffSymbol(WalkState& st, const FastTbl& tbl) {
 	WALK_FILL(st);
@@ -483,20 +497,42 @@ static inline int HuffExtend(int r, int s) {
 
 static bool WalkMCU(const WalkerConf& cfg, WalkState& st, int lastDc[MAX_COMPS_IN_SCAN]) {
 	for (int blkn = 0; blkn < cfg.blocksInMCU; blkn++) {
-		int s = WalkHuffSymbol(st, cfg.dcTbl[blkn]);
+		const FastTbl& dctbl = cfg.dcTbl[cfg.dcIndex[blkn]];
+		WALK_FILL(st);
 		if (st.marker) return false;
-		if (s) {
-			WALK_FILL(st);
-			int r = static_cast<int>((st.get_buffer >> (st.bits_left -= s)) & ((static_cast<uint64_t>(1) << s) - 1));
-			s = HuffExtend(r, s);
+		uint32_t dc = dctbl.dcValue[(st.get_buffer >> (st.bits_left-12)) & 4095];
+		int s;
+		if (dc) {
+			st.bits_left -= dc & 255;
+			s = (int32_t)dc >> 8;
+		} else {
+			s = WalkHuffSymbol(st, dctbl);
+			if (st.marker) return false;
+			if (s) {
+				WALK_FILL(st);
+				int r = static_cast<int>((st.get_buffer >> (st.bits_left -= s)) & ((static_cast<uint64_t>(1) << s) - 1));
+				s = HuffExtend(r, s);
+			}
 		}
 		if (cfg.dcNeeded[blkn]) {
 			int ci = cfg.blockComp[blkn];
 			s += lastDc[ci];
 			lastDc[ci] = s;
 		}
-		const FastTbl& actbl = cfg.acTbl[blkn];
+		const FastTbl& actbl = cfg.acTbl[cfg.acIndex[blkn]];
 		for (int k = 1; k < 64; k++) {
+			WALK_FILL(st);
+			if (st.marker) return false;
+			uint16_t skip = actbl.acSkip[(st.get_buffer >> (st.bits_left - 12)) & 4095];
+			if (skip) {
+				while (st.bits_left < (skip >> 8)) { WALK_GET_BYTE(st) }
+				if (st.marker) return false;
+				st.bits_left -= skip >> 8;
+				int symbol = skip & 255;
+				if (!(symbol & 15) && symbol != 0xf0) break; // end of block
+				k += symbol >> 4;
+				continue;
+			}
 			int sa = WalkHuffSymbol(st, actbl);
 			if (st.marker) return false;
 			int r = sa >> 4;
@@ -519,11 +555,12 @@ static inline int64_t WalkPos(const WalkerConf& cfg, const WalkState& st) {
 }
 
 static constexpr long WALK_TAIL_MARGIN = 4096;
+static constexpr int SNAP_INTERVAL = 16;
 static constexpr int HEAD_N = 64;
 static constexpr int EXT_N = 64;
 static constexpr int MAX_SLICES_CHAIN = 64;
 
-static int WalkProbe(const WalkerConf& cfg, WalkState st, int lastDc[MAX_COMPS_IN_SCAN],
+static int WalkProbe(const WalkerConf& cfg, WalkState& st, int lastDc[MAX_COMPS_IN_SCAN],
 	int nMCU, LogEntry* log, bool logOn) {
 	int done = 0;
 	for (int m = 0; m < nMCU; m++) {
@@ -586,6 +623,7 @@ static bool BuildCandidate(const WalkerConf& cfg, long B, int o, WalkState& out)
 	for (int i = 0; i < m; i++) gb = (gb << 8) | u[i];
 	gb <<= o;
 	out.ptr = cfg.base + offAfter[m - 1];
+	out.limit = cfg.base + cfg.eoiPos + 2;
 	out.get_buffer = gb;
 	out.bits_left = 8 * m - o;
 	out.marker = 0;
@@ -612,6 +650,7 @@ static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResu
 	WalkState st;
 	if (B == cfg.sosEnd && o == 0) {
 		st.ptr = cfg.base + cfg.sosEnd;
+		st.limit = cfg.base + cfg.eoiPos + 2;
 		st.get_buffer = 0;
 		st.bits_left = 0;
 		st.marker = 0;
@@ -625,7 +664,7 @@ static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResu
 	w.head.clear();
 	w.tail.clear();
 	w.mcus = 0;
-	long est = (Bend - B) / 4 + EXT_N + 64;
+	long est = (Bend - B) / (16 * SNAP_INTERVAL) + 128;
 	w.snaps.reserve(est);
 
 	while (WalkPos(cfg, st) < limit) {
@@ -635,7 +674,7 @@ static bool WalkSlice(const WalkerConf& cfg, long B, long Bend, int o, SliceResu
 		s.pos = WalkPos(cfg, st);
 		s.st = st;
 		memcpy(s.pred, lastDc, sizeof(s.pred));
-		w.snaps.push_back(s);
+		if (w.mcus % SNAP_INTERVAL == 0) w.snaps.push_back(s);
 		if (static_cast<int>(w.head.size()) < HEAD_N) {
 			LogEntry e;
 			e.pos = s.pos;
@@ -697,18 +736,17 @@ static void ExtractWalkerConf(PrescanCtx& ctx, const ScanInfo& si, WalkerConf& c
 	cfg.blocksInMCU = ctx.cinfo.blocks_in_MCU;
 	huff_entropy_decoder_* hd = reinterpret_cast<huff_entropy_decoder_*>(ctx.cinfo.entropy);
 	memset(cfg.blockComp, 0, sizeof(cfg.blockComp));
-	for (int b = 0; b < D_MAX_BLOCKS_IN_MCU; b++) {
-		cfg.dcNeeded[b] = false;
-		cfg.acNeeded[b] = false;
-		CopyDerivedTbl(cfg.dcTbl[b], nullptr);
-		CopyDerivedTbl(cfg.acTbl[b], nullptr);
+	for (int table = 0; table < NUM_HUFF_TBLS; ++table) {
+		CopyDerivedTbl(cfg.dcTbl[table], hd->dc_derived_tbls[table]);
+		CopyDerivedTbl(cfg.acTbl[table], hd->ac_derived_tbls[table], true);
 	}
 	for (int b = 0; b < cfg.blocksInMCU; b++) {
 		cfg.blockComp[b] = static_cast<unsigned char>(ctx.cinfo.MCU_membership[b]);
 		cfg.dcNeeded[b] = (hd->dc_needed[b] != FALSE);
 		cfg.acNeeded[b] = (hd->ac_needed[b] != FALSE);
-		if (hd->dc_cur_tbls[b] != nullptr) CopyDerivedTbl(cfg.dcTbl[b], hd->dc_cur_tbls[b]);
-		if (hd->ac_cur_tbls[b] != nullptr) CopyDerivedTbl(cfg.acTbl[b], hd->ac_cur_tbls[b]);
+		const jpeg_component_info* component = ctx.cinfo.cur_comp_info[cfg.blockComp[b]];
+		cfg.dcIndex[b] = (unsigned char)component->dc_tbl_no;
+		cfg.acIndex[b] = (unsigned char)component->ac_tbl_no;
 	}
 }
 
@@ -801,12 +839,22 @@ static bool SpeculativeWalk(const WalkerConf& cfg, ScanInfo& si, int nSlices) {
 			if (g % p != 0) continue;
 			int r = static_cast<int>(g / p);
 			if (r < 1 || r >= si.mcuRows) continue;
+			// Recover this row boundary from its nearest sparse snapshot.
+			// At most 15 MCU walks per row, rather than storing a 64-byte
+			// snapshot for every MCU in the entire compressed image.
+			const Snap& snapshot = sn[m / SNAP_INTERVAL];
+			WalkState state = snapshot.st;
+			int pred[MAX_COMPS_IN_SCAN];
+			memcpy(pred, snapshot.pred, sizeof(pred));
+			for (int j = 0; j < m % SNAP_INTERVAL; ++j) {
+				if (!WalkMCU(cfg, state, pred)) return false;
+			}
 			RowState& rs = si.rowStates[r];
-			rs.next_input_byte = sn[m].st.ptr;
-			rs.get_buffer = sn[m].st.get_buffer;
-			rs.bits_left = sn[m].st.bits_left;
+			rs.next_input_byte = state.ptr;
+			rs.get_buffer = state.get_buffer;
+			rs.bits_left = state.bits_left;
 			for (int c = 0; c < MAX_COMPS_IN_SCAN; c++) {
-				rs.last_dc[c] = P[i][c] + sn[m].pred[c];
+				rs.last_dc[c] = P[i][c] + pred[c];
 			}
 			rs.unread_marker = 0;
 			availCount++;
@@ -976,10 +1024,115 @@ static bool decodePlane(const unsigned char* stream, size_t stream_sz, int width
 	return true;
 }
 
+// Progressive entropy is decoded once. Output workers borrow its completed,
+// fully resident coefficient arrays instead of decoding the scans again or
+// allocating another full set of DCT coefficients per worker.
+struct BorrowedCoefficients {
+	jvirt_barray_ptr* arrays;
+	int components;
+	int next = 0;
+};
+
+static jvirt_barray_ptr BorrowCoefficientArray(j_common_ptr common, int,
+	boolean, JDIMENSION, JDIMENSION, JDIMENSION) {
+	auto* borrowed = static_cast<BorrowedCoefficients*>(common->client_data);
+	if (borrowed->next >= borrowed->components) return nullptr;
+	return borrowed->arrays[borrowed->next++];
+}
+
+static bool OutputProgressiveBand(const unsigned char* buf, size_t sz,
+	jpeg_decompress_struct& parent, jvirt_barray_ptr* arrays,
+	int first, int last, unsigned char* out, size_t pitch) {
+	jpeg_decompress_struct cinfo = {};
+	ErrMgr err;
+	cinfo.err = jpeg_std_error(&err.pub);
+	err.pub.error_exit = error_exit;
+	err.pub.emit_message = output_message;
+	if (setjmp(err.jmp)) { jpeg_destroy_decompress(&cinfo); return false; }
+	jpeg_create_decompress(&cinfo);
+	jpeg_mem_src(&cinfo, buf, (unsigned long)sz);
+	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
+		jpeg_destroy_decompress(&cinfo); return false;
+	}
+	BorrowedCoefficients borrowed = { arrays, parent.num_components };
+	cinfo.client_data = &borrowed;
+	cinfo.mem->request_virt_barray = BorrowCoefficientArray;
+	cinfo.buffered_image = TRUE;
+	cinfo.out_color_space = JCS_EXT_BGR;
+	cinfo.dct_method = JDCT_IFAST;
+	cinfo.do_fancy_upsampling = FALSE;
+	cinfo.dither_mode = JDITHER_NONE;
+	jpeg_start_decompress(&cinfo);
+	cinfo.inputctl->eoi_reached = TRUE;
+	cinfo.input_scan_number = parent.input_scan_number;
+	cinfo.input_iMCU_row = cinfo.total_iMCU_rows;
+	cinfo.coef_bits = parent.coef_bits;
+	jpeg_start_output(&cinfo, parent.input_scan_number);
+	if (jpeg_skip_scanlines(&cinfo, first) != (JDIMENSION)first) {
+		jpeg_destroy_decompress(&cinfo); return false;
+	}
+	JSAMPROW rows[16];
+	while ((int)cinfo.output_scanline < last) {
+		int start = (int)cinfo.output_scanline;
+		int count = min(16, last-start);
+		for (int r = 0; r < count; ++r) rows[r] = out + (size_t)(start+r)*pitch;
+		if (!jpeg_read_scanlines(&cinfo, rows, count)) {
+			jpeg_destroy_decompress(&cinfo); return false;
+		}
+	}
+	jpeg_destroy_decompress(&cinfo);
+	return true;
+}
+
+static unsigned char* DecodeProgressiveShared(const unsigned char* buf, size_t sz,
+	int& width, int& height, int& subsampling, ProgressFn progress, void* user) {
+	jpeg_decompress_struct cinfo = {};
+	ErrMgr err;
+	cinfo.err = jpeg_std_error(&err.pub);
+	err.pub.error_exit = error_exit;
+	err.pub.emit_message = output_message;
+	if (setjmp(err.jmp)) { jpeg_destroy_decompress(&cinfo); return nullptr; }
+	jpeg_create_decompress(&cinfo);
+	jpeg_mem_src(&cinfo, buf, (unsigned long)sz);
+	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK || cinfo.num_components != 3 ||
+		cinfo.jpeg_color_space != JCS_YCbCr || !cinfo.progressive_mode ||
+		(uint64_t)cinfo.image_width*cinfo.image_height < 4*1024*1024) {
+		jpeg_destroy_decompress(&cinfo); return nullptr;
+	}
+	width = cinfo.image_width; height = cinfo.image_height;
+	int hs = cinfo.comp_info[0].h_samp_factor, vs = cinfo.comp_info[0].v_samp_factor;
+	int hc = cinfo.comp_info[1].h_samp_factor, vc = cinfo.comp_info[1].v_samp_factor;
+	subsampling = hc == hs ? (vc == vs ? 0 : 4) : (vc == vs ? (hc*4 == hs ? 5 : 1) : 2);
+	jvirt_barray_ptr* arrays = jpeg_read_coefficients(&cinfo);
+	if (!arrays) { jpeg_destroy_decompress(&cinfo); return nullptr; }
+	size_t pitch = ((size_t)width*3+3)&~(size_t)3;
+	unsigned char* out = new(std::nothrow) unsigned char[pitch*height];
+	if (!out) { jpeg_destroy_decompress(&cinfo); return nullptr; }
+	const int workers = min(8, (int)ProcessorCount::Available());
+	std::atomic<bool> ok(true);
+	std::vector<std::thread> threads;
+	int mcuHeight = cinfo.max_v_samp_factor*DCTSIZE;
+	int mcuRows = (height+mcuHeight-1)/mcuHeight;
+	for (int t = 0; t < workers; ++t) {
+		int first = mcuRows*t/workers*mcuHeight;
+		int last = min(height, mcuRows*(t+1)/workers*mcuHeight);
+		if (first >= last) continue;
+		threads.emplace_back([&,first,last] {
+			if (!OutputProgressiveBand(buf,sz,cinfo,arrays,first,last,out,pitch)) ok = false;
+		});
+	}
+	for (auto& thread : threads) thread.join();
+	jpeg_destroy_decompress(&cinfo);
+	if (!ok) { delete[] out; return nullptr; }
+	if (progress) progress(user,out,width,height);
+	return out;
+}
+
 // Parallel Progressive JPEG Decoder
 static unsigned char* DecodeProgressive(const unsigned char* buf, size_t sz, int& width, int& height, int& subsampling,
 	ProgressFn progress, void* user) {
 	if (buf == nullptr || sz < 64 || buf[0] != 0xFF || buf[1] != 0xD8) return nullptr;
+	if (unsigned char* shared = DecodeProgressiveShared(buf,sz,width,height,subsampling,progress,user)) return shared;
 
 	// Scan markers to inspect SOF2 and SOS layout
 	size_t i = 2;
@@ -1074,7 +1227,7 @@ static unsigned char* DecodeProgressive(const unsigned char* buf, size_t sz, int
 			th2.join();
 
 			if (ok.load()) {
-				int nthreads = static_cast<int>(std::thread::hardware_concurrency());
+				int nthreads = (int)ProcessorCount::Available();
 				if (nthreads < 4) nthreads = 4;
 				if (nthreads > 16) nthreads = 16;
 				std::vector<std::thread> conv_threads;
@@ -1262,12 +1415,15 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 		}
 	}
 
+#ifdef JPEGVIEW_DECODE_PROFILE
+	const auto phaseStart = std::chrono::steady_clock::now();
+#endif
 	ScanInfo si;
 	PrescanCtx ctx;
 	if (!prescanSetup(buf, sz, si, ctx)) return nullptr;
 	subsampling = si.subsampling;
 
-	unsigned hw = std::thread::hardware_concurrency();
+	unsigned hw = ProcessorCount::Available();
 
 	bool walked = false;
 	if (sz >= 2 * 1024 * 1024 && hw >= 4 && si.mcuRows >= 8) {
@@ -1281,7 +1437,11 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 		prescanRun(ctx, si);
 	}
 
-	int nBands = static_cast<int>((hw >= 4) ? min(12u, hw - 1) : 4);
+#ifdef JPEGVIEW_DECODE_PROFILE
+	const auto walkEnd = std::chrono::steady_clock::now();
+#endif
+	// Use all available CPUs for rendering; the coordinator only waits.
+	int nBands = static_cast<int>((hw >= 4) ? min(12u, hw) : 4);
 	if (nBands < 2) nBands = 2;
 	if (nBands > si.mcuRows) nBands = si.mcuRows;
 
@@ -1335,14 +1495,14 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 		int rowA = bands[i].first, rowB = bands[i].second;
 		threads.emplace_back([&, rowA, rowB]() {
 			if (!ok.load()) return;
-			std::vector<unsigned char> bandJpeg = buildBandJpeg(buf, sz, si, rowA, rowB);
 			long bandTopPx = static_cast<long>(rowA) * si.mcuHeight;
-			long offA = static_cast<long>(si.rowStates[rowA].next_input_byte - si.fileBase);
-			bool bandOk = decodeBand(bandJpeg.data(), static_cast<long>(bandJpeg.size()), si, rowA, offA, out, pitch, static_cast<int>(bandTopPx));
-			if (!bandOk) {
-				ok = false;
-			} else {
-				bandsDone.fetch_add(1);
+			bool bandOk = decodeBand(buf, sz, si, rowA, rowB, out, pitch, static_cast<int>(bandTopPx));
+			{
+				// Publish under the same mutex as the wait predicate; otherwise
+				// notification can race between its check and cv.wait().
+				std::lock_guard<std::mutex> lk(mtx);
+				if (!bandOk) ok = false;
+				else bandsDone.fetch_add(1);
 			}
 			cv.notify_all();
 		});
@@ -1363,6 +1523,12 @@ unsigned char* Decode(const void* buffer, int sizebytes, int& width, int& height
 		ok = false;
 	}
 
+#ifdef JPEGVIEW_DECODE_PROFILE
+	const auto bandEnd = std::chrono::steady_clock::now();
+	fprintf(stderr, "JPEG phases: walk=%.2fms render=%.2fms speculative=%d bands=%zu\n",
+		std::chrono::duration<double, std::milli>(walkEnd-phaseStart).count(),
+		std::chrono::duration<double, std::milli>(bandEnd-walkEnd).count(), walked, bands.size());
+#endif
 	if (!ok) {
 		delete[] out;
 		return nullptr;

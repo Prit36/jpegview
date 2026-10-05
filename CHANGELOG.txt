@@ -1,6 +1,21 @@
 JPEGView Changelog
 ******************
 
+[2.11.0] 2026-10-05
+- perf(png): reconstruct RGB/RGBA in the inflate allocation and shorten SIMD Paeth prediction
+  * Borrow single-IDAT input, release joined-IDAT staging earlier, and validate IHDR/interlace/dimensions
+- perf(jpeg): fuse Huffman operations, share lookup tables, use sparse entropy snapshots and avoid band copies
+  * Render large progressive JPEGs from one shared completed coefficient image
+  * Bound entropy reads, advance alignment probes correctly and fix the completion notification race
+- perf(heif): reuse worker chroma buffers and add pixel-exact AVX2/FMA conversion for eligible images
+  * Avoid redundant libde265 worker startup for single-thread grid-tile requests
+  * Retain DAV1D and libde265 support; include a reproducible dependency source patch
+- perf(processing): honor process CPU affinity, bound strip scratch and serialize shared pool submissions
+- measured: 13.35% lower first-paint time across 19 images; independent confirmation 12.87%
+  * Whole-process CPU time reduced 14.05%, peak working set 8.58%, peak committed memory 10.76%
+  * Default quality/read-ahead unchanged; process limits are budgets, not exclusive hardware reservations
+  * PNG/JPEG/HEIF correctness checks passed; confidential inputs and per-file reports remain local
+
 [2.10.1] 2026-10-04
 - feat(ocr): add O keyboard shortcut to start OCR and toggle text regions
   * Ctrl+O remains assigned to Open

@@ -16,12 +16,13 @@
 //   - no acTL (animation), no tRNS for non-palette (transparency key)
 //   - palette tRNS (per-entry alpha) is handled
 #include "FastPng.h"
+#include "MaxImageDef.h"
 
 #include <libdeflate.h>
 #include <intrin.h>
 #include <immintrin.h>
 #include <cstring>
-#include <vector>
+#include <memory>
 
 namespace {
 
@@ -37,16 +38,20 @@ inline int PaethScalar(int a, int b, int c) {
 
 inline __m128i PaethPixel16(__m128i a, __m128i b, __m128i c) {
 	const __m128i zero = _mm_setzero_si128();
-	const __m128i ones = _mm_set1_epi16(-1);
 	__m128i aw = _mm_unpacklo_epi8(a, zero);
 	__m128i bw = _mm_unpacklo_epi8(b, zero);
 	__m128i cw = _mm_unpacklo_epi8(c, zero);
-	__m128i p = _mm_sub_epi16(_mm_add_epi16(aw, bw), cw);
-	__m128i pa = _mm_abs_epi16(_mm_sub_epi16(p, aw));
-	__m128i pb = _mm_abs_epi16(_mm_sub_epi16(p, bw));
-	__m128i pc = _mm_abs_epi16(_mm_sub_epi16(p, cw));
-	__m128i sel_a = _mm_xor_si128(_mm_or_si128(_mm_cmpgt_epi16(pa, pb), _mm_cmpgt_epi16(pa, pc)), ones);
-	__m128i sel_b = _mm_andnot_si128(sel_a, _mm_xor_si128(_mm_cmpgt_epi16(pb, pc), ones));
+	// |p-a|=|b-c| and |p-b|=|a-c|. This shortens the serial
+	// left-pixel dependency chain; all arithmetic remains signed 16-bit.
+	__m128i ac = _mm_sub_epi16(aw, cw);
+	__m128i bc = _mm_sub_epi16(bw, cw);
+	__m128i pa = _mm_abs_epi16(bc);
+	__m128i pb = _mm_abs_epi16(ac);
+	__m128i pc = _mm_abs_epi16(_mm_add_epi16(ac, bc));
+	__m128i min_bc = _mm_min_epi16(pb, pc);
+	__m128i sel_a = _mm_cmpeq_epi16(_mm_min_epi16(pa, min_bc), pa);
+	__m128i sel_b = _mm_cmpeq_epi16(min_bc, pb);
+	// Apply A last so ties still prefer A, then B, as required by PNG.
 	__m128i resw = _mm_blendv_epi8(cw, bw, sel_b);
 	resw = _mm_blendv_epi8(resw, aw, sel_a);
 	return _mm_packus_epi16(resw, zero);
@@ -150,6 +155,57 @@ inline void UnfilterRowGeneric4(unsigned char* row, const unsigned char* prev, s
 		else if (ft == 2) row[i] = (unsigned char)(row[i] + b);
 		else if (ft == 3) row[i] = (unsigned char)(row[i] + (unsigned char)((a + b) / 2));
 		else if (ft == 4) row[i] = (unsigned char)(row[i] + PaethScalar(a, b, c));
+	}
+}
+
+// Reconstruct RGB/RGBA directly as BGRA in the inflate allocation. RGBA
+// input starts at byte zero; RGB input is inflated at offset width*height,
+// leaving room for the extra alpha bytes. In both cases every output store
+// is behind unread input. Predictors are channel-independent, so a BGRA
+// previous row and permuted residuals give exactly the original PNG pixels.
+void UnfilterColorCompact(const unsigned char* row, const unsigned char* prev,
+                          size_t stride, int bpp, unsigned char ft, unsigned char* dst) {
+	const __m128i zero = _mm_setzero_si128();
+	const __m128i swap = _mm_setr_epi8(2,1,0,3, 6,5,4,7, 10,9,8,11, 14,13,12,15);
+	size_t i = 0;
+	if (bpp == 4 && (ft == 0 || ft == 2)) {
+		const __m256i swap256 = _mm256_broadcastsi128_si256(swap);
+		for (; i + 32 <= stride; i += 32) {
+			__m256i d = _mm256_shuffle_epi8(_mm256_loadu_si256((const __m256i*)(row+i)), swap256);
+			if (ft == 2 && prev) d = _mm256_add_epi8(d, _mm256_loadu_si256((const __m256i*)(prev+i)));
+			_mm256_storeu_si256((__m256i*)(dst+i), d);
+		}
+	}
+	size_t o = i;
+	if (bpp == 3 && (ft == 0 || ft == 2)) {
+		const __m128i expand = _mm_setr_epi8(2,1,0,(char)-1, 5,4,3,(char)-1,
+			8,7,6,(char)-1, 11,10,9,(char)-1);
+		const __m128i alpha = _mm_set1_epi32((int)0xff000000);
+		for (; i + 16 <= stride; i += 12, o += 16) {
+			__m128i d = _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)(row+i)), expand);
+			if (ft == 2 && prev) d = _mm_add_epi8(d, _mm_loadu_si128((const __m128i*)(prev+o)));
+			_mm_storeu_si128((__m128i*)(dst+o), _mm_or_si128(d, alpha));
+		}
+	}
+	__m128i a = zero;
+	for (; i < stride; i += bpp, o += 4) {
+		unsigned int dv;
+		if (bpp == 4) memcpy(&dv, row+i, 4);
+		else dv = row[i] | (row[i+1] << 8) | (row[i+2] << 16);
+		__m128i d = _mm_shuffle_epi8(_mm_cvtsi32_si128((int)dv), swap);
+		__m128i b = prev ? Load4(prev+o) : zero;
+		__m128i c = (prev && o >= 4) ? Load4(prev+o-4) : zero;
+		__m128i r = d;
+		if (ft == 1) r = _mm_add_epi8(d, a);
+		else if (ft == 2) r = _mm_add_epi8(d, b);
+		else if (ft == 3) {
+			__m128i avg = _mm_avg_epu8(a, b);
+			__m128i odd = _mm_and_si128(_mm_xor_si128(a, b), _mm_set1_epi8(1));
+			r = _mm_add_epi8(d, _mm_sub_epi8(avg, odd));
+		} else if (ft == 4) r = _mm_add_epi8(d, PaethPixel16(a, b, c));
+		if (bpp == 3) r = _mm_or_si128(r, _mm_set1_epi32((int)0xff000000));
+		Store4(dst+o, r);
+		a = r;
 	}
 }
 
@@ -263,17 +319,20 @@ int FastPngDecode(const unsigned char* file, size_t size, FastPngImage& out) {
 	for (int i=0;i<256;i++){ palBGRA[i*4+0]=0; palBGRA[i*4+1]=0; palBGRA[i*4+2]=0; palBGRA[i*4+3]=255; }
 
 	size_t totalIdat = 0;
+	size_t idatCount = 0;
+	const unsigned char* firstIdat = nullptr;
 	size_t offScan = 8;
 	while (offScan + 8 <= size) {
 		unsigned int len = _byteswap_ulong(*(const unsigned int*)(file + offScan));
 		if (offScan + 12 + (size_t)len > size) break;
 		const char* type = (const char*)(file + offScan + 4);
 		if (memcmp(type, "IHDR", 4) == 0) {
+			if (len != 13 || file[offScan + 18] != 0 || file[offScan + 19] != 0) return -1;
 			w = _byteswap_ulong(*(const unsigned int*)(file + offScan + 8));
 			h = _byteswap_ulong(*(const unsigned int*)(file + offScan + 12));
 			bitDepth = file[offScan + 16];
 			colorType = file[offScan + 17];
-			interlace = file[offScan + 19];
+			interlace = file[offScan + 20];
 			haveIHDR = true;
 		} else if (memcmp(type, "acTL", 4) == 0) { hasACTL = true; break; }
 		else if (memcmp(type, "PLTE", 4) == 0) {
@@ -297,13 +356,19 @@ int FastPngDecode(const unsigned char* file, size_t size, FastPngImage& out) {
 			} else {
 				hasTRNSNonPalette = true;
 			}
-		} else if (memcmp(type, "IDAT", 4) == 0) { totalIdat += len; }
+		} else if (memcmp(type, "IDAT", 4) == 0) {
+			if (idatCount++ == 0) firstIdat = file + offScan + 8;
+			totalIdat += len;
+		}
 		else if (memcmp(type, "eXIf", 4) == 0) {
 			if (len > 0 && len < 65528) { exif_data = file + offScan + 8; exif_len = len; }
 		} else if (memcmp(type, "IEND", 4) == 0) { break; }
 		offScan += 12 + (size_t)len;
 	}
 	if (!haveIHDR || totalIdat == 0) return -1;
+	// Bound all subsequent stride, inflate-offset and BGRA allocation math.
+	if (!w || !h || w > MAX_IMAGE_DIMENSION || h > MAX_IMAGE_DIMENSION ||
+		(uint64_t)w * h > MAX_IMAGE_PIXELS) return -1;
 	if (interlace != 0) return -1;
 	if (hasACTL) return -1;
 	if (hasTRNSNonPalette) return -1;
@@ -322,36 +387,48 @@ int FastPngDecode(const unsigned char* file, size_t size, FastPngImage& out) {
 	else compIn = (colorType == 0) ? 1 : (colorType == 2) ? 3 : (colorType == 4) ? 2 : (colorType == 6) ? 4 : -1;
 	if (compIn < 0) return -1;
 
-	// Allocate IDAT buffer exactly once and copy with memcpy
-	std::vector<unsigned char> idat;
-	idat.resize(totalIdat);
-	unsigned char* idatDst = idat.data();
-	size_t off = 8;
-	while (off + 8 <= size) {
-		unsigned int len = _byteswap_ulong(*(const unsigned int*)(file + off));
-		if (off + 12 + (size_t)len > size) break;
-		const char* type = (const char*)(file + off + 4);
-		if (memcmp(type, "IDAT", 4) == 0) {
-			memcpy(idatDst, file + off + 8, len);
-			idatDst += len;
-		} else if (memcmp(type, "IEND", 4) == 0) { break; }
-		off += 12 + (size_t)len;
+	// Borrow a single IDAT directly. For multiple chunks, join into an
+	// uninitialized allocation (vector::resize used to zero every byte
+	// immediately before memcpy overwrote it).
+	std::unique_ptr<unsigned char, decltype(&free)> idat(nullptr, &free);
+	const unsigned char* compressed = firstIdat;
+	if (idatCount > 1) {
+		idat.reset((unsigned char*)malloc(totalIdat));
+		if (!idat) return -1;
+		unsigned char* idatDst = idat.get();
+		size_t off = 8;
+		while (off + 8 <= size) {
+			unsigned int len = _byteswap_ulong(*(const unsigned int*)(file + off));
+			if (off + 12 + (size_t)len > size) break;
+			const char* type = (const char*)(file + off + 4);
+			if (memcmp(type, "IDAT", 4) == 0) {
+				memcpy(idatDst, file + off + 8, len);
+				idatDst += len;
+			} else if (memcmp(type, "IEND", 4) == 0) { break; }
+			off += 12 + (size_t)len;
+		}
+		compressed = idat.get();
 	}
 
 	size_t stride = isPalette ? (size_t)w : (size_t)w * compIn;
 	size_t rawSize = (size_t)h * (1 + stride);
-	unsigned char* raw = (unsigned char*)malloc(rawSize);
-	if (!raw) return -1;
+	const bool compactColor = (colorType == 2 || colorType == 6);
+	const size_t inflateOffset = colorType == 2 ? (size_t)w * h : 0;
+	unsigned char* allocation = (unsigned char*)malloc(rawSize + inflateOffset);
+	if (!allocation) return -1;
+	unsigned char* raw = allocation + inflateOffset;
 
 	thread_local libdeflate_decompressor* t_dec = nullptr;
 	if (!t_dec) t_dec = libdeflate_alloc_decompressor();
-	if (!t_dec) { free(raw); return -1; }
+	if (!t_dec) { free(allocation); return -1; }
 	size_t outN = 0;
-	enum libdeflate_result r = libdeflate_zlib_decompress(t_dec, idat.data(), idat.size(), raw, rawSize, &outN);
-	if (r != LIBDEFLATE_SUCCESS || outN != rawSize) { free(raw); return -1; }
+	enum libdeflate_result r = libdeflate_zlib_decompress(t_dec, compressed, totalIdat, raw, rawSize, &outN);
+	idat.reset(); // compressed staging is no longer needed during reconstruction
+	if (r != LIBDEFLATE_SUCCESS || outN != rawSize) { free(allocation); return -1; }
 
-	unsigned char* pixels = (unsigned char*)malloc((size_t)w * h * 4);
-	if (!pixels) { free(raw); return -1; }
+	// Reuse the allocation for output; palette/gray formats keep their path.
+	unsigned char* pixels = compactColor ? allocation : (unsigned char*)malloc((size_t)w * h * 4);
+	if (!pixels) { free(allocation); return -1; }
 
 	int hist[5]={0};
 	const unsigned char* prev = nullptr;
@@ -360,7 +437,7 @@ int FastPngDecode(const unsigned char* file, size_t size, FastPngImage& out) {
 			unsigned char* rin = raw + y * (1 + stride) + 1;
 			unsigned char* rout = pixels + (size_t)y * 4 * w;
 			unsigned char ft = raw[y * (1 + stride)];
-			if (ft > 4) { free(raw); free(pixels); return -1; }
+			if (ft > 4) { free(allocation); free(pixels); return -1; }
 			hist[ft]++;
 			UnfilterRow(rin, prev, stride, 1, ft, nullptr, 0);
 			// expand via palette LUT (scalar - palette images are typically small)
@@ -378,8 +455,13 @@ int FastPngDecode(const unsigned char* file, size_t size, FastPngImage& out) {
 			unsigned char* rin = raw + y * (1 + stride) + 1;
 			unsigned char* rout = pixels + (size_t)y * 4 * w;
 			unsigned char ft = raw[y * (1 + stride)];
-			if (ft > 4) { free(raw); free(pixels); return -1; }
+			if (ft > 4) { if (!compactColor) free(pixels); free(allocation); return -1; }
 			hist[ft]++;
+			if (compactColor) {
+				UnfilterColorCompact(rin, prev, stride, compIn, ft, rout);
+				prev = rout;
+				continue;
+			}
 			UnfilterRow(rin, prev, stride, compIn, ft, needPostTransform ? nullptr : rout, xmode);
 			if (needPostTransform) {
 				if (colorType == 0) {
@@ -391,7 +473,7 @@ int FastPngDecode(const unsigned char* file, size_t size, FastPngImage& out) {
 			prev = rin;
 		}
 	}
-	free(raw);
+	if (!compactColor) free(allocation);
 	// print to stderr so pngbench captures
 
 	out.width = (int)w;

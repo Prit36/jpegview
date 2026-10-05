@@ -1,5 +1,6 @@
 #include "StdAfx.h"
 #include "Helpers.h"
+#include "ProcessorCount.h"
 #include "immintrin.h"
 #include "NLS.h"
 #include "MultiMonitorSupport.h"
@@ -224,12 +225,7 @@ static bool CPUSupportsHWMultiprocessing(void) {
 }
 
 int NumCoresPerPhysicalProc(void) {
-	unsigned int n = std::thread::hardware_concurrency();
-	if (n > 0) return (int)n;
-
-	SYSTEM_INFO sysInfo;
-	GetSystemInfo(&sysInfo);
-	return max(1, (int)sysInfo.dwNumberOfProcessors);
+	return (int)ProcessorCount::Available();
 }
 
 bool PatternMatch(LPCTSTR & sMatchingPattern, LPCTSTR sString, LPCTSTR sPattern) {

@@ -71,6 +71,7 @@ void CProcessingThreadPool::StopAllThreads() {
 		m_threads[i]->Terminate();
 		delete m_threads[i];
 	}
+	delete[] m_threads;
 	m_nNumThreads = 0;
 	m_threads = NULL;
 	if (m_hEventFinished != NULL) {
@@ -80,6 +81,7 @@ void CProcessingThreadPool::StopAllThreads() {
 }
 
 bool CProcessingThreadPool::Process(CProcessingRequest* pRequest) {
+	std::lock_guard<std::mutex> submissionLock(m_processMutex);
 	int nTargetCX = pRequest->ClippedTargetSize.cx;
 	int nTargetCY = pRequest->ClippedTargetSize.cy;
 	if (m_nNumThreads == 0) {
@@ -139,8 +141,9 @@ void CProcessingThread::StartProcess(CWrappedRequest* pRequest) {
 }
 
 void CProcessingThread::DoProcess(CProcessingRequest* pRequest, int nOffsetY, int nSizeY) {
-	// Processing is done in optimal thread slices, avoiding excessive micro-strip allocations and cache thrashing.
-	const uint32 MAX_SRC_PIXELS_PER_STRIP = 8 * 1024 * 1024;
+	// Bound planar SIMD scratch per worker so large images do not evict the
+	// entire last-level cache, especially with a restricted CPU affinity.
+	const uint32 MAX_SRC_PIXELS_PER_STRIP = 1024 * 1024;
 	uint32 nNumberOfPixelsInSource = (uint32)((pRequest->SourceSize.cx * (double)pRequest->ClippedTargetSize.cx / pRequest->FullTargetSize.cx) *
 		(pRequest->SourceSize.cy * (double)nSizeY / pRequest->FullTargetSize.cy));
 	uint32 nStrips = 1 + nNumberOfPixelsInSource / MAX_SRC_PIXELS_PER_STRIP;

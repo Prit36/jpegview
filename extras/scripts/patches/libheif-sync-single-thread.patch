@@ -1,0 +1,19 @@
+diff --git a/libheif/plugins/decoder_libde265.cc b/libheif/plugins/decoder_libde265.cc
+index 4f78f4df..bef4cbf9 100644
+--- a/libheif/plugins/decoder_libde265.cc
++++ b/libheif/plugins/decoder_libde265.cc
+@@ -206,7 +206,13 @@ heif_error libde265_new_decoder2(void** dec, const heif_decoder_plugin_options*
+   int nThreads = (options->num_threads ? options->num_threads : 1);
+ 
+   // Worker threads are not supported when running on Emscripten.
+-  de265_start_worker_threads(decoder->ctx, nThreads);
++  // A one-thread decode already runs on its caller (e.g. a grid tile
++  // worker). Starting a codec worker adds CTB task scheduling and a thread
++  // per tile without introducing any parallelism. Use the synchronous
++  // libde265 path for one-thread requests; keep WPP workers for >1.
++  if (nThreads > 1) {
++    de265_start_worker_threads(decoder->ctx, nThreads);
++  }
+ #endif
+ 
+   decoder->strict_decoding = options->strict_decoding;

@@ -33,6 +33,18 @@ IF ERRORLEVEL 1 (
 	exit /b 1
 )
 
+REM Apply our maintained libheif plugin optimization idempotently.
+git -C "%XLIB_DIR%\libheif" apply --reverse --check "%~dp0patches\libheif-sync-single-thread.patch" >nul 2>&1
+IF ERRORLEVEL 1 (
+	git -C "%XLIB_DIR%\libheif" apply --check "%~dp0patches\libheif-sync-single-thread.patch"
+	IF ERRORLEVEL 1 (
+		echo ERROR: libheif single-thread patch cannot be applied
+		exit /b 1
+	)
+	git -C "%XLIB_DIR%\libheif" apply "%~dp0patches\libheif-sync-single-thread.patch"
+	IF ERRORLEVEL 1 exit /b 1
+)
+
 IF EXIST "%XOUT_DIR%" (
 	rd /s /q "%XOUT_DIR%"
 )

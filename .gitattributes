@@ -1,0 +1,2 @@
+# Unified diffs need literal blank context lines; keep source patches portable.
+extras/scripts/patches/*.patch text eol=lf -whitespace

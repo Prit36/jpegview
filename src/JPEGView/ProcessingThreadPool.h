@@ -1,6 +1,7 @@
 #pragma once
 
 #include "WorkThread.h"
+#include <mutex>
 
 class CProcessingThread;
 
@@ -58,6 +59,9 @@ private:
 	CProcessingThread** m_threads;
 	int m_nNumThreads;
 	HANDLE m_hEventFinished;
+	// UI rendering and read-ahead may submit concurrently. The completion
+	// event and worker request counters belong to one submission at a time.
+	std::mutex m_processMutex;
 
 	CProcessingThreadPool(void);
 };

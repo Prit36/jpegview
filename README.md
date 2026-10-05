@@ -7,6 +7,10 @@ A performance-focused, modernized fork of [sylikc/jpegview](https://github.com/s
 
 JPEGView is a lean, fast and highly configurable image viewer/editor with a minimal GUI.
 
+## Version 2.11.0 — faster image loading, lower memory use
+
+Format-specific PNG, JPEG and HEIC optimizations reduce actual first-paint time by **13.35%** on the measured 19-image corpus, with **12.87%** in an independent confirmation. Whole-process CPU time drops **14.05%**, peak working set **8.58%**, and peak committed memory **10.76%**. Image quality and default read-ahead are unchanged. These are workload-specific measurements under fixed process budgets, not guarantees for every image. See the [benchmark summary and reproduction instructions](benchmarks/format_optimization/README.md).
+
 ## Text recognition (OCR)
 
 Click **OCR** to recognize text locally, then drag across highlighted words to select them. **Ctrl+A** selects all text, **Ctrl+C** copies it, and **Esc** hides the regions. Recognition runs only on demand using Windows' installed OCR engine, with no bundled models.

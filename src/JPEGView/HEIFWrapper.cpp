@@ -4,6 +4,7 @@
 #include "GpuHeifDecoder.h"
 #include "MaxImageDef.h"
 #include "ICCProfileTransform.h"
+#include "ProcessorCount.h"
 
 #include <thread>
 #include <immintrin.h>
@@ -111,11 +112,17 @@ static void ConvertYCbCr420ToBGRA(const uint8_t* pY, int yStride,
 	const float norm = (bitDepth == 8) ? 1.0f : (255.0f / (float)((1 << bitDepth) - 1));
 	const float c_center = (bitDepth == 8) ? 128.0f : (float)(1 << (bitDepth - 1));
 
-	#pragma omp parallel for schedule(static)
-	for (int row2 = 0; row2 < height; row2 += 2) {
-		// per-thread scratch for the two bilinearly upsampled chroma rows
+	const int workers = (int)ProcessorCount::Available();
+	#pragma omp parallel num_threads(workers)
+	{
+		// Allocate scratch once per worker, not four buffers per row pair.
 		std::vector<int> cbUp0(2 * cw), cbUp1(2 * cw), crUp0(2 * cw), crUp1(2 * cw);
-
+		std::vector<uint8_t> cbTop8, cbBot8, crTop8, crBot8;
+		if (bitDepth > 8) {
+			cbTop8.resize(cw); cbBot8.resize(cw); crTop8.resize(cw); crBot8.resize(cw);
+		}
+		#pragma omp for schedule(static)
+		for (int row2 = 0; row2 < height; row2 += 2) {
 		for (int dy = 0; dy < 2 && (row2 + dy) < height; dy++) {
 			int row = row2 + dy;
 			const uint8_t* lineY = pY + (size_t)row * yStride;
@@ -136,7 +143,6 @@ static void ConvertYCbCr420ToBGRA(const uint8_t* pY, int yStride,
 					const uint8_t* crBot = pCr + (size_t)cyNext * crStride;
 
 					if (bitDepth > 8) {
-						std::vector<uint8_t> cbTop8(cw), cbBot8(cw), crTop8(cw), crBot8(cw);
 						const uint16_t* cbT16 = (const uint16_t*)cbTop;
 						const uint16_t* cbB16 = (const uint16_t*)cbBot;
 						const uint16_t* crT16 = (const uint16_t*)crTop;
@@ -157,7 +163,33 @@ static void ConvertYCbCr420ToBGRA(const uint8_t* pY, int yStride,
 				}
 			}
 
-			for (int col = 0; col < width; col++) {
+			int col = 0;
+#ifdef __AVX2__
+			const __m256 center = _mm256_set1_ps(128.0f);
+			const __m256 half = _mm256_set1_ps(0.5f);
+			const __m256i zero = _mm256_setzero_si256(), maxByte = _mm256_set1_epi32(255);
+			// Preserve the original scalar rounding for limited-range/HDR.
+			// The SIMD path is used only for full-range 8-bit opaque images.
+			for (; !hasAlpha && fullRange && bitDepth == 8 && col + 8 <= width; col += 8) {
+				__m256i yi = _mm256_cvtepu8_epi32(_mm_loadl_epi64((const __m128i*)(lineY+col)));
+				__m256 yv = _mm256_cvtepi32_ps(yi);
+				__m256 cb = _mm256_sub_ps(_mm256_cvtepi32_ps(_mm256_loadu_si256((const __m256i*)(cbUp+col))), center);
+				__m256 cr = _mm256_sub_ps(_mm256_cvtepi32_ps(_mm256_loadu_si256((const __m256i*)(crUp+col))), center);
+				// Match MSVC /fp:fast scalar contraction, including green's
+				// two successive FMAs (separate mul/add can round a byte up).
+				__m256 bf = _mm256_fmadd_ps(_mm256_set1_ps(b_cb), cb, yv);
+				__m256 gf = _mm256_fmadd_ps(_mm256_set1_ps(g_cr), cr,
+					_mm256_fmadd_ps(_mm256_set1_ps(g_cb), cb, yv));
+				__m256 rf = _mm256_fmadd_ps(_mm256_set1_ps(r_cr), cr, yv);
+				__m256i b = _mm256_min_epi32(maxByte, _mm256_max_epi32(zero, _mm256_cvttps_epi32(_mm256_add_ps(bf, half))));
+				__m256i g = _mm256_min_epi32(maxByte, _mm256_max_epi32(zero, _mm256_cvttps_epi32(_mm256_add_ps(gf, half))));
+				__m256i r = _mm256_min_epi32(maxByte, _mm256_max_epi32(zero, _mm256_cvttps_epi32(_mm256_add_ps(rf, half))));
+				__m256i bgra = _mm256_or_si256(_mm256_or_si256(b, _mm256_slli_epi32(g,8)),
+					_mm256_or_si256(_mm256_slli_epi32(r,16), _mm256_set1_epi32((int)0xff000000)));
+				_mm256_storeu_si256((__m256i*)(out+col*4), bgra);
+			}
+#endif
+			for (; col < width; col++) {
 				float yv = (bitDepth > 8) ? ((float)lineY16[col] * norm) : (float)lineY[col];
 				float cb = (float)cbUp[col] - 128.0f;
 				float cr = (float)crUp[col] - 128.0f;
@@ -171,6 +203,7 @@ static void ConvertYCbCr420ToBGRA(const uint8_t* pY, int yStride,
 				out[col * 4 + 2] = ClipU8Float(yv + r_cr * cr);
 				out[col * 4 + 3] = hasAlpha ? lineA[col] : 0xFF;
 			}
+		}
 		}
 	}
 }
@@ -208,7 +241,7 @@ void * HeifReader::ReadImage(int &width,
 	if (handleError.code != heif_error_Ok) return NULL;
 	heif::ImageHandle handle(rawHandle);
 	has_alpha = handle.has_alpha_channel();
-	unsigned int hw_threads = max(1u, min(std::thread::hardware_concurrency(), 16u));
+	unsigned int hw_threads = max(1u, min(ProcessorCount::Available(), 16u));
 	heif_image_tiling tiling = {};
 	tiling.version = 1;
 	heif_error tilingError = heif_image_handle_get_image_tiling(rawHandle, false, &tiling);

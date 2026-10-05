@@ -1,2 +1,3 @@
-# ignore all subdirectories (all temp stuff)
+# Ignore generated build directories, but retain maintained source patches.
 **/
+!/patches/
